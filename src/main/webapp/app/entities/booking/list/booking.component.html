@@ -1,0 +1,163 @@
+<div>
+  <h2 id="page-heading" data-cy="BookingHeading">
+    <span jhiTranslate="mobigoApp.booking.home.title">Bookings</span>
+
+    <div class="d-flex justify-content-end">
+      <button class="btn btn-info me-2" (click)="load()" [disabled]="isLoading">
+        <fa-icon icon="sync" [animation]="isLoading ? 'spin' : undefined"></fa-icon>
+        <span jhiTranslate="mobigoApp.booking.home.refreshListLabel">Actualiser la liste</span>
+      </button>
+
+      <button
+        id="jh-create-entity"
+        data-cy="entityCreateButton"
+        class="btn btn-primary jh-create-entity create-booking"
+        [routerLink]="['/booking/new']"
+      >
+        <fa-icon icon="plus"></fa-icon>
+        <span class="hidden-sm-down" jhiTranslate="mobigoApp.booking.home.createLabel">Créer un nouveau Booking</span>
+      </button>
+    </div>
+  </h2>
+
+  <jhi-alert-error />
+
+  <jhi-alert />
+
+  <form name="searchForm" class="row row-cols-sm-auto align-items-center">
+    <div class="col-sm-12">
+      <div class="input-group w-100 mt-3">
+        <label class="visually-hidden" for="currentSearch" jhiTranslate="mobigoApp.booking.home.search">Recherche pour Booking</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="currentSearch"
+          id="currentSearch"
+          name="currentSearch"
+          placeholder="{{ 'mobigoApp.booking.home.search' | translate }}"
+        />
+
+        <button class="btn btn-info" (click)="search(currentSearch)">
+          <fa-icon icon="search"></fa-icon>
+        </button>
+
+        @if (currentSearch) {
+          <button class="btn btn-danger" (click)="search('')">
+            <fa-icon icon="trash-alt"></fa-icon>
+          </button>
+        }
+      </div>
+    </div>
+  </form>
+
+  @if (bookings().length === 0) {
+    <div class="alert alert-warning" id="no-result">
+      <span jhiTranslate="mobigoApp.booking.home.notFound">Aucun Booking trouvé</span>
+    </div>
+  } @else {
+    <div class="table-responsive table-entities" id="entities">
+      <table class="table table-striped" aria-describedby="page-heading">
+        <thead>
+          <tr jhiSort [(sortState)]="sortState" (sortChange)="navigateToWithComponentValues($event)">
+            <th scope="col" jhiSortBy="id">
+              <div class="d-flex">
+                <span jhiTranslate="global.field.id">ID</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="nbPlacesReservees">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.booking.nbPlacesReservees">Nb Places Reservees</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="montantTotal">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.booking.montantTotal">Montant Total</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="dateReservation">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.booking.dateReservation">Date Reservation</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="statut">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.booking.statut">Statut</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="trajet.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.booking.trajet">Trajet</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="passager.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.booking.passager">Passager</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (booking of bookings(); track trackId(booking)) {
+            <tr data-cy="entityTable">
+              <td>
+                <a [routerLink]="['/booking', booking.id, 'view']">{{ booking.id }}</a>
+              </td>
+              <td>{{ booking.nbPlacesReservees }}</td>
+              <td>{{ booking.montantTotal }}</td>
+              <td>{{ booking.dateReservation | formatMediumDate }}</td>
+              <td [jhiTranslate]="'mobigoApp.BookingStatusEnum.' + (booking.statut ?? 'null')">
+                {{ { null: '', CONFIRME: 'CONFIRME', ANNULE: 'ANNULE', EN_ATTENTE: 'EN_ATTENTE' }[booking.statut ?? 'null'] }}
+              </td>
+              <td>
+                @if (booking.trajet) {
+                  <div>
+                    <a [routerLink]="['/ride', booking.trajet.id, 'view']">{{ booking.trajet.id }}</a>
+                  </div>
+                }
+              </td>
+              <td>
+                @if (booking.passager) {
+                  <div>
+                    <a [routerLink]="['/people', booking.passager.id, 'view']">{{ booking.passager.id }}</a>
+                  </div>
+                }
+              </td>
+              <td class="text-end">
+                <div class="btn-group">
+                  <a [routerLink]="['/booking', booking.id, 'view']" class="btn btn-info btn-sm" data-cy="entityDetailsButton">
+                    <fa-icon icon="eye"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.view">Voir</span>
+                  </a>
+
+                  <a [routerLink]="['/booking', booking.id, 'edit']" class="btn btn-primary btn-sm" data-cy="entityEditButton">
+                    <fa-icon icon="pencil-alt"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.edit">Editer</span>
+                  </a>
+
+                  <button type="submit" (click)="delete(booking)" class="btn btn-danger btn-sm" data-cy="entityDeleteButton">
+                    <fa-icon icon="times"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.delete">Supprimer</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

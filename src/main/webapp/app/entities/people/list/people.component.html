@@ -1,0 +1,235 @@
+<div>
+  <h2 id="page-heading" data-cy="PeopleHeading">
+    <span jhiTranslate="mobigoApp.people.home.title">People</span>
+
+    <div class="d-flex justify-content-end">
+      <button class="btn btn-info me-2" (click)="load()" [disabled]="isLoading">
+        <fa-icon icon="sync" [animation]="isLoading ? 'spin' : undefined"></fa-icon>
+        <span jhiTranslate="mobigoApp.people.home.refreshListLabel">Actualiser la liste</span>
+      </button>
+
+      <button
+        id="jh-create-entity"
+        data-cy="entityCreateButton"
+        class="btn btn-primary jh-create-entity create-people"
+        [routerLink]="['/people/new']"
+      >
+        <fa-icon icon="plus"></fa-icon>
+        <span class="hidden-sm-down" jhiTranslate="mobigoApp.people.home.createLabel">Créer un nouveau People</span>
+      </button>
+    </div>
+  </h2>
+
+  <jhi-alert-error />
+
+  <jhi-alert />
+
+  <form name="searchForm" class="row row-cols-sm-auto align-items-center">
+    <div class="col-sm-12">
+      <div class="input-group w-100 mt-3">
+        <label class="visually-hidden" for="currentSearch" jhiTranslate="mobigoApp.people.home.search">Recherche pour People</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="currentSearch"
+          id="currentSearch"
+          name="currentSearch"
+          placeholder="{{ 'mobigoApp.people.home.search' | translate }}"
+        />
+
+        <button class="btn btn-info" (click)="search(currentSearch)">
+          <fa-icon icon="search"></fa-icon>
+        </button>
+
+        @if (currentSearch) {
+          <button class="btn btn-danger" (click)="search('')">
+            <fa-icon icon="trash-alt"></fa-icon>
+          </button>
+        }
+      </div>
+    </div>
+  </form>
+
+  @if (people().length === 0) {
+    <div class="alert alert-warning" id="no-result">
+      <span jhiTranslate="mobigoApp.people.home.notFound">Aucun People trouvé</span>
+    </div>
+  } @else {
+    <div class="table-responsive table-entities" id="entities">
+      <table class="table table-striped" aria-describedby="page-heading">
+        <thead>
+          <tr jhiSort [(sortState)]="sortState" (sortChange)="navigateToWithComponentValues($event)">
+            <th scope="col" jhiSortBy="id">
+              <div class="d-flex">
+                <span jhiTranslate="global.field.id">ID</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="nom">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.nom">Nom</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="prenom">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.prenom">Prenom</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="telephone">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.telephone">Telephone</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="cni">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.cni">Cni</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="photo">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.photo">Photo</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="actif">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.actif">Actif</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="dateNaissance">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.dateNaissance">Date Naissance</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="musique">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.musique">Musique</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="discussion">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.discussion">Discussion</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="cigarette">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.cigarette">Cigarette</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="alcool">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.alcool">Alcool</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="animaux">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.animaux">Animaux</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="messagesExpediteur.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.messagesExpediteur">Messages Expediteur</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="messagesDestinatire.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.messagesDestinatire">Messages Destinatire</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (people of people(); track trackId(people)) {
+            <tr data-cy="entityTable">
+              <td>
+                <a [routerLink]="['/people', people.id, 'view']">{{ people.id }}</a>
+              </td>
+              <td>{{ people.nom }}</td>
+              <td>{{ people.prenom }}</td>
+              <td>{{ people.telephone }}</td>
+              <td>{{ people.cni }}</td>
+              <td>{{ people.photo }}</td>
+              <td>{{ people.actif }}</td>
+              <td>{{ people.dateNaissance | formatMediumDate }}</td>
+              <td>{{ people.musique }}</td>
+              <td>{{ people.discussion }}</td>
+              <td>{{ people.cigarette }}</td>
+              <td>{{ people.alcool }}</td>
+              <td>{{ people.animaux }}</td>
+              <td>
+                @if (people.messagesExpediteur) {
+                  <div>
+                    <a [routerLink]="['/message', people.messagesExpediteur.id, 'view']">{{ people.messagesExpediteur.id }}</a>
+                  </div>
+                }
+              </td>
+              <td>
+                @if (people.messagesDestinatire) {
+                  <div>
+                    <a [routerLink]="['/message', people.messagesDestinatire.id, 'view']">{{ people.messagesDestinatire.id }}</a>
+                  </div>
+                }
+              </td>
+              <td class="text-end">
+                <div class="btn-group">
+                  <a [routerLink]="['/people', people.id, 'view']" class="btn btn-info btn-sm" data-cy="entityDetailsButton">
+                    <fa-icon icon="eye"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.view">Voir</span>
+                  </a>
+
+                  <a [routerLink]="['/people', people.id, 'edit']" class="btn btn-primary btn-sm" data-cy="entityEditButton">
+                    <fa-icon icon="pencil-alt"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.edit">Editer</span>
+                  </a>
+
+                  <button type="submit" (click)="delete(people)" class="btn btn-danger btn-sm" data-cy="entityDeleteButton">
+                    <fa-icon icon="times"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.delete">Supprimer</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

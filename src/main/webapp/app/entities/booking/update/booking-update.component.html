@@ -1,0 +1,169 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    <form name="editForm" novalidate (ngSubmit)="save()" [formGroup]="editForm">
+      <h2 id="jhi-booking-heading" data-cy="BookingCreateUpdateHeading" jhiTranslate="mobigoApp.booking.home.createOrEditLabel">
+        Créer ou éditer un Booking
+      </h2>
+
+      <div>
+        <jhi-alert-error />
+
+        @if (editForm.controls.id.value !== null) {
+          <div class="mb-3">
+            <label class="form-label" for="field_id" jhiTranslate="mobigoApp.booking.id">ID</label>
+            <input type="number" class="form-control" name="id" id="field_id" data-cy="id" formControlName="id" [readonly]="true" />
+          </div>
+        }
+
+        @let nbPlacesReserveesRef = editForm.get('nbPlacesReservees')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_nbPlacesReservees" jhiTranslate="mobigoApp.booking.nbPlacesReservees"
+            >Nb Places Reservees</label
+          >
+          <input
+            type="number"
+            class="form-control"
+            name="nbPlacesReservees"
+            id="field_nbPlacesReservees"
+            data-cy="nbPlacesReservees"
+            formControlName="nbPlacesReservees"
+          />
+          @if (nbPlacesReserveesRef.invalid && (nbPlacesReserveesRef.dirty || nbPlacesReserveesRef.touched)) {
+            <div>
+              @if (editForm.get('nbPlacesReservees')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+              <small
+                class="form-text text-danger"
+                [hidden]="!editForm.get('nbPlacesReservees')?.errors?.number"
+                jhiTranslate="entity.validation.number"
+                >Ce champ doit être un nombre.</small
+              >
+            </div>
+          }
+        </div>
+
+        @let montantTotalRef = editForm.get('montantTotal')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_montantTotal" jhiTranslate="mobigoApp.booking.montantTotal">Montant Total</label>
+          <input
+            type="number"
+            class="form-control"
+            name="montantTotal"
+            id="field_montantTotal"
+            data-cy="montantTotal"
+            formControlName="montantTotal"
+          />
+          @if (montantTotalRef.invalid && (montantTotalRef.dirty || montantTotalRef.touched)) {
+            <div>
+              @if (editForm.get('montantTotal')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+              <small
+                class="form-text text-danger"
+                [hidden]="!editForm.get('montantTotal')?.errors?.number"
+                jhiTranslate="entity.validation.number"
+                >Ce champ doit être un nombre.</small
+              >
+            </div>
+          }
+        </div>
+
+        @let dateReservationRef = editForm.get('dateReservation')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_dateReservation" jhiTranslate="mobigoApp.booking.dateReservation">Date Reservation</label>
+          <div class="input-group">
+            <input
+              id="field_dateReservation"
+              data-cy="dateReservation"
+              type="text"
+              class="form-control"
+              name="dateReservation"
+              ngbDatepicker
+              #dateReservationDp="ngbDatepicker"
+              formControlName="dateReservation"
+            />
+            <button type="button" class="btn btn-secondary" (click)="dateReservationDp.toggle()">
+              <fa-icon icon="calendar-alt"></fa-icon>
+            </button>
+          </div>
+          @if (dateReservationRef.invalid && (dateReservationRef.dirty || dateReservationRef.touched)) {
+            <div>
+              @if (editForm.get('dateReservation')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let statutRef = editForm.get('statut')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_statut" jhiTranslate="mobigoApp.booking.statut">Statut</label>
+          <select class="form-control" name="statut" formControlName="statut" id="field_statut" data-cy="statut">
+            <option [ngValue]="null">{{ 'mobigoApp.BookingStatusEnum.null' | translate }}</option>
+            @for (bookingStatusEnum of bookingStatusEnumValues; track $index) {
+              <option [value]="bookingStatusEnum">{{ 'mobigoApp.BookingStatusEnum.' + bookingStatusEnum | translate }}</option>
+            }
+          </select>
+          @if (statutRef.invalid && (statutRef.dirty || statutRef.touched)) {
+            <div>
+              @if (editForm.get('statut')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_trajet" jhiTranslate="mobigoApp.booking.trajet">Trajet</label>
+          <select
+            class="form-control"
+            id="field_trajet"
+            data-cy="trajet"
+            name="trajet"
+            formControlName="trajet"
+            [compareWith]="compareRide"
+          >
+            <option [ngValue]="null"></option>
+            @for (rideOption of ridesSharedCollection; track $index) {
+              <option [ngValue]="rideOption">{{ rideOption.id }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_passager" jhiTranslate="mobigoApp.booking.passager">Passager</label>
+          <select
+            class="form-control"
+            id="field_passager"
+            data-cy="passager"
+            name="passager"
+            formControlName="passager"
+            [compareWith]="comparePeople"
+          >
+            <option [ngValue]="null"></option>
+            @for (peopleOption of peopleSharedCollection; track $index) {
+              <option [ngValue]="peopleOption">{{ peopleOption.id }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <button type="button" id="cancel-save" data-cy="entityCreateCancelButton" class="btn btn-secondary" (click)="previousState()">
+          <fa-icon icon="ban"></fa-icon>&nbsp;<span jhiTranslate="entity.action.cancel">Annuler</span>
+        </button>
+
+        <button
+          type="submit"
+          id="save-entity"
+          data-cy="entityCreateSaveButton"
+          [disabled]="editForm.invalid || isSaving"
+          class="btn btn-primary"
+        >
+          <fa-icon icon="save"></fa-icon>&nbsp;<span jhiTranslate="entity.action.save">Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

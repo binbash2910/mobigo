@@ -1,0 +1,35 @@
+{
+  "mobigoApp": {
+    "vehicle": {
+      "home": {
+        "title": "Vehicles",
+        "refreshListLabel": "Actualiser la liste",
+        "createLabel": "Créer un nouveau Vehicle",
+        "createOrEditLabel": "Créer ou éditer un Vehicle",
+        "search": "Recherche pour Vehicle",
+        "notFound": "Aucun Vehicle trouvé"
+      },
+      "created": "Un nouveau Vehicle a été créé avec l'identifiant {{ param }}",
+      "updated": "Le Vehicle avec l'identifiant {{ param }} a été mis à jour",
+      "deleted": "Le Vehicle avec l'identifiant {{ param }} a été supprimé",
+      "delete": {
+        "question": "Êtes-vous certain de vouloir supprimer le Vehicle {{ id }} ?"
+      },
+      "detail": {
+        "title": "Vehicle"
+      },
+      "id": "ID",
+      "marque": "Marque",
+      "modele": "Modele",
+      "annee": "Annee",
+      "carteGrise": "Carte Grise",
+      "immatriculation": "Immatriculation",
+      "nbPlaces": "Nb Places",
+      "couleur": "Couleur",
+      "photo": "Photo",
+      "actif": "Actif",
+      "trajets": "Trajets",
+      "proprietaire": "Proprietaire"
+    }
+  }
+}

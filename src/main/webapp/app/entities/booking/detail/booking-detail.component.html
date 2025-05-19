@@ -1,0 +1,64 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (booking(); as bookingRef) {
+      <div>
+        <h2 data-cy="bookingDetailsHeading"><span jhiTranslate="mobigoApp.booking.detail.title">Booking</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ bookingRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.booking.nbPlacesReservees">Nb Places Reservees</span></dt>
+          <dd>
+            <span>{{ bookingRef.nbPlacesReservees }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.booking.montantTotal">Montant Total</span></dt>
+          <dd>
+            <span>{{ bookingRef.montantTotal }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.booking.dateReservation">Date Reservation</span></dt>
+          <dd>
+            <span>{{ bookingRef.dateReservation | formatMediumDate }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.booking.statut">Statut</span></dt>
+          <dd>
+            <span [jhiTranslate]="'mobigoApp.BookingStatusEnum.' + (bookingRef.statut ?? 'null')">{{
+              { null: '', CONFIRME: 'CONFIRME', ANNULE: 'ANNULE', EN_ATTENTE: 'EN_ATTENTE' }[bookingRef.statut ?? 'null']
+            }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.booking.trajet">Trajet</span></dt>
+          <dd>
+            @if (booking()!.trajet) {
+              <div>
+                <a [routerLink]="['/ride', booking()!.trajet?.id, 'view']">{{ bookingRef.trajet?.id }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.booking.passager">Passager</span></dt>
+          <dd>
+            @if (booking()!.passager) {
+              <div>
+                <a [routerLink]="['/people', booking()!.passager?.id, 'view']">{{ bookingRef.passager?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/booking', bookingRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

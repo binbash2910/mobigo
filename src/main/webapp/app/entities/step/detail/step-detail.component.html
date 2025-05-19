@@ -1,0 +1,46 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (step(); as stepRef) {
+      <div>
+        <h2 data-cy="stepDetailsHeading"><span jhiTranslate="mobigoApp.step.detail.title">Step</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ stepRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.step.ville">Ville</span></dt>
+          <dd>
+            <span>{{ stepRef.ville }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.step.heureDepart">Heure Depart</span></dt>
+          <dd>
+            <span>{{ stepRef.heureDepart }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.step.trajet">Trajet</span></dt>
+          <dd>
+            @if (step()!.trajet) {
+              <div>
+                <a [routerLink]="['/ride', step()!.trajet?.id, 'view']">{{ stepRef.trajet?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/step', stepRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

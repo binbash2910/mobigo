@@ -1,0 +1,84 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (ride(); as rideRef) {
+      <div>
+        <h2 data-cy="rideDetailsHeading"><span jhiTranslate="mobigoApp.ride.detail.title">Ride</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ rideRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.villeDepart">Ville Depart</span></dt>
+          <dd>
+            <span>{{ rideRef.villeDepart }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.villeArrivee">Ville Arrivee</span></dt>
+          <dd>
+            <span>{{ rideRef.villeArrivee }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.dateDepart">Date Depart</span></dt>
+          <dd>
+            <span>{{ rideRef.dateDepart | formatMediumDate }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.dateArrivee">Date Arrivee</span></dt>
+          <dd>
+            <span>{{ rideRef.dateArrivee | formatMediumDate }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.heureDepart">Heure Depart</span></dt>
+          <dd>
+            <span>{{ rideRef.heureDepart }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.heureArrivee">Heure Arrivee</span></dt>
+          <dd>
+            <span>{{ rideRef.heureArrivee }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.minuteDepart">Minute Depart</span></dt>
+          <dd>
+            <span>{{ rideRef.minuteDepart }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.minuteArrivee">Minute Arrivee</span></dt>
+          <dd>
+            <span>{{ rideRef.minuteArrivee }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.prixParPlace">Prix Par Place</span></dt>
+          <dd>
+            <span>{{ rideRef.prixParPlace }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.nbrePlaceDisponible">Nbre Place Disponible</span></dt>
+          <dd>
+            <span>{{ rideRef.nbrePlaceDisponible }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.statut">Statut</span></dt>
+          <dd>
+            <span [jhiTranslate]="'mobigoApp.RideStatusEnum.' + (rideRef.statut ?? 'null')">{{
+              { null: '', OUVERT: 'OUVERT', COMPLET: 'COMPLET', ANNULE: 'ANNULE' }[rideRef.statut ?? 'null']
+            }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.ride.vehicule">Vehicule</span></dt>
+          <dd>
+            @if (ride()!.vehicule) {
+              <div>
+                <a [routerLink]="['/vehicle', ride()!.vehicule?.id, 'view']">{{ rideRef.vehicule?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/ride', rideRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

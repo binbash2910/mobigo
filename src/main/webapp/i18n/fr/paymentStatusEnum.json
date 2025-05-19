@@ -1,0 +1,11 @@
+{
+  "mobigoApp": {
+    "PaymentStatusEnum": {
+      "null": "",
+      "REUSSI": "REUSSI",
+      "ECHOUE": "ECHOUE",
+      "EN": "EN",
+      "ATTENTE": "ATTENTE"
+    }
+  }
+}

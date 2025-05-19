@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+                        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+    <!--
+        Added the constraints for entity People.
+    -->
+    <changeSet id="20250519094527-2" author="jhipster">
+
+        <addForeignKeyConstraint baseColumnNames="messages_expediteur_id"
+                                 baseTableName="people"
+                                 constraintName="fk_people__messages_expediteur_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="message"
+                                 />
+
+        <addForeignKeyConstraint baseColumnNames="messages_destinatire_id"
+                                 baseTableName="people"
+                                 constraintName="fk_people__messages_destinatire_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="message"
+                                 />
+    </changeSet>
+</databaseChangeLog>

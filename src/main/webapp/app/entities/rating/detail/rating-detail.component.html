@@ -1,0 +1,66 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (rating(); as ratingRef) {
+      <div>
+        <h2 data-cy="ratingDetailsHeading"><span jhiTranslate="mobigoApp.rating.detail.title">Rating</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ ratingRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.rating.note">Note</span></dt>
+          <dd>
+            <span>{{ ratingRef.note }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.rating.commentaire">Commentaire</span></dt>
+          <dd>
+            <span>{{ ratingRef.commentaire }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.rating.ratingDate">Rating Date</span></dt>
+          <dd>
+            <span>{{ ratingRef.ratingDate | formatMediumDate }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.rating.trajet">Trajet</span></dt>
+          <dd>
+            @if (rating()!.trajet) {
+              <div>
+                <a [routerLink]="['/ride', rating()!.trajet?.id, 'view']">{{ ratingRef.trajet?.id }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.rating.passager">Passager</span></dt>
+          <dd>
+            @if (rating()!.passager) {
+              <div>
+                <a [routerLink]="['/people', rating()!.passager?.id, 'view']">{{ ratingRef.passager?.id }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.rating.conducteur">Conducteur</span></dt>
+          <dd>
+            @if (rating()!.conducteur) {
+              <div>
+                <a [routerLink]="['/people', rating()!.conducteur?.id, 'view']">{{ ratingRef.conducteur?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/rating', ratingRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

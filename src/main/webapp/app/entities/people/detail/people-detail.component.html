@@ -1,0 +1,94 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (people(); as peopleRef) {
+      <div>
+        <h2 data-cy="peopleDetailsHeading"><span jhiTranslate="mobigoApp.people.detail.title">People</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ peopleRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.nom">Nom</span></dt>
+          <dd>
+            <span>{{ peopleRef.nom }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.prenom">Prenom</span></dt>
+          <dd>
+            <span>{{ peopleRef.prenom }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.telephone">Telephone</span></dt>
+          <dd>
+            <span>{{ peopleRef.telephone }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.cni">Cni</span></dt>
+          <dd>
+            <span>{{ peopleRef.cni }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.photo">Photo</span></dt>
+          <dd>
+            <span>{{ peopleRef.photo }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.actif">Actif</span></dt>
+          <dd>
+            <span>{{ peopleRef.actif }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.dateNaissance">Date Naissance</span></dt>
+          <dd>
+            <span>{{ peopleRef.dateNaissance | formatMediumDate }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.musique">Musique</span></dt>
+          <dd>
+            <span>{{ peopleRef.musique }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.discussion">Discussion</span></dt>
+          <dd>
+            <span>{{ peopleRef.discussion }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.cigarette">Cigarette</span></dt>
+          <dd>
+            <span>{{ peopleRef.cigarette }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.alcool">Alcool</span></dt>
+          <dd>
+            <span>{{ peopleRef.alcool }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.animaux">Animaux</span></dt>
+          <dd>
+            <span>{{ peopleRef.animaux }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.messagesExpediteur">Messages Expediteur</span></dt>
+          <dd>
+            @if (people()!.messagesExpediteur) {
+              <div>
+                <a [routerLink]="['/message', people()!.messagesExpediteur?.id, 'view']">{{ peopleRef.messagesExpediteur?.id }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.people.messagesDestinatire">Messages Destinatire</span></dt>
+          <dd>
+            @if (people()!.messagesDestinatire) {
+              <div>
+                <a [routerLink]="['/message', people()!.messagesDestinatire?.id, 'view']">{{ peopleRef.messagesDestinatire?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/people', peopleRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

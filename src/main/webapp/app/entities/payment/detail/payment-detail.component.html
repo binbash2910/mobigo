@@ -1,0 +1,68 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (payment(); as paymentRef) {
+      <div>
+        <h2 data-cy="paymentDetailsHeading"><span jhiTranslate="mobigoApp.payment.detail.title">Payment</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ paymentRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.payment.montant">Montant</span></dt>
+          <dd>
+            <span>{{ paymentRef.montant }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.payment.datePaiement">Date Paiement</span></dt>
+          <dd>
+            <span>{{ paymentRef.datePaiement | formatMediumDate }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.payment.methode">Methode</span></dt>
+          <dd>
+            <span [jhiTranslate]="'mobigoApp.PaymentMethodEnum.' + (paymentRef.methode ?? 'null')">{{
+              {
+                null: '',
+                CARTE: 'CARTE',
+                BANCAURE: 'BANCAURE',
+                VIREMENT: 'VIREMENT',
+                PAYPAL: 'PAYPAL',
+                ORANGE: 'ORANGE',
+                MONEY: 'MONEY',
+                MTN: 'MTN',
+                MOBILE: 'MOBILE',
+              }[paymentRef.methode ?? 'null']
+            }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.payment.statut">Statut</span></dt>
+          <dd>
+            <span [jhiTranslate]="'mobigoApp.PaymentStatusEnum.' + (paymentRef.statut ?? 'null')">{{
+              { null: '', REUSSI: 'REUSSI', ECHOUE: 'ECHOUE', EN: 'EN', ATTENTE: 'ATTENTE' }[paymentRef.statut ?? 'null']
+            }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.payment.booking">Booking</span></dt>
+          <dd>
+            @if (payment()!.booking) {
+              <div>
+                <a [routerLink]="['/booking', payment()!.booking?.id, 'view']">{{ paymentRef.booking?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/payment', paymentRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

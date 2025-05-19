@@ -1,0 +1,129 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    <form name="editForm" novalidate (ngSubmit)="save()" [formGroup]="editForm">
+      <h2 id="jhi-rating-heading" data-cy="RatingCreateUpdateHeading" jhiTranslate="mobigoApp.rating.home.createOrEditLabel">
+        Créer ou éditer un Rating
+      </h2>
+
+      <div>
+        <jhi-alert-error />
+
+        @if (editForm.controls.id.value !== null) {
+          <div class="mb-3">
+            <label class="form-label" for="field_id" jhiTranslate="mobigoApp.rating.id">ID</label>
+            <input type="number" class="form-control" name="id" id="field_id" data-cy="id" formControlName="id" [readonly]="true" />
+          </div>
+        }
+
+        <div class="mb-3">
+          <label class="form-label" for="field_note" jhiTranslate="mobigoApp.rating.note">Note</label>
+          <input type="number" class="form-control" name="note" id="field_note" data-cy="note" formControlName="note" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_commentaire" jhiTranslate="mobigoApp.rating.commentaire">Commentaire</label>
+          <input
+            type="text"
+            class="form-control"
+            name="commentaire"
+            id="field_commentaire"
+            data-cy="commentaire"
+            formControlName="commentaire"
+          />
+        </div>
+
+        @let ratingDateRef = editForm.get('ratingDate')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_ratingDate" jhiTranslate="mobigoApp.rating.ratingDate">Rating Date</label>
+          <div class="input-group">
+            <input
+              id="field_ratingDate"
+              data-cy="ratingDate"
+              type="text"
+              class="form-control"
+              name="ratingDate"
+              ngbDatepicker
+              #ratingDateDp="ngbDatepicker"
+              formControlName="ratingDate"
+            />
+            <button type="button" class="btn btn-secondary" (click)="ratingDateDp.toggle()"><fa-icon icon="calendar-alt"></fa-icon></button>
+          </div>
+          @if (ratingDateRef.invalid && (ratingDateRef.dirty || ratingDateRef.touched)) {
+            <div>
+              @if (editForm.get('ratingDate')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_trajet" jhiTranslate="mobigoApp.rating.trajet">Trajet</label>
+          <select
+            class="form-control"
+            id="field_trajet"
+            data-cy="trajet"
+            name="trajet"
+            formControlName="trajet"
+            [compareWith]="compareRide"
+          >
+            <option [ngValue]="null"></option>
+            @for (rideOption of ridesSharedCollection; track $index) {
+              <option [ngValue]="rideOption">{{ rideOption.id }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_passager" jhiTranslate="mobigoApp.rating.passager">Passager</label>
+          <select
+            class="form-control"
+            id="field_passager"
+            data-cy="passager"
+            name="passager"
+            formControlName="passager"
+            [compareWith]="comparePeople"
+          >
+            <option [ngValue]="null"></option>
+            @for (peopleOption of peopleSharedCollection; track $index) {
+              <option [ngValue]="peopleOption">{{ peopleOption.id }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_conducteur" jhiTranslate="mobigoApp.rating.conducteur">Conducteur</label>
+          <select
+            class="form-control"
+            id="field_conducteur"
+            data-cy="conducteur"
+            name="conducteur"
+            formControlName="conducteur"
+            [compareWith]="comparePeople"
+          >
+            <option [ngValue]="null"></option>
+            @for (peopleOption of peopleSharedCollection; track $index) {
+              <option [ngValue]="peopleOption">{{ peopleOption.id }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <button type="button" id="cancel-save" data-cy="entityCreateCancelButton" class="btn btn-secondary" (click)="previousState()">
+          <fa-icon icon="ban"></fa-icon>&nbsp;<span jhiTranslate="entity.action.cancel">Annuler</span>
+        </button>
+
+        <button
+          type="submit"
+          id="save-entity"
+          data-cy="entityCreateSaveButton"
+          [disabled]="editForm.invalid || isSaving"
+          class="btn btn-primary"
+        >
+          <fa-icon icon="save"></fa-icon>&nbsp;<span jhiTranslate="entity.action.save">Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

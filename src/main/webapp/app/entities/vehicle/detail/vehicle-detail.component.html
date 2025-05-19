@@ -1,0 +1,74 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (vehicle(); as vehicleRef) {
+      <div>
+        <h2 data-cy="vehicleDetailsHeading"><span jhiTranslate="mobigoApp.vehicle.detail.title">Vehicle</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ vehicleRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.marque">Marque</span></dt>
+          <dd>
+            <span>{{ vehicleRef.marque }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.modele">Modele</span></dt>
+          <dd>
+            <span>{{ vehicleRef.modele }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.annee">Annee</span></dt>
+          <dd>
+            <span>{{ vehicleRef.annee }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.carteGrise">Carte Grise</span></dt>
+          <dd>
+            <span>{{ vehicleRef.carteGrise }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.immatriculation">Immatriculation</span></dt>
+          <dd>
+            <span>{{ vehicleRef.immatriculation }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.nbPlaces">Nb Places</span></dt>
+          <dd>
+            <span>{{ vehicleRef.nbPlaces }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.couleur">Couleur</span></dt>
+          <dd>
+            <span>{{ vehicleRef.couleur }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.photo">Photo</span></dt>
+          <dd>
+            <span>{{ vehicleRef.photo }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.actif">Actif</span></dt>
+          <dd>
+            <span>{{ vehicleRef.actif }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.vehicle.proprietaire">Proprietaire</span></dt>
+          <dd>
+            @if (vehicle()!.proprietaire) {
+              <div>
+                <a [routerLink]="['/people', vehicle()!.proprietaire?.id, 'view']">{{ vehicleRef.proprietaire?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/vehicle', vehicleRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,297 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    <form name="editForm" novalidate (ngSubmit)="save()" [formGroup]="editForm">
+      <h2 id="jhi-ride-heading" data-cy="RideCreateUpdateHeading" jhiTranslate="mobigoApp.ride.home.createOrEditLabel">
+        Créer ou éditer un Ride
+      </h2>
+
+      <div>
+        <jhi-alert-error />
+
+        @if (editForm.controls.id.value !== null) {
+          <div class="mb-3">
+            <label class="form-label" for="field_id" jhiTranslate="mobigoApp.ride.id">ID</label>
+            <input type="number" class="form-control" name="id" id="field_id" data-cy="id" formControlName="id" [readonly]="true" />
+          </div>
+        }
+
+        @let villeDepartRef = editForm.get('villeDepart')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_villeDepart" jhiTranslate="mobigoApp.ride.villeDepart">Ville Depart</label>
+          <input
+            type="text"
+            class="form-control"
+            name="villeDepart"
+            id="field_villeDepart"
+            data-cy="villeDepart"
+            formControlName="villeDepart"
+          />
+          @if (villeDepartRef.invalid && (villeDepartRef.dirty || villeDepartRef.touched)) {
+            <div>
+              @if (editForm.get('villeDepart')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let villeArriveeRef = editForm.get('villeArrivee')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_villeArrivee" jhiTranslate="mobigoApp.ride.villeArrivee">Ville Arrivee</label>
+          <input
+            type="text"
+            class="form-control"
+            name="villeArrivee"
+            id="field_villeArrivee"
+            data-cy="villeArrivee"
+            formControlName="villeArrivee"
+          />
+          @if (villeArriveeRef.invalid && (villeArriveeRef.dirty || villeArriveeRef.touched)) {
+            <div>
+              @if (editForm.get('villeArrivee')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let dateDepartRef = editForm.get('dateDepart')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_dateDepart" jhiTranslate="mobigoApp.ride.dateDepart">Date Depart</label>
+          <div class="input-group">
+            <input
+              id="field_dateDepart"
+              data-cy="dateDepart"
+              type="text"
+              class="form-control"
+              name="dateDepart"
+              ngbDatepicker
+              #dateDepartDp="ngbDatepicker"
+              formControlName="dateDepart"
+            />
+            <button type="button" class="btn btn-secondary" (click)="dateDepartDp.toggle()"><fa-icon icon="calendar-alt"></fa-icon></button>
+          </div>
+          @if (dateDepartRef.invalid && (dateDepartRef.dirty || dateDepartRef.touched)) {
+            <div>
+              @if (editForm.get('dateDepart')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let dateArriveeRef = editForm.get('dateArrivee')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_dateArrivee" jhiTranslate="mobigoApp.ride.dateArrivee">Date Arrivee</label>
+          <div class="input-group">
+            <input
+              id="field_dateArrivee"
+              data-cy="dateArrivee"
+              type="text"
+              class="form-control"
+              name="dateArrivee"
+              ngbDatepicker
+              #dateArriveeDp="ngbDatepicker"
+              formControlName="dateArrivee"
+            />
+            <button type="button" class="btn btn-secondary" (click)="dateArriveeDp.toggle()">
+              <fa-icon icon="calendar-alt"></fa-icon>
+            </button>
+          </div>
+          @if (dateArriveeRef.invalid && (dateArriveeRef.dirty || dateArriveeRef.touched)) {
+            <div>
+              @if (editForm.get('dateArrivee')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let heureDepartRef = editForm.get('heureDepart')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_heureDepart" jhiTranslate="mobigoApp.ride.heureDepart">Heure Depart</label>
+          <input
+            type="text"
+            class="form-control"
+            name="heureDepart"
+            id="field_heureDepart"
+            data-cy="heureDepart"
+            formControlName="heureDepart"
+          />
+          @if (heureDepartRef.invalid && (heureDepartRef.dirty || heureDepartRef.touched)) {
+            <div>
+              @if (editForm.get('heureDepart')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let heureArriveeRef = editForm.get('heureArrivee')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_heureArrivee" jhiTranslate="mobigoApp.ride.heureArrivee">Heure Arrivee</label>
+          <input
+            type="text"
+            class="form-control"
+            name="heureArrivee"
+            id="field_heureArrivee"
+            data-cy="heureArrivee"
+            formControlName="heureArrivee"
+          />
+          @if (heureArriveeRef.invalid && (heureArriveeRef.dirty || heureArriveeRef.touched)) {
+            <div>
+              @if (editForm.get('heureArrivee')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let minuteDepartRef = editForm.get('minuteDepart')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_minuteDepart" jhiTranslate="mobigoApp.ride.minuteDepart">Minute Depart</label>
+          <input
+            type="text"
+            class="form-control"
+            name="minuteDepart"
+            id="field_minuteDepart"
+            data-cy="minuteDepart"
+            formControlName="minuteDepart"
+          />
+          @if (minuteDepartRef.invalid && (minuteDepartRef.dirty || minuteDepartRef.touched)) {
+            <div>
+              @if (editForm.get('minuteDepart')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let minuteArriveeRef = editForm.get('minuteArrivee')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_minuteArrivee" jhiTranslate="mobigoApp.ride.minuteArrivee">Minute Arrivee</label>
+          <input
+            type="text"
+            class="form-control"
+            name="minuteArrivee"
+            id="field_minuteArrivee"
+            data-cy="minuteArrivee"
+            formControlName="minuteArrivee"
+          />
+          @if (minuteArriveeRef.invalid && (minuteArriveeRef.dirty || minuteArriveeRef.touched)) {
+            <div>
+              @if (editForm.get('minuteArrivee')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let prixParPlaceRef = editForm.get('prixParPlace')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_prixParPlace" jhiTranslate="mobigoApp.ride.prixParPlace">Prix Par Place</label>
+          <input
+            type="number"
+            class="form-control"
+            name="prixParPlace"
+            id="field_prixParPlace"
+            data-cy="prixParPlace"
+            formControlName="prixParPlace"
+          />
+          @if (prixParPlaceRef.invalid && (prixParPlaceRef.dirty || prixParPlaceRef.touched)) {
+            <div>
+              @if (editForm.get('prixParPlace')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+              <small
+                class="form-text text-danger"
+                [hidden]="!editForm.get('prixParPlace')?.errors?.number"
+                jhiTranslate="entity.validation.number"
+                >Ce champ doit être un nombre.</small
+              >
+            </div>
+          }
+        </div>
+
+        @let nbrePlaceDisponibleRef = editForm.get('nbrePlaceDisponible')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_nbrePlaceDisponible" jhiTranslate="mobigoApp.ride.nbrePlaceDisponible"
+            >Nbre Place Disponible</label
+          >
+          <input
+            type="number"
+            class="form-control"
+            name="nbrePlaceDisponible"
+            id="field_nbrePlaceDisponible"
+            data-cy="nbrePlaceDisponible"
+            formControlName="nbrePlaceDisponible"
+          />
+          @if (nbrePlaceDisponibleRef.invalid && (nbrePlaceDisponibleRef.dirty || nbrePlaceDisponibleRef.touched)) {
+            <div>
+              @if (editForm.get('nbrePlaceDisponible')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+              <small
+                class="form-text text-danger"
+                [hidden]="!editForm.get('nbrePlaceDisponible')?.errors?.number"
+                jhiTranslate="entity.validation.number"
+                >Ce champ doit être un nombre.</small
+              >
+            </div>
+          }
+        </div>
+
+        @let statutRef = editForm.get('statut')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_statut" jhiTranslate="mobigoApp.ride.statut">Statut</label>
+          <select class="form-control" name="statut" formControlName="statut" id="field_statut" data-cy="statut">
+            <option [ngValue]="null">{{ 'mobigoApp.RideStatusEnum.null' | translate }}</option>
+            @for (rideStatusEnum of rideStatusEnumValues; track $index) {
+              <option [value]="rideStatusEnum">{{ 'mobigoApp.RideStatusEnum.' + rideStatusEnum | translate }}</option>
+            }
+          </select>
+          @if (statutRef.invalid && (statutRef.dirty || statutRef.touched)) {
+            <div>
+              @if (editForm.get('statut')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_vehicule" jhiTranslate="mobigoApp.ride.vehicule">Vehicule</label>
+          <select
+            class="form-control"
+            id="field_vehicule"
+            data-cy="vehicule"
+            name="vehicule"
+            formControlName="vehicule"
+            [compareWith]="compareVehicle"
+          >
+            <option [ngValue]="null"></option>
+            @for (vehicleOption of vehiclesSharedCollection; track $index) {
+              <option [ngValue]="vehicleOption">{{ vehicleOption.id }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <button type="button" id="cancel-save" data-cy="entityCreateCancelButton" class="btn btn-secondary" (click)="previousState()">
+          <fa-icon icon="ban"></fa-icon>&nbsp;<span jhiTranslate="entity.action.cancel">Annuler</span>
+        </button>
+
+        <button
+          type="submit"
+          id="save-entity"
+          data-cy="entityCreateSaveButton"
+          [disabled]="editForm.invalid || isSaving"
+          class="btn btn-primary"
+        >
+          <fa-icon icon="save"></fa-icon>&nbsp;<span jhiTranslate="entity.action.save">Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,96 @@
+{
+  "annotations": {
+    "changelogDate": "20250519094529"
+  },
+  "applications": "*",
+  "documentation": "not an ignored comment",
+  "fields": [
+    {
+      "fieldName": "villeDepart",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "villeArrivee",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "dateDepart",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "dateArrivee",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "heureDepart",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "heureArrivee",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "minuteDepart",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "minuteArrivee",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "prixParPlace",
+      "fieldType": "Float",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "nbrePlaceDisponible",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "statut",
+      "fieldType": "RideStatusEnum",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "OUVERT,COMPLET,ANNULE"
+    }
+  ],
+  "name": "Ride",
+  "relationships": [
+    {
+      "otherEntityName": "step",
+      "otherEntityRelationshipName": "trajet",
+      "relationshipName": "steps",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "booking",
+      "otherEntityRelationshipName": "trajet",
+      "relationshipName": "bookingsTrajet",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "rating",
+      "otherEntityRelationshipName": "trajet",
+      "relationshipName": "notations",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "vehicle",
+      "otherEntityRelationshipName": "trajets",
+      "relationshipName": "vehicule",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    }
+  ]
+}

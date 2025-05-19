@@ -1,0 +1,10 @@
+{
+  "mobigoApp": {
+    "RideStatusEnum": {
+      "null": "",
+      "OUVERT": "OUVERT",
+      "COMPLET": "COMPLET",
+      "ANNULE": "ANNULE"
+    }
+  }
+}

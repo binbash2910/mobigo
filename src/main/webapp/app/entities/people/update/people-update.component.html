@@ -1,0 +1,195 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    <form name="editForm" novalidate (ngSubmit)="save()" [formGroup]="editForm">
+      <h2 id="jhi-people-heading" data-cy="PeopleCreateUpdateHeading" jhiTranslate="mobigoApp.people.home.createOrEditLabel">
+        Créer ou éditer un People
+      </h2>
+
+      <div>
+        <jhi-alert-error />
+
+        @if (editForm.controls.id.value !== null) {
+          <div class="mb-3">
+            <label class="form-label" for="field_id" jhiTranslate="mobigoApp.people.id">ID</label>
+            <input type="number" class="form-control" name="id" id="field_id" data-cy="id" formControlName="id" [readonly]="true" />
+          </div>
+        }
+
+        @let nomRef = editForm.get('nom')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_nom" jhiTranslate="mobigoApp.people.nom">Nom</label>
+          <input type="text" class="form-control" name="nom" id="field_nom" data-cy="nom" formControlName="nom" />
+          @if (nomRef.invalid && (nomRef.dirty || nomRef.touched)) {
+            <div>
+              @if (editForm.get('nom')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_prenom" jhiTranslate="mobigoApp.people.prenom">Prenom</label>
+          <input type="text" class="form-control" name="prenom" id="field_prenom" data-cy="prenom" formControlName="prenom" />
+        </div>
+
+        @let telephoneRef = editForm.get('telephone')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_telephone" jhiTranslate="mobigoApp.people.telephone">Telephone</label>
+          <input type="text" class="form-control" name="telephone" id="field_telephone" data-cy="telephone" formControlName="telephone" />
+          @if (telephoneRef.invalid && (telephoneRef.dirty || telephoneRef.touched)) {
+            <div>
+              @if (editForm.get('telephone')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let cniRef = editForm.get('cni')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_cni" jhiTranslate="mobigoApp.people.cni">Cni</label>
+          <input type="text" class="form-control" name="cni" id="field_cni" data-cy="cni" formControlName="cni" />
+          @if (cniRef.invalid && (cniRef.dirty || cniRef.touched)) {
+            <div>
+              @if (editForm.get('cni')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_photo" jhiTranslate="mobigoApp.people.photo">Photo</label>
+          <input type="text" class="form-control" name="photo" id="field_photo" data-cy="photo" formControlName="photo" />
+        </div>
+
+        @let actifRef = editForm.get('actif')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_actif" jhiTranslate="mobigoApp.people.actif">Actif</label>
+          <input type="text" class="form-control" name="actif" id="field_actif" data-cy="actif" formControlName="actif" />
+          @if (actifRef.invalid && (actifRef.dirty || actifRef.touched)) {
+            <div>
+              @if (editForm.get('actif')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let dateNaissanceRef = editForm.get('dateNaissance')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_dateNaissance" jhiTranslate="mobigoApp.people.dateNaissance">Date Naissance</label>
+          <div class="input-group">
+            <input
+              id="field_dateNaissance"
+              data-cy="dateNaissance"
+              type="text"
+              class="form-control"
+              name="dateNaissance"
+              ngbDatepicker
+              #dateNaissanceDp="ngbDatepicker"
+              formControlName="dateNaissance"
+            />
+            <button type="button" class="btn btn-secondary" (click)="dateNaissanceDp.toggle()">
+              <fa-icon icon="calendar-alt"></fa-icon>
+            </button>
+          </div>
+          @if (dateNaissanceRef.invalid && (dateNaissanceRef.dirty || dateNaissanceRef.touched)) {
+            <div>
+              @if (editForm.get('dateNaissance')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_musique" jhiTranslate="mobigoApp.people.musique">Musique</label>
+          <input type="text" class="form-control" name="musique" id="field_musique" data-cy="musique" formControlName="musique" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_discussion" jhiTranslate="mobigoApp.people.discussion">Discussion</label>
+          <input
+            type="text"
+            class="form-control"
+            name="discussion"
+            id="field_discussion"
+            data-cy="discussion"
+            formControlName="discussion"
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_cigarette" jhiTranslate="mobigoApp.people.cigarette">Cigarette</label>
+          <input type="text" class="form-control" name="cigarette" id="field_cigarette" data-cy="cigarette" formControlName="cigarette" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_alcool" jhiTranslate="mobigoApp.people.alcool">Alcool</label>
+          <input type="text" class="form-control" name="alcool" id="field_alcool" data-cy="alcool" formControlName="alcool" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_animaux" jhiTranslate="mobigoApp.people.animaux">Animaux</label>
+          <input type="text" class="form-control" name="animaux" id="field_animaux" data-cy="animaux" formControlName="animaux" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_messagesExpediteur" jhiTranslate="mobigoApp.people.messagesExpediteur"
+            >Messages Expediteur</label
+          >
+          <select
+            class="form-control"
+            id="field_messagesExpediteur"
+            data-cy="messagesExpediteur"
+            name="messagesExpediteur"
+            formControlName="messagesExpediteur"
+            [compareWith]="compareMessage"
+          >
+            <option [ngValue]="null"></option>
+            @for (messageOption of messagesSharedCollection; track $index) {
+              <option [ngValue]="messageOption">{{ messageOption.id }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_messagesDestinatire" jhiTranslate="mobigoApp.people.messagesDestinatire"
+            >Messages Destinatire</label
+          >
+          <select
+            class="form-control"
+            id="field_messagesDestinatire"
+            data-cy="messagesDestinatire"
+            name="messagesDestinatire"
+            formControlName="messagesDestinatire"
+            [compareWith]="compareMessage"
+          >
+            <option [ngValue]="null"></option>
+            @for (messageOption of messagesSharedCollection; track $index) {
+              <option [ngValue]="messageOption">{{ messageOption.id }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <button type="button" id="cancel-save" data-cy="entityCreateCancelButton" class="btn btn-secondary" (click)="previousState()">
+          <fa-icon icon="ban"></fa-icon>&nbsp;<span jhiTranslate="entity.action.cancel">Annuler</span>
+        </button>
+
+        <button
+          type="submit"
+          id="save-entity"
+          data-cy="entityCreateSaveButton"
+          [disabled]="editForm.invalid || isSaving"
+          class="btn btn-primary"
+        >
+          <fa-icon icon="save"></fa-icon>&nbsp;<span jhiTranslate="entity.action.save">Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+{
+  "mobigoApp": {
+    "booking": {
+      "home": {
+        "title": "Bookings",
+        "refreshListLabel": "Actualiser la liste",
+        "createLabel": "Créer un nouveau Booking",
+        "createOrEditLabel": "Créer ou éditer un Booking",
+        "search": "Recherche pour Booking",
+        "notFound": "Aucun Booking trouvé"
+      },
+      "created": "Un nouveau Booking a été créé avec l'identifiant {{ param }}",
+      "updated": "Le Booking avec l'identifiant {{ param }} a été mis à jour",
+      "deleted": "Le Booking avec l'identifiant {{ param }} a été supprimé",
+      "delete": {
+        "question": "Êtes-vous certain de vouloir supprimer le Booking {{ id }} ?"
+      },
+      "detail": {
+        "title": "Booking"
+      },
+      "id": "ID",
+      "nbPlacesReservees": "Nb Places Reservees",
+      "montantTotal": "Montant Total",
+      "dateReservation": "Date Reservation",
+      "statut": "Statut",
+      "payement": "Payement",
+      "trajet": "Trajet",
+      "passager": "Passager"
+    }
+  }
+}

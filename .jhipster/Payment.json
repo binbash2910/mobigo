@@ -1,0 +1,40 @@
+{
+  "annotations": {
+    "changelogDate": "20250519094532"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "montant",
+      "fieldType": "Float",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "datePaiement",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "methode",
+      "fieldType": "PaymentMethodEnum",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "CARTE,BANCAURE,VIREMENT,PAYPAL,ORANGE,MONEY,MTN,MOBILE"
+    },
+    {
+      "fieldName": "statut",
+      "fieldType": "PaymentStatusEnum",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "REUSSI,ECHOUE,EN,ATTENTE"
+    }
+  ],
+  "name": "Payment",
+  "relationships": [
+    {
+      "otherEntityName": "booking",
+      "otherEntityRelationshipName": "payement",
+      "relationshipName": "booking",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-one"
+    }
+  ]
+}

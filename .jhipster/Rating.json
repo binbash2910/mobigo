@@ -1,0 +1,45 @@
+{
+  "annotations": {
+    "changelogDate": "20250519094533"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "note",
+      "fieldType": "Float"
+    },
+    {
+      "fieldName": "commentaire",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "ratingDate",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    }
+  ],
+  "name": "Rating",
+  "relationships": [
+    {
+      "otherEntityName": "ride",
+      "otherEntityRelationshipName": "notations",
+      "relationshipName": "trajet",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "people",
+      "otherEntityRelationshipName": "notationsPassager",
+      "relationshipName": "passager",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "people",
+      "otherEntityRelationshipName": "notationsConducteur",
+      "relationshipName": "conducteur",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "mobigoApp": {
+    "rating": {
+      "home": {
+        "title": "Ratings",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Rating",
+        "createOrEditLabel": "Create or edit a Rating",
+        "search": "Search for Rating",
+        "notFound": "No Ratings found"
+      },
+      "created": "A new Rating is created with identifier {{ param }}",
+      "updated": "A Rating is updated with identifier {{ param }}",
+      "deleted": "A Rating is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Rating {{ id }}?"
+      },
+      "detail": {
+        "title": "Rating"
+      },
+      "id": "ID",
+      "note": "Note",
+      "commentaire": "Commentaire",
+      "ratingDate": "Rating Date",
+      "trajet": "Trajet",
+      "passager": "Passager",
+      "conducteur": "Conducteur"
+    }
+  }
+}

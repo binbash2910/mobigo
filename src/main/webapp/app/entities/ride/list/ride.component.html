@@ -1,0 +1,212 @@
+<div>
+  <h2 id="page-heading" data-cy="RideHeading">
+    <span jhiTranslate="mobigoApp.ride.home.title">Rides</span>
+
+    <div class="d-flex justify-content-end">
+      <button class="btn btn-info me-2" (click)="load()" [disabled]="isLoading">
+        <fa-icon icon="sync" [animation]="isLoading ? 'spin' : undefined"></fa-icon>
+        <span jhiTranslate="mobigoApp.ride.home.refreshListLabel">Actualiser la liste</span>
+      </button>
+
+      <button
+        id="jh-create-entity"
+        data-cy="entityCreateButton"
+        class="btn btn-primary jh-create-entity create-ride"
+        [routerLink]="['/ride/new']"
+      >
+        <fa-icon icon="plus"></fa-icon>
+        <span class="hidden-sm-down" jhiTranslate="mobigoApp.ride.home.createLabel">Créer un nouveau Ride</span>
+      </button>
+    </div>
+  </h2>
+
+  <jhi-alert-error />
+
+  <jhi-alert />
+
+  <form name="searchForm" class="row row-cols-sm-auto align-items-center">
+    <div class="col-sm-12">
+      <div class="input-group w-100 mt-3">
+        <label class="visually-hidden" for="currentSearch" jhiTranslate="mobigoApp.ride.home.search">Recherche pour Ride</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="currentSearch"
+          id="currentSearch"
+          name="currentSearch"
+          placeholder="{{ 'mobigoApp.ride.home.search' | translate }}"
+        />
+
+        <button class="btn btn-info" (click)="search(currentSearch)">
+          <fa-icon icon="search"></fa-icon>
+        </button>
+
+        @if (currentSearch) {
+          <button class="btn btn-danger" (click)="search('')">
+            <fa-icon icon="trash-alt"></fa-icon>
+          </button>
+        }
+      </div>
+    </div>
+  </form>
+
+  @if (rides().length === 0) {
+    <div class="alert alert-warning" id="no-result">
+      <span jhiTranslate="mobigoApp.ride.home.notFound">Aucun Ride trouvé</span>
+    </div>
+  } @else {
+    <div class="table-responsive table-entities" id="entities">
+      <table class="table table-striped" aria-describedby="page-heading">
+        <thead>
+          <tr jhiSort [(sortState)]="sortState" (sortChange)="navigateToWithComponentValues($event)">
+            <th scope="col" jhiSortBy="id">
+              <div class="d-flex">
+                <span jhiTranslate="global.field.id">ID</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="villeDepart">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.villeDepart">Ville Depart</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="villeArrivee">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.villeArrivee">Ville Arrivee</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="dateDepart">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.dateDepart">Date Depart</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="dateArrivee">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.dateArrivee">Date Arrivee</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="heureDepart">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.heureDepart">Heure Depart</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="heureArrivee">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.heureArrivee">Heure Arrivee</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="minuteDepart">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.minuteDepart">Minute Depart</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="minuteArrivee">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.minuteArrivee">Minute Arrivee</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="prixParPlace">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.prixParPlace">Prix Par Place</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="nbrePlaceDisponible">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.nbrePlaceDisponible">Nbre Place Disponible</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="statut">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.statut">Statut</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="vehicule.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.ride.vehicule">Vehicule</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (ride of rides(); track trackId(ride)) {
+            <tr data-cy="entityTable">
+              <td>
+                <a [routerLink]="['/ride', ride.id, 'view']">{{ ride.id }}</a>
+              </td>
+              <td>{{ ride.villeDepart }}</td>
+              <td>{{ ride.villeArrivee }}</td>
+              <td>{{ ride.dateDepart | formatMediumDate }}</td>
+              <td>{{ ride.dateArrivee | formatMediumDate }}</td>
+              <td>{{ ride.heureDepart }}</td>
+              <td>{{ ride.heureArrivee }}</td>
+              <td>{{ ride.minuteDepart }}</td>
+              <td>{{ ride.minuteArrivee }}</td>
+              <td>{{ ride.prixParPlace }}</td>
+              <td>{{ ride.nbrePlaceDisponible }}</td>
+              <td [jhiTranslate]="'mobigoApp.RideStatusEnum.' + (ride.statut ?? 'null')">
+                {{ { null: '', OUVERT: 'OUVERT', COMPLET: 'COMPLET', ANNULE: 'ANNULE' }[ride.statut ?? 'null'] }}
+              </td>
+              <td>
+                @if (ride.vehicule) {
+                  <div>
+                    <a [routerLink]="['/vehicle', ride.vehicule.id, 'view']">{{ ride.vehicule.id }}</a>
+                  </div>
+                }
+              </td>
+              <td class="text-end">
+                <div class="btn-group">
+                  <a [routerLink]="['/ride', ride.id, 'view']" class="btn btn-info btn-sm" data-cy="entityDetailsButton">
+                    <fa-icon icon="eye"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.view">Voir</span>
+                  </a>
+
+                  <a [routerLink]="['/ride', ride.id, 'edit']" class="btn btn-primary btn-sm" data-cy="entityEditButton">
+                    <fa-icon icon="pencil-alt"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.edit">Editer</span>
+                  </a>
+
+                  <button type="submit" (click)="delete(ride)" class="btn btn-danger btn-sm" data-cy="entityDeleteButton">
+                    <fa-icon icon="times"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.delete">Supprimer</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

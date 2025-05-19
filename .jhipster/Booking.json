@@ -1,0 +1,53 @@
+{
+  "annotations": {
+    "changelogDate": "20250519094531"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "nbPlacesReservees",
+      "fieldType": "Long",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "montantTotal",
+      "fieldType": "Float",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "dateReservation",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "statut",
+      "fieldType": "BookingStatusEnum",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "CONFIRME,ANNULE,EN_ATTENTE"
+    }
+  ],
+  "name": "Booking",
+  "relationships": [
+    {
+      "otherEntityName": "payment",
+      "otherEntityRelationshipName": "booking",
+      "relationshipName": "payement",
+      "relationshipSide": "right",
+      "relationshipType": "one-to-one"
+    },
+    {
+      "otherEntityName": "ride",
+      "otherEntityRelationshipName": "bookingsTrajet",
+      "relationshipName": "trajet",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "people",
+      "otherEntityRelationshipName": "bookingsPassager",
+      "relationshipName": "passager",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    }
+  ]
+}

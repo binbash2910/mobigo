@@ -1,0 +1,106 @@
+{
+  "annotations": {
+    "changelogDate": "20250519094527"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "nom",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "prenom",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "telephone",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "cni",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "photo",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "actif",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "dateNaissance",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "musique",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "discussion",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "cigarette",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "alcool",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "animaux",
+      "fieldType": "String"
+    }
+  ],
+  "name": "People",
+  "relationships": [
+    {
+      "otherEntityName": "vehicle",
+      "otherEntityRelationshipName": "proprietaire",
+      "relationshipName": "vehicules",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "booking",
+      "otherEntityRelationshipName": "passager",
+      "relationshipName": "bookingsPassager",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "rating",
+      "otherEntityRelationshipName": "passager",
+      "relationshipName": "notationsPassager",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "rating",
+      "otherEntityRelationshipName": "conducteur",
+      "relationshipName": "notationsConducteur",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-many"
+    },
+    {
+      "otherEntityName": "message",
+      "otherEntityRelationshipName": "expediteur",
+      "relationshipName": "messagesExpediteur",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityName": "message",
+      "otherEntityRelationshipName": "destinataire",
+      "relationshipName": "messagesDestinatire",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "mobigoApp": {
+    "ride": {
+      "home": {
+        "title": "Rides",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Ride",
+        "createOrEditLabel": "Create or edit a Ride",
+        "search": "Search for Ride",
+        "notFound": "No Rides found"
+      },
+      "created": "A new Ride is created with identifier {{ param }}",
+      "updated": "A Ride is updated with identifier {{ param }}",
+      "deleted": "A Ride is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Ride {{ id }}?"
+      },
+      "detail": {
+        "title": "Ride"
+      },
+      "id": "ID",
+      "villeDepart": "Ville Depart",
+      "villeArrivee": "Ville Arrivee",
+      "dateDepart": "Date Depart",
+      "dateArrivee": "Date Arrivee",
+      "heureDepart": "Heure Depart",
+      "heureArrivee": "Heure Arrivee",
+      "minuteDepart": "Minute Depart",
+      "minuteArrivee": "Minute Arrivee",
+      "prixParPlace": "Prix Par Place",
+      "nbrePlaceDisponible": "Nbre Place Disponible",
+      "statut": "Statut",
+      "steps": "Steps",
+      "bookingsTrajet": "Bookings Trajet",
+      "notations": "Notations",
+      "vehicule": "Vehicule"
+    }
+  }
+}

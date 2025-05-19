@@ -1,0 +1,28 @@
+{
+  "annotations": {
+    "changelogDate": "20250519094530"
+  },
+  "applications": "*",
+  "fields": [
+    {
+      "fieldName": "ville",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "heureDepart",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    }
+  ],
+  "name": "Step",
+  "relationships": [
+    {
+      "otherEntityName": "ride",
+      "otherEntityRelationshipName": "steps",
+      "relationshipName": "trajet",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-one"
+    }
+  ]
+}

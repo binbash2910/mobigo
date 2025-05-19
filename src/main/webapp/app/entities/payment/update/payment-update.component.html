@@ -1,0 +1,135 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    <form name="editForm" novalidate (ngSubmit)="save()" [formGroup]="editForm">
+      <h2 id="jhi-payment-heading" data-cy="PaymentCreateUpdateHeading" jhiTranslate="mobigoApp.payment.home.createOrEditLabel">
+        Créer ou éditer un Payment
+      </h2>
+
+      <div>
+        <jhi-alert-error />
+
+        @if (editForm.controls.id.value !== null) {
+          <div class="mb-3">
+            <label class="form-label" for="field_id" jhiTranslate="mobigoApp.payment.id">ID</label>
+            <input type="number" class="form-control" name="id" id="field_id" data-cy="id" formControlName="id" [readonly]="true" />
+          </div>
+        }
+
+        @let montantRef = editForm.get('montant')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_montant" jhiTranslate="mobigoApp.payment.montant">Montant</label>
+          <input type="number" class="form-control" name="montant" id="field_montant" data-cy="montant" formControlName="montant" />
+          @if (montantRef.invalid && (montantRef.dirty || montantRef.touched)) {
+            <div>
+              @if (editForm.get('montant')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+              <small
+                class="form-text text-danger"
+                [hidden]="!editForm.get('montant')?.errors?.number"
+                jhiTranslate="entity.validation.number"
+                >Ce champ doit être un nombre.</small
+              >
+            </div>
+          }
+        </div>
+
+        @let datePaiementRef = editForm.get('datePaiement')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_datePaiement" jhiTranslate="mobigoApp.payment.datePaiement">Date Paiement</label>
+          <div class="input-group">
+            <input
+              id="field_datePaiement"
+              data-cy="datePaiement"
+              type="text"
+              class="form-control"
+              name="datePaiement"
+              ngbDatepicker
+              #datePaiementDp="ngbDatepicker"
+              formControlName="datePaiement"
+            />
+            <button type="button" class="btn btn-secondary" (click)="datePaiementDp.toggle()">
+              <fa-icon icon="calendar-alt"></fa-icon>
+            </button>
+          </div>
+          @if (datePaiementRef.invalid && (datePaiementRef.dirty || datePaiementRef.touched)) {
+            <div>
+              @if (editForm.get('datePaiement')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let methodeRef = editForm.get('methode')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_methode" jhiTranslate="mobigoApp.payment.methode">Methode</label>
+          <select class="form-control" name="methode" formControlName="methode" id="field_methode" data-cy="methode">
+            <option [ngValue]="null">{{ 'mobigoApp.PaymentMethodEnum.null' | translate }}</option>
+            @for (paymentMethodEnum of paymentMethodEnumValues; track $index) {
+              <option [value]="paymentMethodEnum">{{ 'mobigoApp.PaymentMethodEnum.' + paymentMethodEnum | translate }}</option>
+            }
+          </select>
+          @if (methodeRef.invalid && (methodeRef.dirty || methodeRef.touched)) {
+            <div>
+              @if (editForm.get('methode')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        @let statutRef = editForm.get('statut')!;
+        <div class="mb-3">
+          <label class="form-label" for="field_statut" jhiTranslate="mobigoApp.payment.statut">Statut</label>
+          <select class="form-control" name="statut" formControlName="statut" id="field_statut" data-cy="statut">
+            <option [ngValue]="null">{{ 'mobigoApp.PaymentStatusEnum.null' | translate }}</option>
+            @for (paymentStatusEnum of paymentStatusEnumValues; track $index) {
+              <option [value]="paymentStatusEnum">{{ 'mobigoApp.PaymentStatusEnum.' + paymentStatusEnum | translate }}</option>
+            }
+          </select>
+          @if (statutRef.invalid && (statutRef.dirty || statutRef.touched)) {
+            <div>
+              @if (editForm.get('statut')?.errors?.required) {
+                <small class="form-text text-danger" jhiTranslate="entity.validation.required">Ce champ est obligatoire.</small>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_booking" jhiTranslate="mobigoApp.payment.booking">Booking</label>
+          <select
+            class="form-control"
+            id="field_booking"
+            data-cy="booking"
+            name="booking"
+            formControlName="booking"
+            [compareWith]="compareBooking"
+          >
+            <option [ngValue]="null"></option>
+            @for (bookingOption of bookingsCollection; track $index) {
+              <option [ngValue]="bookingOption">{{ bookingOption.id }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <button type="button" id="cancel-save" data-cy="entityCreateCancelButton" class="btn btn-secondary" (click)="previousState()">
+          <fa-icon icon="ban"></fa-icon>&nbsp;<span jhiTranslate="entity.action.cancel">Annuler</span>
+        </button>
+
+        <button
+          type="submit"
+          id="save-entity"
+          data-cy="entityCreateSaveButton"
+          [disabled]="editForm.invalid || isSaving"
+          class="btn btn-primary"
+        >
+          <fa-icon icon="save"></fa-icon>&nbsp;<span jhiTranslate="entity.action.save">Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

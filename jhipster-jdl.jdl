@@ -1,0 +1,138 @@
+
+entity People {
+    nom String required
+    prenom String
+    telephone String required
+    cni String required
+    photo String
+    actif String required
+    dateNaissance LocalDate required
+    musique String
+    discussion String
+    cigarette String
+    alcool String
+    animaux String
+}
+
+entity Vehicle {
+    marque String required
+    modele String required
+    annee String required
+    carteGrise String required
+    immatriculation String required
+    nbPlaces Integer required
+    couleur String required
+    photo String
+    actif String required
+}
+
+// an ignored comment
+/** not an ignored comment */
+entity Ride {
+    villeDepart String required
+	villeArrivee String required
+	dateDepart LocalDate required
+    dateArrivee LocalDate required
+    heureDepart String required
+    heureArrivee String required
+    minuteDepart String required
+    minuteArrivee String required
+	prixParPlace Float required
+    nbrePlaceDisponible Integer required
+    statut RideStatusEnum required
+}
+
+entity Step {
+    ville String required
+    heureDepart String required
+}
+
+entity Booking {
+    nbPlacesReservees Long required
+	montantTotal Float required
+	dateReservation LocalDate required
+    statut BookingStatusEnum required
+}
+
+entity Payment {
+    montant Float required
+	datePaiement LocalDate required
+    methode PaymentMethodEnum required
+    statut PaymentStatusEnum required
+}
+
+entity Rating {
+	note Float
+	commentaire String
+	ratingDate LocalDate required
+}
+
+entity Message {
+	contenu String
+	dateEnvoi LocalDate required
+    statut MessageStatusEnum
+}
+
+enum RideStatusEnum {
+    OUVERT, COMPLET, ANNULE
+}
+
+enum BookingStatusEnum {
+    CONFIRME, ANNULE, EN_ATTENTE
+}
+
+enum PaymentMethodEnum {
+    CARTE BANCAURE, VIREMENT, PAYPAL, ORANGE MONEY, MTN MOBILE MONEY
+}
+
+enum PaymentStatusEnum {
+    REUSSI, ECHOUE, EN ATTENTE
+}
+
+enum MessageStatusEnum {
+    ENVOYE, ECHEC, LU, REPONDU
+}
+
+relationship OneToMany {
+	People{vehicules} to Vehicle{proprietaire}
+}
+
+relationship OneToMany {
+	Vehicle{trajets} to Ride{vehicule}
+}
+
+relationship OneToMany {
+    Ride{steps} to Step{trajet}
+}
+
+relationship OneToMany {
+    Ride{bookingsTrajet} to Booking{trajet}
+}
+
+relationship OneToMany {
+    People{bookingsPassager} to Booking{passager}
+}
+
+relationship OneToMany {
+    Ride{notations} to Rating{trajet}
+}
+
+relationship OneToMany {
+    People{notationsPassager} to Rating{passager}
+}
+
+relationship OneToMany {
+    People{notationsConducteur} to Rating{conducteur}
+}
+
+relationship ManyToOne {
+    People{messagesExpediteur} to Message{expediteur}
+}
+
+relationship ManyToOne {
+    People{messagesDestinatire} to Message{destinataire}
+}
+
+relationship OneToOne {
+	Payment{booking} to Booking{payement}
+}
