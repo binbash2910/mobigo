@@ -1,0 +1,4 @@
+org.springframework.test.context.ContextCustomizerFactory = \
+    com.binbash.mobigo.config.\
+    SqlTestContainersSpringContextCustomizerFactory,com.binbash.mobigo.config.\
+    TestContainersSpringContextCustomizerFactory
