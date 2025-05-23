@@ -49,6 +49,30 @@ describe('Authority Service', () => {
       expect(expectedResult).toMatchObject(expected);
     });
 
+    it('should update a Authority', () => {
+      const authority = { ...sampleWithRequiredData };
+      const returnedFromService = { ...requireRestSample };
+      const expected = { ...sampleWithRequiredData };
+
+      service.update(authority).subscribe(resp => (expectedResult = resp.body));
+
+      const req = httpMock.expectOne({ method: 'PUT' });
+      req.flush(returnedFromService);
+      expect(expectedResult).toMatchObject(expected);
+    });
+
+    it('should partial update a Authority', () => {
+      const patchObject = { ...sampleWithPartialData };
+      const returnedFromService = { ...requireRestSample };
+      const expected = { ...sampleWithRequiredData };
+
+      service.partialUpdate(patchObject).subscribe(resp => (expectedResult = resp.body));
+
+      const req = httpMock.expectOne({ method: 'PATCH' });
+      req.flush(returnedFromService);
+      expect(expectedResult).toMatchObject(expected);
+    });
+
     it('should return a list of Authority', () => {
       const returnedFromService = { ...requireRestSample };
 

@@ -89,6 +89,18 @@
                 }
               </div>
             </th>
+            <th scope="col" jhiSortBy="expediteur.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.message.expediteur">Expediteur</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="destinataire.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.message.destinataire">Destinataire</span>
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
             <th scope="col"></th>
           </tr>
         </thead>
@@ -102,6 +114,20 @@
               <td>{{ message.dateEnvoi | formatMediumDate }}</td>
               <td [jhiTranslate]="'mobigoApp.MessageStatusEnum.' + (message.statut ?? 'null')">
                 {{ { null: '', ENVOYE: 'ENVOYE', ECHEC: 'ECHEC', LU: 'LU', REPONDU: 'REPONDU' }[message.statut ?? 'null'] }}
+              </td>
+              <td>
+                @if (message.expediteur) {
+                  <div>
+                    <a [routerLink]="['/people', message.expediteur.id, 'view']">{{ message.expediteur.id }}</a>
+                  </div>
+                }
+              </td>
+              <td>
+                @if (message.destinataire) {
+                  <div>
+                    <a [routerLink]="['/people', message.destinataire.id, 'view']">{{ message.destinataire.id }}</a>
+                  </div>
+                }
               </td>
               <td class="text-end">
                 <div class="btn-group">

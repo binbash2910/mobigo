@@ -15,10 +15,22 @@
           <dd>
             <span>{{ authorityRef.name }}</span>
           </dd>
+          <dt><span jhiTranslate="mobigoApp.adminAuthority.description">Description</span></dt>
+          <dd>
+            <span>{{ authorityRef.description }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.adminAuthority.ordre">Ordre</span></dt>
+          <dd>
+            <span>{{ authorityRef.ordre }}</span>
+          </dd>
         </dl>
 
         <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
           <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/authority', authorityRef.name, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
         </button>
       </div>
     }

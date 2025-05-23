@@ -398,7 +398,7 @@ class PaymentResourceIT {
         Payment partialUpdatedPayment = new Payment();
         partialUpdatedPayment.setId(payment.getId());
 
-        partialUpdatedPayment.datePaiement(UPDATED_DATE_PAIEMENT).statut(UPDATED_STATUT);
+        partialUpdatedPayment.montant(UPDATED_MONTANT).statut(UPDATED_STATUT);
 
         restPaymentMockMvc
             .perform(

@@ -40,6 +40,20 @@
                 <fa-icon class="p-1" icon="sort"></fa-icon>
               </div>
             </th>
+            <th scope="col" jhiSortBy="description">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.adminAuthority.description">Description</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="ordre">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.adminAuthority.ordre">Ordre</span>
+
+                <fa-icon class="p-1" icon="sort"></fa-icon>
+              </div>
+            </th>
             <th scope="col"></th>
           </tr>
         </thead>
@@ -49,11 +63,18 @@
               <td>
                 <a [routerLink]="['/authority', authority.name, 'view']">{{ authority.name }}</a>
               </td>
+              <td>{{ authority.description }}</td>
+              <td>{{ authority.ordre }}</td>
               <td class="text-end">
                 <div class="btn-group">
                   <a [routerLink]="['/authority', authority.name, 'view']" class="btn btn-info btn-sm" data-cy="entityDetailsButton">
                     <fa-icon icon="eye"></fa-icon>
                     <span class="d-none d-md-inline" jhiTranslate="entity.action.view">Voir</span>
+                  </a>
+
+                  <a [routerLink]="['/authority', authority.name, 'edit']" class="btn btn-primary btn-sm" data-cy="entityEditButton">
+                    <fa-icon icon="pencil-alt"></fa-icon>
+                    <span class="d-none d-md-inline" jhiTranslate="entity.action.edit">Editer</span>
                   </a>
 
                   <button type="submit" (click)="delete(authority)" class="btn btn-danger btn-sm" data-cy="entityDeleteButton">

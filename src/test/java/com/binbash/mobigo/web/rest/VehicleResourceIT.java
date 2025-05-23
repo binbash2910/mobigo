@@ -526,14 +526,7 @@ class VehicleResourceIT {
         Vehicle partialUpdatedVehicle = new Vehicle();
         partialUpdatedVehicle.setId(vehicle.getId());
 
-        partialUpdatedVehicle
-            .modele(UPDATED_MODELE)
-            .annee(UPDATED_ANNEE)
-            .immatriculation(UPDATED_IMMATRICULATION)
-            .nbPlaces(UPDATED_NB_PLACES)
-            .couleur(UPDATED_COULEUR)
-            .photo(UPDATED_PHOTO)
-            .actif(UPDATED_ACTIF);
+        partialUpdatedVehicle.marque(UPDATED_MARQUE).annee(UPDATED_ANNEE).nbPlaces(UPDATED_NB_PLACES).photo(UPDATED_PHOTO);
 
         restVehicleMockMvc
             .perform(

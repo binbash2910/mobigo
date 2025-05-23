@@ -344,7 +344,7 @@ class StepResourceIT {
         Step partialUpdatedStep = new Step();
         partialUpdatedStep.setId(step.getId());
 
-        partialUpdatedStep.ville(UPDATED_VILLE);
+        partialUpdatedStep.heureDepart(UPDATED_HEURE_DEPART);
 
         restStepMockMvc
             .perform(

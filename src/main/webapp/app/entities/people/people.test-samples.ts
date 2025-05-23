@@ -12,12 +12,13 @@ export const sampleWithRequiredData: IPeople = {
 };
 
 export const sampleWithPartialData: IPeople = {
-  id: 27891,
-  nom: 'contenter',
-  telephone: '+33 626644485',
-  cni: 'de crainte que efficace',
-  actif: 'secouer ha ha',
+  id: 19852,
+  nom: 'sans magnifique',
+  telephone: '0758822711',
+  cni: 'diététiste aïe',
+  actif: "considérable d'après suffisamment",
   dateNaissance: dayjs('2025-05-19'),
+  passager: 'tant que ouille',
 };
 
 export const sampleWithFullData: IPeople = {
@@ -34,6 +35,8 @@ export const sampleWithFullData: IPeople = {
   cigarette: 'a',
   alcool: 'clientèle blablabla tellement',
   animaux: 'meuh ouch coac coac',
+  conducteur: 'selon brave établir',
+  passager: 'lectorat de peur que hé',
 };
 
 export const sampleWithNewData: NewPeople = {

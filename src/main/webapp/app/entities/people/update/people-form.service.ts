@@ -30,8 +30,9 @@ type PeopleFormGroupContent = {
   cigarette: FormControl<IPeople['cigarette']>;
   alcool: FormControl<IPeople['alcool']>;
   animaux: FormControl<IPeople['animaux']>;
-  messagesExpediteur: FormControl<IPeople['messagesExpediteur']>;
-  messagesDestinatire: FormControl<IPeople['messagesDestinatire']>;
+  conducteur: FormControl<IPeople['conducteur']>;
+  passager: FormControl<IPeople['passager']>;
+  user: FormControl<IPeople['user']>;
 };
 
 export type PeopleFormGroup = FormGroup<PeopleFormGroupContent>;
@@ -73,8 +74,9 @@ export class PeopleFormService {
       cigarette: new FormControl(peopleRawValue.cigarette),
       alcool: new FormControl(peopleRawValue.alcool),
       animaux: new FormControl(peopleRawValue.animaux),
-      messagesExpediteur: new FormControl(peopleRawValue.messagesExpediteur),
-      messagesDestinatire: new FormControl(peopleRawValue.messagesDestinatire),
+      conducteur: new FormControl(peopleRawValue.conducteur),
+      passager: new FormControl(peopleRawValue.passager),
+      user: new FormControl(peopleRawValue.user),
     });
   }
 

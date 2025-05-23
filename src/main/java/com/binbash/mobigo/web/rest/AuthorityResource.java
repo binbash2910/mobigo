@@ -2,18 +2,20 @@ package com.binbash.mobigo.web.rest;
 
 import com.binbash.mobigo.domain.Authority;
 import com.binbash.mobigo.repository.AuthorityRepository;
+import com.binbash.mobigo.service.AuthorityService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
@@ -23,7 +25,6 @@ import tech.jhipster.web.util.ResponseUtil;
  */
 @RestController
 @RequestMapping("/api/authorities")
-@Transactional
 public class AuthorityResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthorityResource.class);
@@ -33,9 +34,12 @@ public class AuthorityResource {
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
 
+    private final AuthorityService authorityService;
+
     private final AuthorityRepository authorityRepository;
 
-    public AuthorityResource(AuthorityRepository authorityRepository) {
+    public AuthorityResource(AuthorityService authorityService, AuthorityRepository authorityRepository) {
+        this.authorityService = authorityService;
         this.authorityRepository = authorityRepository;
     }
 
@@ -53,10 +57,81 @@ public class AuthorityResource {
         if (authorityRepository.existsById(authority.getName())) {
             throw new BadRequestAlertException("authority already exists", ENTITY_NAME, "idexists");
         }
-        authority = authorityRepository.save(authority);
+        authority = authorityService.save(authority);
         return ResponseEntity.created(new URI("/api/authorities/" + authority.getName()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, authority.getName()))
             .body(authority);
+    }
+
+    /**
+     * {@code PUT  /authorities/:name} : Updates an existing authority.
+     *
+     * @param name the id of the authority to save.
+     * @param authority the authority to update.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated authority,
+     * or with status {@code 400 (Bad Request)} if the authority is not valid,
+     * or with status {@code 500 (Internal Server Error)} if the authority couldn't be updated.
+     * @throws URISyntaxException if the Location URI syntax is incorrect.
+     */
+    @PutMapping("/{name}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Authority> updateAuthority(
+        @PathVariable(value = "name", required = false) final String name,
+        @Valid @RequestBody Authority authority
+    ) throws URISyntaxException {
+        LOG.debug("REST request to update Authority : {}, {}", name, authority);
+        if (authority.getName() == null) {
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+        }
+        if (!Objects.equals(name, authority.getName())) {
+            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
+        }
+
+        if (!authorityRepository.existsById(name)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+
+        authority = authorityService.update(authority);
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, authority.getName()))
+            .body(authority);
+    }
+
+    /**
+     * {@code PATCH  /authorities/:name} : Partial updates given fields of an existing authority, field will ignore if it is null
+     *
+     * @param name the id of the authority to save.
+     * @param authority the authority to update.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated authority,
+     * or with status {@code 400 (Bad Request)} if the authority is not valid,
+     * or with status {@code 404 (Not Found)} if the authority is not found,
+     * or with status {@code 500 (Internal Server Error)} if the authority couldn't be updated.
+     * @throws URISyntaxException if the Location URI syntax is incorrect.
+     */
+    @PatchMapping(value = "/{name}", consumes = { "application/json", "application/merge-patch+json" })
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Authority> partialUpdateAuthority(
+        @PathVariable(value = "name", required = false) final String name,
+        @NotNull @RequestBody Authority authority
+    ) throws URISyntaxException {
+        LOG.debug("REST request to partial update Authority partially : {}, {}", name, authority);
+        if (authority.getName() == null) {
+            throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
+        }
+        if (!Objects.equals(name, authority.getName())) {
+            throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
+        }
+
+        if (!authorityRepository.existsById(name)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+
+        Optional<Authority> result = authorityService.partialUpdate(authority);
+
+        return ResponseUtil.wrapOrNotFound(
+            result,
+            HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, authority.getName())
+        );
     }
 
     /**
@@ -68,7 +143,7 @@ public class AuthorityResource {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
     public List<Authority> getAllAuthorities() {
         LOG.debug("REST request to get all Authorities");
-        return authorityRepository.findAll();
+        return authorityService.findAll();
     }
 
     /**
@@ -81,7 +156,7 @@ public class AuthorityResource {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
     public ResponseEntity<Authority> getAuthority(@PathVariable("id") String id) {
         LOG.debug("REST request to get Authority : {}", id);
-        Optional<Authority> authority = authorityRepository.findById(id);
+        Optional<Authority> authority = authorityService.findOne(id);
         return ResponseUtil.wrapOrNotFound(authority);
     }
 
@@ -95,7 +170,7 @@ public class AuthorityResource {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteAuthority(@PathVariable("id") String id) {
         LOG.debug("REST request to delete Authority : {}", id);
-        authorityRepository.deleteById(id);
+        authorityService.delete(id);
         return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id)).build();
     }
 }

@@ -1,0 +1,26 @@
+{
+  "mobigoApp": {
+    "groupMember": {
+      "home": {
+        "title": "Group Members",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Group Member",
+        "createOrEditLabel": "Create or edit a Group Member",
+        "search": "Search for Group Member",
+        "notFound": "No Group Members found"
+      },
+      "created": "A new Group Member is created with identifier {{ param }}",
+      "updated": "A Group Member is updated with identifier {{ param }}",
+      "deleted": "A Group Member is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Group Member {{ id }}?"
+      },
+      "detail": {
+        "title": "Group Member"
+      },
+      "id": "ID",
+      "group": "Group",
+      "user": "User"
+    }
+  }
+}

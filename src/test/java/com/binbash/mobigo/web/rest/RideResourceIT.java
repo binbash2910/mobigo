@@ -606,13 +606,10 @@ class RideResourceIT {
         partialUpdatedRide.setId(ride.getId());
 
         partialUpdatedRide
-            .villeDepart(UPDATED_VILLE_DEPART)
-            .villeArrivee(UPDATED_VILLE_ARRIVEE)
             .dateDepart(UPDATED_DATE_DEPART)
-            .dateArrivee(UPDATED_DATE_ARRIVEE)
-            .heureDepart(UPDATED_HEURE_DEPART)
             .heureArrivee(UPDATED_HEURE_ARRIVEE)
-            .minuteArrivee(UPDATED_MINUTE_ARRIVEE);
+            .minuteArrivee(UPDATED_MINUTE_ARRIVEE)
+            .nbrePlaceDisponible(UPDATED_NBRE_PLACE_DISPONIBLE);
 
         restRideMockMvc
             .perform(

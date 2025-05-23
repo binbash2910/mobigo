@@ -18,6 +18,8 @@ type AuthorityFormDefaults = Pick<NewAuthority, 'name'>;
 
 type AuthorityFormGroupContent = {
   name: FormControl<IAuthority['name'] | NewAuthority['name']>;
+  description: FormControl<IAuthority['description']>;
+  ordre: FormControl<IAuthority['ordre']>;
 };
 
 export type AuthorityFormGroup = FormGroup<AuthorityFormGroupContent>;
@@ -37,11 +39,13 @@ export class AuthorityFormService {
           validators: [Validators.required, Validators.maxLength(50)],
         },
       ),
+      description: new FormControl(authorityRawValue.description),
+      ordre: new FormControl(authorityRawValue.ordre),
     });
   }
 
-  getAuthority(form: AuthorityFormGroup): NewAuthority {
-    return form.getRawValue() as NewAuthority;
+  getAuthority(form: AuthorityFormGroup): IAuthority | NewAuthority {
+    return form.getRawValue() as IAuthority | NewAuthority;
   }
 
   resetForm(form: AuthorityFormGroup, authority: AuthorityFormGroupInput): void {

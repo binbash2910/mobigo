@@ -59,6 +59,9 @@ public class MessageAsserts {
      * @param actual the actual entity
      */
     public static void assertMessageUpdatableRelationshipsEquals(Message expected, Message actual) {
-        // empty method
+        assertThat(actual)
+            .as("Verify Message relationships")
+            .satisfies(a -> assertThat(a.getExpediteur()).as("check expediteur").isEqualTo(expected.getExpediteur()))
+            .satisfies(a -> assertThat(a.getDestinataire()).as("check destinataire").isEqualTo(expected.getDestinataire()));
     }
 }

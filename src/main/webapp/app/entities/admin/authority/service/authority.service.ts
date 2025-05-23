@@ -7,6 +7,8 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 import { createRequestOption } from 'app/core/request/request-util';
 import { IAuthority, NewAuthority } from '../authority.model';
 
+export type PartialUpdateAuthority = Partial<IAuthority> & Pick<IAuthority, 'name'>;
+
 export type EntityResponseType = HttpResponse<IAuthority>;
 export type EntityArrayResponseType = HttpResponse<IAuthority[]>;
 
@@ -19,6 +21,14 @@ export class AuthorityService {
 
   create(authority: NewAuthority): Observable<EntityResponseType> {
     return this.http.post<IAuthority>(this.resourceUrl, authority, { observe: 'response' });
+  }
+
+  update(authority: IAuthority): Observable<EntityResponseType> {
+    return this.http.put<IAuthority>(`${this.resourceUrl}/${this.getAuthorityIdentifier(authority)}`, authority, { observe: 'response' });
+  }
+
+  partialUpdate(authority: PartialUpdateAuthority): Observable<EntityResponseType> {
+    return this.http.patch<IAuthority>(`${this.resourceUrl}/${this.getAuthorityIdentifier(authority)}`, authority, { observe: 'response' });
   }
 
   find(id: string): Observable<EntityResponseType> {

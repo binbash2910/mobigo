@@ -409,7 +409,7 @@ class BookingResourceIT {
         Booking partialUpdatedBooking = new Booking();
         partialUpdatedBooking.setId(booking.getId());
 
-        partialUpdatedBooking.montantTotal(UPDATED_MONTANT_TOTAL).dateReservation(UPDATED_DATE_RESERVATION).statut(UPDATED_STATUT);
+        partialUpdatedBooking.montantTotal(UPDATED_MONTANT_TOTAL).dateReservation(UPDATED_DATE_RESERVATION);
 
         restBookingMockMvc
             .perform(

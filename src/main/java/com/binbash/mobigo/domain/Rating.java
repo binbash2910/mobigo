@@ -41,7 +41,13 @@ public class Rating extends AbstractAuditingEntity<Long> implements Serializable
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(
         value = {
-            "vehicules", "bookingsPassagers", "notationsPassagers", "notationsConducteurs", "messagesExpediteur", "messagesDestinatire",
+            "vehicules",
+            "bookingsPassagers",
+            "notationsPassagers",
+            "notationsConducteurs",
+            "user",
+            "messagesExpediteurs",
+            "messagesDestinataires",
         },
         allowSetters = true
     )
@@ -50,7 +56,13 @@ public class Rating extends AbstractAuditingEntity<Long> implements Serializable
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(
         value = {
-            "vehicules", "bookingsPassagers", "notationsPassagers", "notationsConducteurs", "messagesExpediteur", "messagesDestinatire",
+            "vehicules",
+            "bookingsPassagers",
+            "notationsPassagers",
+            "notationsConducteurs",
+            "user",
+            "messagesExpediteurs",
+            "messagesDestinataires",
         },
         allowSetters = true
     )

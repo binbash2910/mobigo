@@ -20,6 +20,8 @@ describe('Authority Form Service', () => {
         expect(formGroup.controls).toEqual(
           expect.objectContaining({
             name: expect.any(Object),
+            description: expect.any(Object),
+            ordre: expect.any(Object),
           }),
         );
       });
@@ -30,6 +32,8 @@ describe('Authority Form Service', () => {
         expect(formGroup.controls).toEqual(
           expect.objectContaining({
             name: expect.any(Object),
+            description: expect.any(Object),
+            ordre: expect.any(Object),
           }),
         );
       });

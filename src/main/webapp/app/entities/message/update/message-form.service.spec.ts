@@ -23,6 +23,8 @@ describe('Message Form Service', () => {
             contenu: expect.any(Object),
             dateEnvoi: expect.any(Object),
             statut: expect.any(Object),
+            expediteur: expect.any(Object),
+            destinataire: expect.any(Object),
           }),
         );
       });
@@ -36,6 +38,8 @@ describe('Message Form Service', () => {
             contenu: expect.any(Object),
             dateEnvoi: expect.any(Object),
             statut: expect.any(Object),
+            expediteur: expect.any(Object),
+            destinataire: expect.any(Object),
           }),
         );
       });

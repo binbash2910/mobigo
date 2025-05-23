@@ -1,0 +1,46 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (groupAuthority(); as groupAuthorityRef) {
+      <div>
+        <h2 data-cy="groupAuthorityDetailsHeading"><span jhiTranslate="mobigoApp.groupAuthority.detail.title">Group Authority</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ groupAuthorityRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.groupAuthority.authority">Authority</span></dt>
+          <dd>
+            @if (groupAuthority()!.authority) {
+              <div>
+                <a [routerLink]="['/authority', groupAuthority()!.authority?.name, 'view']">{{ groupAuthorityRef.authority?.name }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.groupAuthority.group">Group</span></dt>
+          <dd>
+            @if (groupAuthority()!.group) {
+              <div>
+                <a [routerLink]="['/group', groupAuthority()!.group?.id, 'view']">{{ groupAuthorityRef.group?.id }}</a>
+              </div>
+            }
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/group-authority', groupAuthorityRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

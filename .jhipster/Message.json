@@ -20,20 +20,5 @@
     }
   ],
   "name": "Message",
-  "relationships": [
-    {
-      "otherEntityName": "people",
-      "otherEntityRelationshipName": "messagesExpediteur",
-      "relationshipName": "expediteur",
-      "relationshipSide": "right",
-      "relationshipType": "one-to-many"
-    },
-    {
-      "otherEntityName": "people",
-      "otherEntityRelationshipName": "messagesDestinatire",
-      "relationshipName": "destinataire",
-      "relationshipSide": "right",
-      "relationshipType": "one-to-many"
-    }
-  ]
+  "relationships": []
 }

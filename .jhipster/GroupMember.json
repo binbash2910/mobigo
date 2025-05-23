@@ -1,0 +1,32 @@
+{
+  "annotations": {
+    "changelogDate": "20250520092641"
+  },
+  "dto": "mapstruct",
+  "fields": [],
+  "jpaMetamodelFiltering": false,
+  "name": "GroupMember",
+  "pagination": "no",
+  "readOnly": false,
+  "relationships": [
+    {
+      "otherEntityField": "id",
+      "otherEntityName": "group",
+      "otherEntityRelationshipName": "groupMember",
+      "relationshipName": "group",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one",
+      "relationshipValidateRules": []
+    },
+    {
+      "otherEntityField": "login",
+      "otherEntityName": "user",
+      "otherEntityRelationshipName": "groupMember",
+      "relationshipName": "user",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one",
+      "relationshipValidateRules": []
+    }
+  ],
+  "service": "serviceClass"
+}

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
-import java.util.Objects;
 import org.springframework.data.domain.Persistable;
 
 /**
@@ -14,7 +13,7 @@ import org.springframework.data.domain.Persistable;
 @Table(name = "jhi_authority")
 @JsonIgnoreProperties(value = { "new", "id" })
 @SuppressWarnings("common-java:DuplicatedBlocks")
-public class Authority implements Serializable, Persistable<String> {
+public class Authority extends AbstractAuditingEntity<String> implements Serializable, Persistable<String> {
 
     private static final long serialVersionUID = 1L;
 
@@ -23,6 +22,12 @@ public class Authority implements Serializable, Persistable<String> {
     @Id
     @Column(name = "name", length = 50, nullable = false)
     private String name;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "ordre")
+    private String ordre;
 
     @org.springframework.data.annotation.Transient
     @Transient
@@ -41,6 +46,32 @@ public class Authority implements Serializable, Persistable<String> {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return this.description;
+    }
+
+    public Authority description(String description) {
+        this.setDescription(description);
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getOrdre() {
+        return this.ordre;
+    }
+
+    public Authority ordre(String ordre) {
+        this.setOrdre(ordre);
+        return this;
+    }
+
+    public void setOrdre(String ordre) {
+        this.ordre = ordre;
     }
 
     @PostLoad
@@ -81,7 +112,8 @@ public class Authority implements Serializable, Persistable<String> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getName());
+        // see https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
+        return getClass().hashCode();
     }
 
     // prettier-ignore
@@ -89,6 +121,8 @@ public class Authority implements Serializable, Persistable<String> {
     public String toString() {
         return "Authority{" +
             "name=" + getName() +
+            ", description='" + getDescription() + "'" +
+            ", ordre='" + getOrdre() + "'" +
             "}";
     }
 }

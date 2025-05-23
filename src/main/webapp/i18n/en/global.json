@@ -8,6 +8,7 @@
       "entities": {
         "main": "Entities",
         "jhipster-needle-menu-add-entry": "JHipster will add additional entities here (do not translate!)",
+        "adminAuthority": "Authority",
         "people": "People",
         "vehicle": "Vehicle",
         "ride": "Ride",
@@ -15,7 +16,10 @@
         "booking": "Booking",
         "payment": "Payment",
         "rating": "Rating",
-        "message": "Message"
+        "message": "Message",
+        "group": "Group",
+        "groupMember": "Group Member",
+        "groupAuthority": "Group Authority"
       },
       "account": {
         "main": "Account",

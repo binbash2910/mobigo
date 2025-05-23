@@ -21,6 +21,8 @@ type MessageFormGroupContent = {
   contenu: FormControl<IMessage['contenu']>;
   dateEnvoi: FormControl<IMessage['dateEnvoi']>;
   statut: FormControl<IMessage['statut']>;
+  expediteur: FormControl<IMessage['expediteur']>;
+  destinataire: FormControl<IMessage['destinataire']>;
 };
 
 export type MessageFormGroup = FormGroup<MessageFormGroupContent>;
@@ -45,6 +47,8 @@ export class MessageFormService {
         validators: [Validators.required],
       }),
       statut: new FormControl(messageRawValue.statut),
+      expediteur: new FormControl(messageRawValue.expediteur),
+      destinataire: new FormControl(messageRawValue.destinataire),
     });
   }
 

@@ -30,6 +30,8 @@ export class PeopleComponent implements OnInit {
     'cigarette',
     'alcool',
     'animaux',
+    'conducteur',
+    'passager',
   ];
 
   subscription: Subscription | null = null;

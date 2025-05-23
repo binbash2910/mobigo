@@ -5,11 +5,14 @@ export const sampleWithRequiredData: IAuthority = {
 };
 
 export const sampleWithPartialData: IAuthority = {
-  name: '7bd55631-a2c5-45ca-8628-9d2760e719a6',
+  name: 'd55631a2-c55c-4a62-889d-2760e719a604',
+  description: 'depuis',
 };
 
 export const sampleWithFullData: IAuthority = {
   name: '13e08196-c7f7-4f05-9df5-047fea2afaa7',
+  description: 'via',
+  ordre: 'après super',
 };
 
 export const sampleWithNewData: NewAuthority = {

@@ -21,14 +21,4 @@ class AuthorityTest {
         authority2 = getAuthoritySample2();
         assertThat(authority1).isNotEqualTo(authority2);
     }
-
-    @Test
-    void hashCodeVerifier() {
-        Authority authority = new Authority();
-        assertThat(authority.hashCode()).isZero();
-
-        Authority authority1 = getAuthoritySample1();
-        authority.setName(authority1.getName());
-        assertThat(authority).hasSameHashCodeAs(authority1);
-    }
 }

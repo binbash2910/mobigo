@@ -34,6 +34,17 @@ const authorityRoute: Routes = [
     },
     canActivate: [UserRouteAccessService],
   },
+  {
+    path: ':name/edit',
+    loadComponent: () => import('./update/authority-update.component').then(m => m.AuthorityUpdateComponent),
+    resolve: {
+      authority: AuthorityResolve,
+    },
+    data: {
+      authorities: ['ROLE_ADMIN'],
+    },
+    canActivate: [UserRouteAccessService],
+  },
 ];
 
 export default authorityRoute;

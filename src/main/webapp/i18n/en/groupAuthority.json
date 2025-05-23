@@ -1,0 +1,26 @@
+{
+  "mobigoApp": {
+    "groupAuthority": {
+      "home": {
+        "title": "Group Authorities",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Group Authority",
+        "createOrEditLabel": "Create or edit a Group Authority",
+        "search": "Search for Group Authority",
+        "notFound": "No Group Authorities found"
+      },
+      "created": "A new Group Authority is created with identifier {{ param }}",
+      "updated": "A Group Authority is updated with identifier {{ param }}",
+      "deleted": "A Group Authority is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Group Authority {{ id }}?"
+      },
+      "detail": {
+        "title": "Group Authority"
+      },
+      "id": "ID",
+      "authority": "Authority",
+      "group": "Group"
+    }
+  }
+}

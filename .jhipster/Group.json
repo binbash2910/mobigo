@@ -1,0 +1,20 @@
+{
+  "annotations": {
+    "changelogDate": "20250520070632"
+  },
+  "dto": "mapstruct",
+  "entityTableName": "jhi_group",
+  "fields": [
+    {
+      "fieldName": "groupName",
+      "fieldType": "String",
+      "fieldValidateRules": []
+    }
+  ],
+  "jpaMetamodelFiltering": false,
+  "name": "Group",
+  "pagination": "no",
+  "readOnly": false,
+  "relationships": [],
+  "service": "serviceClass"
+}

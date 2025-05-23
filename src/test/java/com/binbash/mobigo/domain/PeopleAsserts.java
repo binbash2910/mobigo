@@ -58,7 +58,9 @@ public class PeopleAsserts {
             .satisfies(a -> assertThat(a.getDiscussion()).as("check discussion").isEqualTo(expected.getDiscussion()))
             .satisfies(a -> assertThat(a.getCigarette()).as("check cigarette").isEqualTo(expected.getCigarette()))
             .satisfies(a -> assertThat(a.getAlcool()).as("check alcool").isEqualTo(expected.getAlcool()))
-            .satisfies(a -> assertThat(a.getAnimaux()).as("check animaux").isEqualTo(expected.getAnimaux()));
+            .satisfies(a -> assertThat(a.getAnimaux()).as("check animaux").isEqualTo(expected.getAnimaux()))
+            .satisfies(a -> assertThat(a.getConducteur()).as("check conducteur").isEqualTo(expected.getConducteur()))
+            .satisfies(a -> assertThat(a.getPassager()).as("check passager").isEqualTo(expected.getPassager()));
     }
 
     /**
@@ -68,12 +70,6 @@ public class PeopleAsserts {
      * @param actual the actual entity
      */
     public static void assertPeopleUpdatableRelationshipsEquals(People expected, People actual) {
-        assertThat(actual)
-            .as("Verify People relationships")
-            .satisfies(a -> assertThat(a.getMessagesExpediteur()).as("check messagesExpediteur").isEqualTo(expected.getMessagesExpediteur())
-            )
-            .satisfies(a ->
-                assertThat(a.getMessagesDestinatire()).as("check messagesDestinatire").isEqualTo(expected.getMessagesDestinatire())
-            );
+        // empty method
     }
 }

@@ -167,6 +167,12 @@ public class PeopleResource {
                 if (people.getAnimaux() != null) {
                     existingPeople.setAnimaux(people.getAnimaux());
                 }
+                if (people.getConducteur() != null) {
+                    existingPeople.setConducteur(people.getConducteur());
+                }
+                if (people.getPassager() != null) {
+                    existingPeople.setPassager(people.getPassager());
+                }
 
                 return existingPeople;
             })

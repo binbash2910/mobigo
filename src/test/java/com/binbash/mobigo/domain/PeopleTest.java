@@ -121,22 +121,42 @@ class PeopleTest {
         People people = getPeopleRandomSampleGenerator();
         Message messageBack = getMessageRandomSampleGenerator();
 
-        people.setMessagesExpediteur(messageBack);
-        assertThat(people.getMessagesExpediteur()).isEqualTo(messageBack);
+        people.addMessagesExpediteur(messageBack);
+        assertThat(people.getMessagesExpediteurs()).containsOnly(messageBack);
+        assertThat(messageBack.getExpediteur()).isEqualTo(people);
 
-        people.messagesExpediteur(null);
-        assertThat(people.getMessagesExpediteur()).isNull();
+        people.removeMessagesExpediteur(messageBack);
+        assertThat(people.getMessagesExpediteurs()).doesNotContain(messageBack);
+        assertThat(messageBack.getExpediteur()).isNull();
+
+        people.messagesExpediteurs(new HashSet<>(Set.of(messageBack)));
+        assertThat(people.getMessagesExpediteurs()).containsOnly(messageBack);
+        assertThat(messageBack.getExpediteur()).isEqualTo(people);
+
+        people.setMessagesExpediteurs(new HashSet<>());
+        assertThat(people.getMessagesExpediteurs()).doesNotContain(messageBack);
+        assertThat(messageBack.getExpediteur()).isNull();
     }
 
     @Test
-    void messagesDestinatireTest() {
+    void messagesDestinataireTest() {
         People people = getPeopleRandomSampleGenerator();
         Message messageBack = getMessageRandomSampleGenerator();
 
-        people.setMessagesDestinatire(messageBack);
-        assertThat(people.getMessagesDestinatire()).isEqualTo(messageBack);
+        people.addMessagesDestinataire(messageBack);
+        assertThat(people.getMessagesDestinataires()).containsOnly(messageBack);
+        assertThat(messageBack.getDestinataire()).isEqualTo(people);
 
-        people.messagesDestinatire(null);
-        assertThat(people.getMessagesDestinatire()).isNull();
+        people.removeMessagesDestinataire(messageBack);
+        assertThat(people.getMessagesDestinataires()).doesNotContain(messageBack);
+        assertThat(messageBack.getDestinataire()).isNull();
+
+        people.messagesDestinataires(new HashSet<>(Set.of(messageBack)));
+        assertThat(people.getMessagesDestinataires()).containsOnly(messageBack);
+        assertThat(messageBack.getDestinataire()).isEqualTo(people);
+
+        people.setMessagesDestinataires(new HashSet<>());
+        assertThat(people.getMessagesDestinataires()).doesNotContain(messageBack);
+        assertThat(messageBack.getDestinataire()).isNull();
     }
 }

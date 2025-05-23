@@ -54,6 +54,40 @@
             }
           </select>
         </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_expediteur" jhiTranslate="mobigoApp.message.expediteur">Expediteur</label>
+          <select
+            class="form-control"
+            id="field_expediteur"
+            data-cy="expediteur"
+            name="expediteur"
+            formControlName="expediteur"
+            [compareWith]="comparePeople"
+          >
+            <option [ngValue]="null"></option>
+            @for (peopleOption of peopleSharedCollection; track $index) {
+              <option [ngValue]="peopleOption">{{ peopleOption.id }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_destinataire" jhiTranslate="mobigoApp.message.destinataire">Destinataire</label>
+          <select
+            class="form-control"
+            id="field_destinataire"
+            data-cy="destinataire"
+            name="destinataire"
+            formControlName="destinataire"
+            [compareWith]="comparePeople"
+          >
+            <option [ngValue]="null"></option>
+            @for (peopleOption of peopleSharedCollection; track $index) {
+              <option [ngValue]="peopleOption">{{ peopleOption.id }}</option>
+            }
+          </select>
+        </div>
       </div>
 
       <div>

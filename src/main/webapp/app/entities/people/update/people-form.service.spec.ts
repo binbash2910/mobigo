@@ -32,8 +32,9 @@ describe('People Form Service', () => {
             cigarette: expect.any(Object),
             alcool: expect.any(Object),
             animaux: expect.any(Object),
-            messagesExpediteur: expect.any(Object),
-            messagesDestinatire: expect.any(Object),
+            conducteur: expect.any(Object),
+            passager: expect.any(Object),
+            user: expect.any(Object),
           }),
         );
       });
@@ -56,8 +57,9 @@ describe('People Form Service', () => {
             cigarette: expect.any(Object),
             alcool: expect.any(Object),
             animaux: expect.any(Object),
-            messagesExpediteur: expect.any(Object),
-            messagesDestinatire: expect.any(Object),
+            conducteur: expect.any(Object),
+            passager: expect.any(Object),
+            user: expect.any(Object),
           }),
         );
       });

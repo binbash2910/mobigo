@@ -50,12 +50,19 @@
             <column name="animaux" type="varchar(255)">
                 <constraints nullable="true" />
             </column>
-            <column name="messages_expediteur_id" type="bigint">
+            <column name="conducteur" type="varchar(255)">
                 <constraints nullable="true" />
             </column>
-            <column name="messages_destinatire_id" type="bigint">
+            <column name="passager" type="varchar(255)">
                 <constraints nullable="true" />
             </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="true" unique="true" uniqueConstraintName="ux_people__user_id" />
+            </column>
+          <column name="created_date" type="timestamp"/>
+          <column name="created_by" type="varchar(50)"/>
+          <column name="last_modified_by" type="varchar(50)"/>
+          <column name="last_modified_date" type="timestamp"/>
             <!-- jhipster-needle-liquibase-add-column - JHipster will add columns here -->
         </createTable>
     </changeSet>
@@ -89,6 +96,8 @@
             <column name="cigarette" type="string"/>
             <column name="alcool" type="string"/>
             <column name="animaux" type="string"/>
+            <column name="conducteur" type="string"/>
+            <column name="passager" type="string"/>
             <!-- jhipster-needle-liquibase-add-loadcolumn - JHipster (and/or extensions) can add load columns here -->
         </loadData>
     </changeSet>

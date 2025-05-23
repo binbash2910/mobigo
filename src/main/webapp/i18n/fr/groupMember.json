@@ -1,0 +1,26 @@
+{
+  "mobigoApp": {
+    "groupMember": {
+      "home": {
+        "title": "GroupMembers",
+        "refreshListLabel": "Actualiser la liste",
+        "createLabel": "Créer un nouveau Group Member",
+        "createOrEditLabel": "Créer ou éditer un Group Member",
+        "search": "Recherche pour Group Member",
+        "notFound": "Aucun Group Member trouvé"
+      },
+      "created": "Un nouveau Group Member a été créé avec l'identifiant {{ param }}",
+      "updated": "Le Group Member avec l'identifiant {{ param }} a été mis à jour",
+      "deleted": "Le Group Member avec l'identifiant {{ param }} a été supprimé",
+      "delete": {
+        "question": "Êtes-vous certain de vouloir supprimer le Group Member {{ id }} ?"
+      },
+      "detail": {
+        "title": "Group Member"
+      },
+      "id": "ID",
+      "group": "Group",
+      "user": "User"
+    }
+  }
+}

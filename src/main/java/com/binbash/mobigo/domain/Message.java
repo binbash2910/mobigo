@@ -6,8 +6,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * A Message.
@@ -39,25 +37,35 @@ public class Message extends AbstractAuditingEntity<Long> implements Serializabl
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private MessageStatusEnum statut;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "messagesExpediteur")
-    @org.springframework.data.annotation.Transient
+    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(
         value = {
-            "vehicules", "bookingsPassagers", "notationsPassagers", "notationsConducteurs", "messagesExpediteur", "messagesDestinatire",
+            "vehicules",
+            "bookingsPassagers",
+            "notationsPassagers",
+            "notationsConducteurs",
+            "user",
+            "messagesExpediteurs",
+            "messagesDestinataires",
         },
         allowSetters = true
     )
-    private Set<People> expediteurs = new HashSet<>();
+    private People expediteur;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "messagesDestinatire")
-    @org.springframework.data.annotation.Transient
+    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(
         value = {
-            "vehicules", "bookingsPassagers", "notationsPassagers", "notationsConducteurs", "messagesExpediteur", "messagesDestinatire",
+            "vehicules",
+            "bookingsPassagers",
+            "notationsPassagers",
+            "notationsConducteurs",
+            "user",
+            "messagesExpediteurs",
+            "messagesDestinataires",
         },
         allowSetters = true
     )
-    private Set<People> destinataires = new HashSet<>();
+    private People destinataire;
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
@@ -113,65 +121,29 @@ public class Message extends AbstractAuditingEntity<Long> implements Serializabl
         this.statut = statut;
     }
 
-    public Set<People> getExpediteurs() {
-        return this.expediteurs;
+    public People getExpediteur() {
+        return this.expediteur;
     }
 
-    public void setExpediteurs(Set<People> people) {
-        if (this.expediteurs != null) {
-            this.expediteurs.forEach(i -> i.setMessagesExpediteur(null));
-        }
-        if (people != null) {
-            people.forEach(i -> i.setMessagesExpediteur(this));
-        }
-        this.expediteurs = people;
+    public void setExpediteur(People people) {
+        this.expediteur = people;
     }
 
-    public Message expediteurs(Set<People> people) {
-        this.setExpediteurs(people);
+    public Message expediteur(People people) {
+        this.setExpediteur(people);
         return this;
     }
 
-    public Message addExpediteur(People people) {
-        this.expediteurs.add(people);
-        people.setMessagesExpediteur(this);
-        return this;
+    public People getDestinataire() {
+        return this.destinataire;
     }
 
-    public Message removeExpediteur(People people) {
-        this.expediteurs.remove(people);
-        people.setMessagesExpediteur(null);
-        return this;
+    public void setDestinataire(People people) {
+        this.destinataire = people;
     }
 
-    public Set<People> getDestinataires() {
-        return this.destinataires;
-    }
-
-    public void setDestinataires(Set<People> people) {
-        if (this.destinataires != null) {
-            this.destinataires.forEach(i -> i.setMessagesDestinatire(null));
-        }
-        if (people != null) {
-            people.forEach(i -> i.setMessagesDestinatire(this));
-        }
-        this.destinataires = people;
-    }
-
-    public Message destinataires(Set<People> people) {
-        this.setDestinataires(people);
-        return this;
-    }
-
-    public Message addDestinataire(People people) {
-        this.destinataires.add(people);
-        people.setMessagesDestinatire(this);
-        return this;
-    }
-
-    public Message removeDestinataire(People people) {
-        this.destinataires.remove(people);
-        people.setMessagesDestinatire(null);
+    public Message destinataire(People people) {
+        this.setDestinataire(people);
         return this;
     }
 

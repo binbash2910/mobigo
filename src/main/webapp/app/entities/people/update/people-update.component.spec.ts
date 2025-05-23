@@ -4,8 +4,8 @@ import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, from, of } from 'rxjs';
 
-import { IMessage } from 'app/entities/message/message.model';
-import { MessageService } from 'app/entities/message/service/message.service';
+import { IUser } from 'app/entities/user/user.model';
+import { UserService } from 'app/entities/user/service/user.service';
 import { PeopleService } from '../service/people.service';
 import { IPeople } from '../people.model';
 import { PeopleFormService } from './people-form.service';
@@ -18,7 +18,7 @@ describe('People Management Update Component', () => {
   let activatedRoute: ActivatedRoute;
   let peopleFormService: PeopleFormService;
   let peopleService: PeopleService;
-  let messageService: MessageService;
+  let userService: UserService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -41,48 +41,43 @@ describe('People Management Update Component', () => {
     activatedRoute = TestBed.inject(ActivatedRoute);
     peopleFormService = TestBed.inject(PeopleFormService);
     peopleService = TestBed.inject(PeopleService);
-    messageService = TestBed.inject(MessageService);
+    userService = TestBed.inject(UserService);
 
     comp = fixture.componentInstance;
   });
 
   describe('ngOnInit', () => {
-    it('should call Message query and add missing value', () => {
+    it('should call User query and add missing value', () => {
       const people: IPeople = { id: 20275 };
-      const messagesExpediteur: IMessage = { id: 6456 };
-      people.messagesExpediteur = messagesExpediteur;
-      const messagesDestinatire: IMessage = { id: 6456 };
-      people.messagesDestinatire = messagesDestinatire;
+      const user: IUser = { id: 3944 };
+      people.user = user;
 
-      const messageCollection: IMessage[] = [{ id: 6456 }];
-      jest.spyOn(messageService, 'query').mockReturnValue(of(new HttpResponse({ body: messageCollection })));
-      const additionalMessages = [messagesExpediteur, messagesDestinatire];
-      const expectedCollection: IMessage[] = [...additionalMessages, ...messageCollection];
-      jest.spyOn(messageService, 'addMessageToCollectionIfMissing').mockReturnValue(expectedCollection);
+      const userCollection: IUser[] = [{ id: 3944 }];
+      jest.spyOn(userService, 'query').mockReturnValue(of(new HttpResponse({ body: userCollection })));
+      const additionalUsers = [user];
+      const expectedCollection: IUser[] = [...additionalUsers, ...userCollection];
+      jest.spyOn(userService, 'addUserToCollectionIfMissing').mockReturnValue(expectedCollection);
 
       activatedRoute.data = of({ people });
       comp.ngOnInit();
 
-      expect(messageService.query).toHaveBeenCalled();
-      expect(messageService.addMessageToCollectionIfMissing).toHaveBeenCalledWith(
-        messageCollection,
-        ...additionalMessages.map(expect.objectContaining),
+      expect(userService.query).toHaveBeenCalled();
+      expect(userService.addUserToCollectionIfMissing).toHaveBeenCalledWith(
+        userCollection,
+        ...additionalUsers.map(expect.objectContaining),
       );
-      expect(comp.messagesSharedCollection).toEqual(expectedCollection);
+      expect(comp.usersSharedCollection).toEqual(expectedCollection);
     });
 
     it('should update editForm', () => {
       const people: IPeople = { id: 20275 };
-      const messagesExpediteur: IMessage = { id: 6456 };
-      people.messagesExpediteur = messagesExpediteur;
-      const messagesDestinatire: IMessage = { id: 6456 };
-      people.messagesDestinatire = messagesDestinatire;
+      const user: IUser = { id: 3944 };
+      people.user = user;
 
       activatedRoute.data = of({ people });
       comp.ngOnInit();
 
-      expect(comp.messagesSharedCollection).toContainEqual(messagesExpediteur);
-      expect(comp.messagesSharedCollection).toContainEqual(messagesDestinatire);
+      expect(comp.usersSharedCollection).toContainEqual(user);
       expect(comp.people).toEqual(people);
     });
   });
@@ -156,13 +151,13 @@ describe('People Management Update Component', () => {
   });
 
   describe('Compare relationships', () => {
-    describe('compareMessage', () => {
-      it('should forward to messageService', () => {
-        const entity = { id: 6456 };
-        const entity2 = { id: 11110 };
-        jest.spyOn(messageService, 'compareMessage');
-        comp.compareMessage(entity, entity2);
-        expect(messageService.compareMessage).toHaveBeenCalledWith(entity, entity2);
+    describe('compareUser', () => {
+      it('should forward to userService', () => {
+        const entity = { id: 3944 };
+        const entity2 = { id: 6275 };
+        jest.spyOn(userService, 'compareUser');
+        comp.compareUser(entity, entity2);
+        expect(userService.compareUser).toHaveBeenCalledWith(entity, entity2);
       });
     });
   });

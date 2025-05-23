@@ -1,0 +1,42 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (groupMember(); as groupMemberRef) {
+      <div>
+        <h2 data-cy="groupMemberDetailsHeading"><span jhiTranslate="mobigoApp.groupMember.detail.title">Group Member</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ groupMemberRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.groupMember.group">Group</span></dt>
+          <dd>
+            @if (groupMember()!.group) {
+              <div>
+                <a [routerLink]="['/group', groupMember()!.group?.id, 'view']">{{ groupMemberRef.group?.id }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.groupMember.user">User</span></dt>
+          <dd>
+            <span>{{ groupMemberRef.user?.login }}</span>
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/group-member', groupMemberRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

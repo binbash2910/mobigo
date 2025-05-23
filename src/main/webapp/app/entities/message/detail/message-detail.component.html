@@ -29,6 +29,22 @@
               { null: '', ENVOYE: 'ENVOYE', ECHEC: 'ECHEC', LU: 'LU', REPONDU: 'REPONDU' }[messageRef.statut ?? 'null']
             }}</span>
           </dd>
+          <dt><span jhiTranslate="mobigoApp.message.expediteur">Expediteur</span></dt>
+          <dd>
+            @if (message()!.expediteur) {
+              <div>
+                <a [routerLink]="['/people', message()!.expediteur?.id, 'view']">{{ messageRef.expediteur?.id }}</a>
+              </div>
+            }
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.message.destinataire">Destinataire</span></dt>
+          <dd>
+            @if (message()!.destinataire) {
+              <div>
+                <a [routerLink]="['/people', message()!.destinataire?.id, 'view']">{{ messageRef.destinataire?.id }}</a>
+              </div>
+            }
+          </dd>
         </dl>
 
         <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">

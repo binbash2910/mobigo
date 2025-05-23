@@ -54,7 +54,13 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(
         value = {
-            "vehicules", "bookingsPassagers", "notationsPassagers", "notationsConducteurs", "messagesExpediteur", "messagesDestinatire",
+            "vehicules",
+            "bookingsPassagers",
+            "notationsPassagers",
+            "notationsConducteurs",
+            "user",
+            "messagesExpediteurs",
+            "messagesDestinataires",
         },
         allowSetters = true
     )

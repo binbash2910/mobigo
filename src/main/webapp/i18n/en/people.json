@@ -31,12 +31,15 @@
       "cigarette": "Cigarette",
       "alcool": "Alcool",
       "animaux": "Animaux",
+      "conducteur": "Conducteur",
+      "passager": "Passager",
       "vehicules": "Vehicules",
       "bookingsPassager": "Bookings Passager",
       "notationsPassager": "Notations Passager",
       "notationsConducteur": "Notations Conducteur",
+      "user": "User",
       "messagesExpediteur": "Messages Expediteur",
-      "messagesDestinatire": "Messages Destinatire"
+      "messagesDestinataire": "Messages Destinataire"
     }
   }
 }

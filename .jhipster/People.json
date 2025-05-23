@@ -56,6 +56,14 @@
     {
       "fieldName": "animaux",
       "fieldType": "String"
+    },
+    {
+      "fieldName": "conducteur",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "passager",
+      "fieldType": "String"
     }
   ],
   "name": "People",
@@ -89,18 +97,30 @@
       "relationshipType": "one-to-many"
     },
     {
+      "id": false,
+      "otherEntityField": "id",
+      "otherEntityName": "user",
+      "otherEntityRelationshipName": "user",
+      "relationshipName": "user",
+      "relationshipSide": "left",
+      "relationshipType": "one-to-one",
+      "relationshipValidateRules": []
+    },
+    {
+      "otherEntityField": "id",
       "otherEntityName": "message",
       "otherEntityRelationshipName": "expediteur",
       "relationshipName": "messagesExpediteur",
       "relationshipSide": "left",
-      "relationshipType": "many-to-one"
+      "relationshipType": "one-to-many"
     },
     {
+      "otherEntityField": "id",
       "otherEntityName": "message",
       "otherEntityRelationshipName": "destinataire",
-      "relationshipName": "messagesDestinatire",
+      "relationshipName": "messagesDestinataire",
       "relationshipSide": "left",
-      "relationshipType": "many-to-one"
+      "relationshipType": "one-to-many"
     }
   ]
 }

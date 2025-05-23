@@ -1,0 +1,34 @@
+<div class="d-flex justify-content-center">
+  <div class="col-8">
+    @if (group(); as groupRef) {
+      <div>
+        <h2 data-cy="groupDetailsHeading"><span jhiTranslate="mobigoApp.group.detail.title">Group</span></h2>
+
+        <hr />
+
+        <jhi-alert-error />
+
+        <jhi-alert />
+
+        <dl class="row-md jh-entity-details">
+          <dt><span jhiTranslate="global.field.id">ID</span></dt>
+          <dd>
+            <span>{{ groupRef.id }}</span>
+          </dd>
+          <dt><span jhiTranslate="mobigoApp.group.groupName">Group Name</span></dt>
+          <dd>
+            <span>{{ groupRef.groupName }}</span>
+          </dd>
+        </dl>
+
+        <button type="submit" (click)="previousState()" class="btn btn-info" data-cy="entityDetailsBackButton">
+          <fa-icon icon="arrow-left"></fa-icon>&nbsp;<span jhiTranslate="entity.action.back">Retour</span>
+        </button>
+
+        <button type="button" [routerLink]="['/group', groupRef.id, 'edit']" class="btn btn-primary">
+          <fa-icon icon="pencil-alt"></fa-icon>&nbsp;<span jhiTranslate="entity.action.edit">Editer</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -46,6 +46,21 @@ const routes: Routes = [
     data: { pageTitle: 'mobigoApp.message.home.title' },
     loadChildren: () => import('./message/message.routes'),
   },
+  {
+    path: 'group',
+    data: { pageTitle: 'mobigoApp.group.home.title' },
+    loadChildren: () => import('./group/group.routes'),
+  },
+  {
+    path: 'group-member',
+    data: { pageTitle: 'mobigoApp.groupMember.home.title' },
+    loadChildren: () => import('./group-member/group-member.routes'),
+  },
+  {
+    path: 'group-authority',
+    data: { pageTitle: 'mobigoApp.groupAuthority.home.title' },
+    loadChildren: () => import('./group-authority/group-authority.routes'),
+  },
   /* jhipster-needle-add-entity-route - JHipster will add entity modules routes here */
 ];
 

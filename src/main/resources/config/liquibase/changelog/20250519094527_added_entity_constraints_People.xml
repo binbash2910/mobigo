@@ -10,18 +10,11 @@
     -->
     <changeSet id="20250519094527-2" author="jhipster">
 
-        <addForeignKeyConstraint baseColumnNames="messages_expediteur_id"
+        <addForeignKeyConstraint baseColumnNames="user_id"
                                  baseTableName="people"
-                                 constraintName="fk_people__messages_expediteur_id"
+                                 constraintName="fk_people__user_id"
                                  referencedColumnNames="id"
-                                 referencedTableName="message"
-                                 />
-
-        <addForeignKeyConstraint baseColumnNames="messages_destinatire_id"
-                                 baseTableName="people"
-                                 constraintName="fk_people__messages_destinatire_id"
-                                 referencedColumnNames="id"
-                                 referencedTableName="message"
+                                 referencedTableName="jhi_user"
                                  />
     </changeSet>
 </databaseChangeLog>

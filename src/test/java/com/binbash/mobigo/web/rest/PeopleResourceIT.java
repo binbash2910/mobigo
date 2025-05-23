@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.binbash.mobigo.IntegrationTest;
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.repository.PeopleRepository;
+import com.binbash.mobigo.repository.UserRepository;
 import com.binbash.mobigo.repository.search.PeopleSearchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -77,6 +78,12 @@ class PeopleResourceIT {
     private static final String DEFAULT_ANIMAUX = "AAAAAAAAAA";
     private static final String UPDATED_ANIMAUX = "BBBBBBBBBB";
 
+    private static final String DEFAULT_CONDUCTEUR = "AAAAAAAAAA";
+    private static final String UPDATED_CONDUCTEUR = "BBBBBBBBBB";
+
+    private static final String DEFAULT_PASSAGER = "AAAAAAAAAA";
+    private static final String UPDATED_PASSAGER = "BBBBBBBBBB";
+
     private static final String ENTITY_API_URL = "/api/people";
     private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
     private static final String ENTITY_SEARCH_API_URL = "/api/people/_search";
@@ -89,6 +96,9 @@ class PeopleResourceIT {
 
     @Autowired
     private PeopleRepository peopleRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private PeopleSearchRepository peopleSearchRepository;
@@ -122,7 +132,9 @@ class PeopleResourceIT {
             .discussion(DEFAULT_DISCUSSION)
             .cigarette(DEFAULT_CIGARETTE)
             .alcool(DEFAULT_ALCOOL)
-            .animaux(DEFAULT_ANIMAUX);
+            .animaux(DEFAULT_ANIMAUX)
+            .conducteur(DEFAULT_CONDUCTEUR)
+            .passager(DEFAULT_PASSAGER);
     }
 
     /**
@@ -144,7 +156,9 @@ class PeopleResourceIT {
             .discussion(UPDATED_DISCUSSION)
             .cigarette(UPDATED_CIGARETTE)
             .alcool(UPDATED_ALCOOL)
-            .animaux(UPDATED_ANIMAUX);
+            .animaux(UPDATED_ANIMAUX)
+            .conducteur(UPDATED_CONDUCTEUR)
+            .passager(UPDATED_PASSAGER);
     }
 
     @BeforeEach
@@ -334,7 +348,9 @@ class PeopleResourceIT {
             .andExpect(jsonPath("$.[*].discussion").value(hasItem(DEFAULT_DISCUSSION)))
             .andExpect(jsonPath("$.[*].cigarette").value(hasItem(DEFAULT_CIGARETTE)))
             .andExpect(jsonPath("$.[*].alcool").value(hasItem(DEFAULT_ALCOOL)))
-            .andExpect(jsonPath("$.[*].animaux").value(hasItem(DEFAULT_ANIMAUX)));
+            .andExpect(jsonPath("$.[*].animaux").value(hasItem(DEFAULT_ANIMAUX)))
+            .andExpect(jsonPath("$.[*].conducteur").value(hasItem(DEFAULT_CONDUCTEUR)))
+            .andExpect(jsonPath("$.[*].passager").value(hasItem(DEFAULT_PASSAGER)));
     }
 
     @Test
@@ -360,7 +376,9 @@ class PeopleResourceIT {
             .andExpect(jsonPath("$.discussion").value(DEFAULT_DISCUSSION))
             .andExpect(jsonPath("$.cigarette").value(DEFAULT_CIGARETTE))
             .andExpect(jsonPath("$.alcool").value(DEFAULT_ALCOOL))
-            .andExpect(jsonPath("$.animaux").value(DEFAULT_ANIMAUX));
+            .andExpect(jsonPath("$.animaux").value(DEFAULT_ANIMAUX))
+            .andExpect(jsonPath("$.conducteur").value(DEFAULT_CONDUCTEUR))
+            .andExpect(jsonPath("$.passager").value(DEFAULT_PASSAGER));
     }
 
     @Test
@@ -396,7 +414,9 @@ class PeopleResourceIT {
             .discussion(UPDATED_DISCUSSION)
             .cigarette(UPDATED_CIGARETTE)
             .alcool(UPDATED_ALCOOL)
-            .animaux(UPDATED_ANIMAUX);
+            .animaux(UPDATED_ANIMAUX)
+            .conducteur(UPDATED_CONDUCTEUR)
+            .passager(UPDATED_PASSAGER);
 
         restPeopleMockMvc
             .perform(
@@ -492,15 +512,7 @@ class PeopleResourceIT {
         People partialUpdatedPeople = new People();
         partialUpdatedPeople.setId(people.getId());
 
-        partialUpdatedPeople
-            .nom(UPDATED_NOM)
-            .cni(UPDATED_CNI)
-            .photo(UPDATED_PHOTO)
-            .actif(UPDATED_ACTIF)
-            .musique(UPDATED_MUSIQUE)
-            .discussion(UPDATED_DISCUSSION)
-            .cigarette(UPDATED_CIGARETTE)
-            .alcool(UPDATED_ALCOOL);
+        partialUpdatedPeople.cni(UPDATED_CNI).photo(UPDATED_PHOTO).actif(UPDATED_ACTIF).musique(UPDATED_MUSIQUE).alcool(UPDATED_ALCOOL);
 
         restPeopleMockMvc
             .perform(
@@ -540,7 +552,9 @@ class PeopleResourceIT {
             .discussion(UPDATED_DISCUSSION)
             .cigarette(UPDATED_CIGARETTE)
             .alcool(UPDATED_ALCOOL)
-            .animaux(UPDATED_ANIMAUX);
+            .animaux(UPDATED_ANIMAUX)
+            .conducteur(UPDATED_CONDUCTEUR)
+            .passager(UPDATED_PASSAGER);
 
         restPeopleMockMvc
             .perform(
@@ -663,7 +677,9 @@ class PeopleResourceIT {
             .andExpect(jsonPath("$.[*].discussion").value(hasItem(DEFAULT_DISCUSSION)))
             .andExpect(jsonPath("$.[*].cigarette").value(hasItem(DEFAULT_CIGARETTE)))
             .andExpect(jsonPath("$.[*].alcool").value(hasItem(DEFAULT_ALCOOL)))
-            .andExpect(jsonPath("$.[*].animaux").value(hasItem(DEFAULT_ANIMAUX)));
+            .andExpect(jsonPath("$.[*].animaux").value(hasItem(DEFAULT_ANIMAUX)))
+            .andExpect(jsonPath("$.[*].conducteur").value(hasItem(DEFAULT_CONDUCTEUR)))
+            .andExpect(jsonPath("$.[*].passager").value(hasItem(DEFAULT_PASSAGER)));
     }
 
     protected long getRepositoryCount() {

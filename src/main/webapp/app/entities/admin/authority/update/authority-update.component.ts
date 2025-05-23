@@ -43,7 +43,11 @@ export class AuthorityUpdateComponent implements OnInit {
   save(): void {
     this.isSaving = true;
     const authority = this.authorityFormService.getAuthority(this.editForm);
-    this.subscribeToSaveResponse(this.authorityService.create(authority));
+    if (authority.name !== null) {
+      this.subscribeToSaveResponse(this.authorityService.update(authority));
+    } else {
+      this.subscribeToSaveResponse(this.authorityService.create(authority));
+    }
   }
 
   protected subscribeToSaveResponse(result: Observable<HttpResponse<IAuthority>>): void {

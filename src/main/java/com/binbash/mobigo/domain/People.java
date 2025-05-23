@@ -77,6 +77,14 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String animaux;
 
+    @Column(name = "conducteur")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String conducteur;
+
+    @Column(name = "passager")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String passager;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "proprietaire")
     @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "trajets", "proprietaire" }, allowSetters = true)
@@ -97,13 +105,19 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     @JsonIgnoreProperties(value = { "trajet", "passager", "conducteur" }, allowSetters = true)
     private Set<Rating> notationsConducteurs = new HashSet<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JsonIgnoreProperties(value = { "expediteurs", "destinataires" }, allowSetters = true)
-    private Message messagesExpediteur;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(unique = true)
+    private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JsonIgnoreProperties(value = { "expediteurs", "destinataires" }, allowSetters = true)
-    private Message messagesDestinatire;
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "expediteur")
+    @org.springframework.data.annotation.Transient
+    @JsonIgnoreProperties(value = { "expediteur", "destinataire" }, allowSetters = true)
+    private Set<Message> messagesExpediteurs = new HashSet<>();
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "destinataire")
+    @org.springframework.data.annotation.Transient
+    @JsonIgnoreProperties(value = { "expediteur", "destinataire" }, allowSetters = true)
+    private Set<Message> messagesDestinataires = new HashSet<>();
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
 
@@ -276,6 +290,32 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
         this.animaux = animaux;
     }
 
+    public String getConducteur() {
+        return this.conducteur;
+    }
+
+    public People conducteur(String conducteur) {
+        this.setConducteur(conducteur);
+        return this;
+    }
+
+    public void setConducteur(String conducteur) {
+        this.conducteur = conducteur;
+    }
+
+    public String getPassager() {
+        return this.passager;
+    }
+
+    public People passager(String passager) {
+        this.setPassager(passager);
+        return this;
+    }
+
+    public void setPassager(String passager) {
+        this.passager = passager;
+    }
+
     public Set<Vehicle> getVehicules() {
         return this.vehicules;
     }
@@ -400,29 +440,78 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
         return this;
     }
 
-    public Message getMessagesExpediteur() {
-        return this.messagesExpediteur;
+    public User getUser() {
+        return this.user;
     }
 
-    public void setMessagesExpediteur(Message message) {
-        this.messagesExpediteur = message;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public People messagesExpediteur(Message message) {
-        this.setMessagesExpediteur(message);
+    public People user(User user) {
+        this.setUser(user);
         return this;
     }
 
-    public Message getMessagesDestinatire() {
-        return this.messagesDestinatire;
+    public Set<Message> getMessagesExpediteurs() {
+        return this.messagesExpediteurs;
     }
 
-    public void setMessagesDestinatire(Message message) {
-        this.messagesDestinatire = message;
+    public void setMessagesExpediteurs(Set<Message> messages) {
+        if (this.messagesExpediteurs != null) {
+            this.messagesExpediteurs.forEach(i -> i.setExpediteur(null));
+        }
+        if (messages != null) {
+            messages.forEach(i -> i.setExpediteur(this));
+        }
+        this.messagesExpediteurs = messages;
     }
 
-    public People messagesDestinatire(Message message) {
-        this.setMessagesDestinatire(message);
+    public People messagesExpediteurs(Set<Message> messages) {
+        this.setMessagesExpediteurs(messages);
+        return this;
+    }
+
+    public People addMessagesExpediteur(Message message) {
+        this.messagesExpediteurs.add(message);
+        message.setExpediteur(this);
+        return this;
+    }
+
+    public People removeMessagesExpediteur(Message message) {
+        this.messagesExpediteurs.remove(message);
+        message.setExpediteur(null);
+        return this;
+    }
+
+    public Set<Message> getMessagesDestinataires() {
+        return this.messagesDestinataires;
+    }
+
+    public void setMessagesDestinataires(Set<Message> messages) {
+        if (this.messagesDestinataires != null) {
+            this.messagesDestinataires.forEach(i -> i.setDestinataire(null));
+        }
+        if (messages != null) {
+            messages.forEach(i -> i.setDestinataire(this));
+        }
+        this.messagesDestinataires = messages;
+    }
+
+    public People messagesDestinataires(Set<Message> messages) {
+        this.setMessagesDestinataires(messages);
+        return this;
+    }
+
+    public People addMessagesDestinataire(Message message) {
+        this.messagesDestinataires.add(message);
+        message.setDestinataire(this);
+        return this;
+    }
+
+    public People removeMessagesDestinataire(Message message) {
+        this.messagesDestinataires.remove(message);
+        message.setDestinataire(null);
         return this;
     }
 
@@ -462,6 +551,8 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
             ", cigarette='" + getCigarette() + "'" +
             ", alcool='" + getAlcool() + "'" +
             ", animaux='" + getAnimaux() + "'" +
+            ", conducteur='" + getConducteur() + "'" +
+            ", passager='" + getPassager() + "'" +
             "}";
     }
 }

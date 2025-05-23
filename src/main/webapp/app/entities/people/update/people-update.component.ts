@@ -7,8 +7,8 @@ import { finalize, map } from 'rxjs/operators';
 import SharedModule from 'app/shared/shared.module';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
-import { IMessage } from 'app/entities/message/message.model';
-import { MessageService } from 'app/entities/message/service/message.service';
+import { IUser } from 'app/entities/user/user.model';
+import { UserService } from 'app/entities/user/service/user.service';
 import { IPeople } from '../people.model';
 import { PeopleService } from '../service/people.service';
 import { PeopleFormGroup, PeopleFormService } from './people-form.service';
@@ -22,17 +22,17 @@ export class PeopleUpdateComponent implements OnInit {
   isSaving = false;
   people: IPeople | null = null;
 
-  messagesSharedCollection: IMessage[] = [];
+  usersSharedCollection: IUser[] = [];
 
   protected peopleService = inject(PeopleService);
   protected peopleFormService = inject(PeopleFormService);
-  protected messageService = inject(MessageService);
+  protected userService = inject(UserService);
   protected activatedRoute = inject(ActivatedRoute);
 
   // eslint-disable-next-line @typescript-eslint/member-ordering
   editForm: PeopleFormGroup = this.peopleFormService.createPeopleFormGroup();
 
-  compareMessage = (o1: IMessage | null, o2: IMessage | null): boolean => this.messageService.compareMessage(o1, o2);
+  compareUser = (o1: IUser | null, o2: IUser | null): boolean => this.userService.compareUser(o1, o2);
 
   ngOnInit(): void {
     this.activatedRoute.data.subscribe(({ people }) => {
@@ -82,26 +82,14 @@ export class PeopleUpdateComponent implements OnInit {
     this.people = people;
     this.peopleFormService.resetForm(this.editForm, people);
 
-    this.messagesSharedCollection = this.messageService.addMessageToCollectionIfMissing<IMessage>(
-      this.messagesSharedCollection,
-      people.messagesExpediteur,
-      people.messagesDestinatire,
-    );
+    this.usersSharedCollection = this.userService.addUserToCollectionIfMissing<IUser>(this.usersSharedCollection, people.user);
   }
 
   protected loadRelationshipsOptions(): void {
-    this.messageService
+    this.userService
       .query()
-      .pipe(map((res: HttpResponse<IMessage[]>) => res.body ?? []))
-      .pipe(
-        map((messages: IMessage[]) =>
-          this.messageService.addMessageToCollectionIfMissing<IMessage>(
-            messages,
-            this.people?.messagesExpediteur,
-            this.people?.messagesDestinatire,
-          ),
-        ),
-      )
-      .subscribe((messages: IMessage[]) => (this.messagesSharedCollection = messages));
+      .pipe(map((res: HttpResponse<IUser[]>) => res.body ?? []))
+      .pipe(map((users: IUser[]) => this.userService.addUserToCollectionIfMissing<IUser>(users, this.people?.user)))
+      .subscribe((users: IUser[]) => (this.usersSharedCollection = users));
   }
 }

@@ -137,39 +137,28 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="field_messagesExpediteur" jhiTranslate="mobigoApp.people.messagesExpediteur"
-            >Messages Expediteur</label
-          >
-          <select
+          <label class="form-label" for="field_conducteur" jhiTranslate="mobigoApp.people.conducteur">Conducteur</label>
+          <input
+            type="text"
             class="form-control"
-            id="field_messagesExpediteur"
-            data-cy="messagesExpediteur"
-            name="messagesExpediteur"
-            formControlName="messagesExpediteur"
-            [compareWith]="compareMessage"
-          >
-            <option [ngValue]="null"></option>
-            @for (messageOption of messagesSharedCollection; track $index) {
-              <option [ngValue]="messageOption">{{ messageOption.id }}</option>
-            }
-          </select>
+            name="conducteur"
+            id="field_conducteur"
+            data-cy="conducteur"
+            formControlName="conducteur"
+          />
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="field_messagesDestinatire" jhiTranslate="mobigoApp.people.messagesDestinatire"
-            >Messages Destinatire</label
-          >
-          <select
-            class="form-control"
-            id="field_messagesDestinatire"
-            data-cy="messagesDestinatire"
-            name="messagesDestinatire"
-            formControlName="messagesDestinatire"
-            [compareWith]="compareMessage"
-          >
+          <label class="form-label" for="field_passager" jhiTranslate="mobigoApp.people.passager">Passager</label>
+          <input type="text" class="form-control" name="passager" id="field_passager" data-cy="passager" formControlName="passager" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="field_user" jhiTranslate="mobigoApp.people.user">User</label>
+          <select class="form-control" id="field_user" data-cy="user" name="user" formControlName="user" [compareWith]="compareUser">
             <option [ngValue]="null"></option>
-            @for (messageOption of messagesSharedCollection; track $index) {
-              <option [ngValue]="messageOption">{{ messageOption.id }}</option>
+            @for (userOption of usersSharedCollection; track $index) {
+              <option [ngValue]="userOption">{{ userOption.id }}</option>
             }
           </select>
         </div>

@@ -1,5 +1,5 @@
 import dayjs from 'dayjs/esm';
-import { IMessage } from 'app/entities/message/message.model';
+import { IUser } from 'app/entities/user/user.model';
 
 export interface IPeople {
   id: number;
@@ -15,8 +15,9 @@ export interface IPeople {
   cigarette?: string | null;
   alcool?: string | null;
   animaux?: string | null;
-  messagesExpediteur?: IMessage | null;
-  messagesDestinatire?: IMessage | null;
+  conducteur?: string | null;
+  passager?: string | null;
+  user?: Pick<IUser, 'id'> | null;
 }
 
 export type NewPeople = Omit<IPeople, 'id'> & { id: null };

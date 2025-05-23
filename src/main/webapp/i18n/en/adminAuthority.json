@@ -17,7 +17,9 @@
       "detail": {
         "title": "Authority"
       },
-      "name": "Name"
+      "name": "Name",
+      "description": "Description",
+      "ordre": "Ordre"
     }
   }
 }

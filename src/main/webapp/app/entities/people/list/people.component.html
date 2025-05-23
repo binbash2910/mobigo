@@ -161,15 +161,25 @@
                 }
               </div>
             </th>
-            <th scope="col" jhiSortBy="messagesExpediteur.id">
+            <th scope="col" jhiSortBy="conducteur">
               <div class="d-flex">
-                <span jhiTranslate="mobigoApp.people.messagesExpediteur">Messages Expediteur</span>
-                <fa-icon class="p-1" icon="sort"></fa-icon>
+                <span jhiTranslate="mobigoApp.people.conducteur">Conducteur</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
               </div>
             </th>
-            <th scope="col" jhiSortBy="messagesDestinatire.id">
+            <th scope="col" jhiSortBy="passager">
               <div class="d-flex">
-                <span jhiTranslate="mobigoApp.people.messagesDestinatire">Messages Destinatire</span>
+                <span jhiTranslate="mobigoApp.people.passager">Passager</span>
+                @if (!currentSearch) {
+                  <fa-icon class="p-1" icon="sort"></fa-icon>
+                }
+              </div>
+            </th>
+            <th scope="col" jhiSortBy="user.id">
+              <div class="d-flex">
+                <span jhiTranslate="mobigoApp.people.user">User</span>
                 <fa-icon class="p-1" icon="sort"></fa-icon>
               </div>
             </th>
@@ -194,19 +204,10 @@
               <td>{{ people.cigarette }}</td>
               <td>{{ people.alcool }}</td>
               <td>{{ people.animaux }}</td>
+              <td>{{ people.conducteur }}</td>
+              <td>{{ people.passager }}</td>
               <td>
-                @if (people.messagesExpediteur) {
-                  <div>
-                    <a [routerLink]="['/message', people.messagesExpediteur.id, 'view']">{{ people.messagesExpediteur.id }}</a>
-                  </div>
-                }
-              </td>
-              <td>
-                @if (people.messagesDestinatire) {
-                  <div>
-                    <a [routerLink]="['/message', people.messagesDestinatire.id, 'view']">{{ people.messagesDestinatire.id }}</a>
-                  </div>
-                }
+                {{ people.user?.id }}
               </td>
               <td class="text-end">
                 <div class="btn-group">

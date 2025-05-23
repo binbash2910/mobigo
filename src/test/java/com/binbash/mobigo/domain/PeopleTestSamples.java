@@ -22,7 +22,9 @@ public class PeopleTestSamples {
             .discussion("discussion1")
             .cigarette("cigarette1")
             .alcool("alcool1")
-            .animaux("animaux1");
+            .animaux("animaux1")
+            .conducteur("conducteur1")
+            .passager("passager1");
     }
 
     public static People getPeopleSample2() {
@@ -38,7 +40,9 @@ public class PeopleTestSamples {
             .discussion("discussion2")
             .cigarette("cigarette2")
             .alcool("alcool2")
-            .animaux("animaux2");
+            .animaux("animaux2")
+            .conducteur("conducteur2")
+            .passager("passager2");
     }
 
     public static People getPeopleRandomSampleGenerator() {
@@ -54,6 +58,8 @@ public class PeopleTestSamples {
             .discussion(UUID.randomUUID().toString())
             .cigarette(UUID.randomUUID().toString())
             .alcool(UUID.randomUUID().toString())
-            .animaux(UUID.randomUUID().toString());
+            .animaux(UUID.randomUUID().toString())
+            .conducteur(UUID.randomUUID().toString())
+            .passager(UUID.randomUUID().toString());
     }
 }
