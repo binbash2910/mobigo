@@ -105,7 +105,7 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     @JsonIgnoreProperties(value = { "trajet", "passager", "conducteur" }, allowSetters = true)
     private Set<Rating> notationsConducteurs = new HashSet<>();
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(unique = true)
     private User user;
 

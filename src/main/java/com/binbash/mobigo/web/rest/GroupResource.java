@@ -1,5 +1,6 @@
 package com.binbash.mobigo.web.rest;
 
+import com.binbash.mobigo.helper.PeopleHelper;
 import com.binbash.mobigo.repository.GroupRepository;
 import com.binbash.mobigo.service.GroupService;
 import com.binbash.mobigo.service.dto.GroupDTO;
@@ -36,9 +37,12 @@ public class GroupResource {
 
     private final GroupRepository groupRepository;
 
-    public GroupResource(GroupService groupService, GroupRepository groupRepository) {
+    private final PeopleHelper peopleHelper;
+
+    public GroupResource(GroupService groupService, GroupRepository groupRepository, PeopleHelper peopleHelper) {
         this.groupService = groupService;
         this.groupRepository = groupRepository;
+        this.peopleHelper = peopleHelper;
     }
 
     /**
@@ -51,6 +55,10 @@ public class GroupResource {
     @PostMapping("")
     public ResponseEntity<GroupDTO> createGroup(@RequestBody GroupDTO groupDTO) throws URISyntaxException {
         LOG.debug("REST request to save Group : {}", groupDTO);
+        LOG.debug(
+            "CURRENT USER : {}",
+            peopleHelper.getCurrentPeople().map(people -> people.getNom().concat(" ").concat(people.getPrenom()))
+        );
         if (groupDTO.getId() != null) {
             throw new BadRequestAlertException("A new group cannot already have an ID", ENTITY_NAME, "idexists");
         }

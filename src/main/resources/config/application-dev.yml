@@ -45,9 +45,6 @@ spring:
       auto-commit: false
   elasticsearch:
     uris: http://localhost:9200
-  liquibase:
-    # Remove 'faker' if you do not want the sample data to be loaded automatically
-    contexts: dev, faker
   mail:
     host: localhost
     port: 25
