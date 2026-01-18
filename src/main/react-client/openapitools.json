@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.13.0",
+    "generators": {
+      "react-client": {
+        "generatorName": "typescript-axios",
+        "output": "#{cwd}/generated",
+        "inputSpec": "http://localhost:8080/v3/api-docs",
+        "additionalProperties": {
+          "supportsES6": true,
+          "npmName": "mobigo-api-client",
+          "npmVersion": "0.0.1",
+          "withInterfaces": true,
+          "useSingleRequestParameter": true
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/mobigo
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://postgresql:5432/mobigo
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - SPRING_MAIL_HOST=mailpit
+      - SPRING_MAIL_PORT=1025
     ports:
       - 127.0.0.1:8080:8080
     healthcheck:
@@ -26,6 +28,8 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
+      mailpit:
+        condition: service_healthy
   postgresql:
     extends:
       file: ./postgresql.yml
@@ -34,3 +38,7 @@ services:
     extends:
       file: ./elasticsearch.yml
       service: elasticsearch
+  mailpit:
+    extends:
+      file: ./mailpit.yml
+      service: mailpit

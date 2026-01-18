@@ -9,3 +9,7 @@ services:
     extends:
       file: ./elasticsearch.yml
       service: elasticsearch
+  mailpit:
+    extends:
+      file: ./mailpit.yml
+      service: mailpit
