@@ -49,8 +49,8 @@ class PaymentResourceIT {
     private static final LocalDate DEFAULT_DATE_PAIEMENT = LocalDate.ofEpochDay(0L);
     private static final LocalDate UPDATED_DATE_PAIEMENT = LocalDate.now(ZoneId.systemDefault());
 
-    private static final PaymentMethodEnum DEFAULT_METHODE = PaymentMethodEnum.CARTE;
-    private static final PaymentMethodEnum UPDATED_METHODE = PaymentMethodEnum.BANCAURE;
+    private static final PaymentMethodEnum DEFAULT_METHODE = PaymentMethodEnum.CARTE_BANCAIRE;
+    private static final PaymentMethodEnum UPDATED_METHODE = PaymentMethodEnum.VIREMENT;
 
     private static final PaymentStatusEnum DEFAULT_STATUT = PaymentStatusEnum.REUSSI;
     private static final PaymentStatusEnum UPDATED_STATUT = PaymentStatusEnum.ECHOUE;

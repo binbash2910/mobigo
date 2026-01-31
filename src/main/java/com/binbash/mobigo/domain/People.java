@@ -90,6 +90,11 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     @JsonIgnoreProperties(value = { "trajets", "proprietaire" }, allowSetters = true)
     private Set<Vehicle> vehicules = new HashSet<>();
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "proprietaire")
+    @org.springframework.data.annotation.Transient
+    @JsonIgnoreProperties(value = { "proprietaire" }, allowSetters = true)
+    private Set<SavedPaymentMethod> savedPaymentMethods = new HashSet<>();
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "passager")
     @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "payement", "trajet", "passager" }, allowSetters = true)
@@ -344,6 +349,37 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     public People removeVehicules(Vehicle vehicle) {
         this.vehicules.remove(vehicle);
         vehicle.setProprietaire(null);
+        return this;
+    }
+
+    public Set<SavedPaymentMethod> getSavedPaymentMethods() {
+        return this.savedPaymentMethods;
+    }
+
+    public void setSavedPaymentMethods(Set<SavedPaymentMethod> savedPaymentMethods) {
+        if (this.savedPaymentMethods != null) {
+            this.savedPaymentMethods.forEach(i -> i.setProprietaire(null));
+        }
+        if (savedPaymentMethods != null) {
+            savedPaymentMethods.forEach(i -> i.setProprietaire(this));
+        }
+        this.savedPaymentMethods = savedPaymentMethods;
+    }
+
+    public People savedPaymentMethods(Set<SavedPaymentMethod> savedPaymentMethods) {
+        this.setSavedPaymentMethods(savedPaymentMethods);
+        return this;
+    }
+
+    public People addSavedPaymentMethod(SavedPaymentMethod savedPaymentMethod) {
+        this.savedPaymentMethods.add(savedPaymentMethod);
+        savedPaymentMethod.setProprietaire(this);
+        return this;
+    }
+
+    public People removeSavedPaymentMethod(SavedPaymentMethod savedPaymentMethod) {
+        this.savedPaymentMethods.remove(savedPaymentMethod);
+        savedPaymentMethod.setProprietaire(null);
         return this;
     }
 

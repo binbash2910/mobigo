@@ -1,5 +1,6 @@
 package com.binbash.mobigo.web.rest;
 
+import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Vehicle;
 import com.binbash.mobigo.repository.VehicleRepository;
 import com.binbash.mobigo.repository.search.VehicleSearchRepository;
@@ -7,18 +8,28 @@ import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
@@ -33,6 +44,7 @@ public class VehicleResource {
     private static final Logger LOG = LoggerFactory.getLogger(VehicleResource.class);
 
     private static final String ENTITY_NAME = "vehicle";
+    private static final String VEHICLE_IMAGES_DIR = "content/images/vehicles";
 
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
@@ -44,6 +56,125 @@ public class VehicleResource {
     public VehicleResource(VehicleRepository vehicleRepository, VehicleSearchRepository vehicleSearchRepository) {
         this.vehicleRepository = vehicleRepository;
         this.vehicleSearchRepository = vehicleSearchRepository;
+    }
+
+    /**
+     * {@code POST  /vehicles/{id}/upload-photo} : Upload a photo for a vehicle.
+     *
+     * @param id the id of the vehicle.
+     * @param file the image file to upload.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body containing the photo path.
+     */
+    @PostMapping(value = "/{id}/upload-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadVehiclePhoto(@PathVariable("id") Long id, @RequestParam("file") MultipartFile file) {
+        LOG.debug("REST request to upload photo for Vehicle : {}", id);
+
+        if (!vehicleRepository.existsById(id)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+
+        if (file.isEmpty()) {
+            throw new BadRequestAlertException("File is empty", ENTITY_NAME, "fileempty");
+        }
+
+        // Validate file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BadRequestAlertException("File must be an image", ENTITY_NAME, "invalidfiletype");
+        }
+
+        try {
+            // Get the file extension
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            } else {
+                // Default to .jpg if no extension
+                extension = ".jpg";
+            }
+
+            // Create filename based on vehicle ID
+            String filename = "vehicle_" + id + extension;
+
+            // Get the webapp directory path (relative to the application)
+            Path uploadDir = Paths.get("src/main/webapp/" + VEHICLE_IMAGES_DIR);
+
+            // Create directory if it doesn't exist
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+
+            // Save the file
+            Path filePath = uploadDir.resolve(filename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // The photo path that will be stored in the database (relative URL)
+            String photoPath = "/" + VEHICLE_IMAGES_DIR + "/" + filename;
+
+            // Update the vehicle with the photo path
+            vehicleRepository
+                .findById(id)
+                .ifPresent(vehicle -> {
+                    vehicle.setPhoto(photoPath);
+                    vehicleRepository.save(vehicle);
+                    vehicleSearchRepository.index(vehicle);
+                });
+
+            Map<String, String> response = new HashMap<>();
+            response.put("photoPath", photoPath);
+            response.put("message", "Photo uploaded successfully");
+
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            LOG.error("Error uploading vehicle photo", e);
+            throw new BadRequestAlertException("Error uploading file: " + e.getMessage(), ENTITY_NAME, "uploaderror");
+        }
+    }
+
+    /**
+     * {@code PUT  /vehicles/{id}/set-default} : Set a vehicle as the default vehicle for its owner.
+     *
+     * @param id the id of the vehicle to set as default.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated vehicle.
+     */
+    @PutMapping("/{id}/set-default")
+    public ResponseEntity<Vehicle> setDefaultVehicle(@PathVariable("id") Long id) {
+        LOG.debug("REST request to set Vehicle as default : {}", id);
+
+        Optional<Vehicle> vehicleOpt = vehicleRepository.findById(id);
+        if (vehicleOpt.isEmpty()) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+
+        Vehicle vehicle = vehicleOpt.get();
+        People owner = vehicle.getProprietaire();
+
+        if (owner != null) {
+            // Reset all other vehicles of the same owner to not default
+            List<Vehicle> ownerVehicles = vehicleRepository
+                .findAll()
+                .stream()
+                .filter(v -> v.getProprietaire() != null && v.getProprietaire().getId().equals(owner.getId()))
+                .toList();
+
+            for (Vehicle v : ownerVehicles) {
+                if (Boolean.TRUE.equals(v.getParDefaut())) {
+                    v.setParDefaut(false);
+                    vehicleRepository.save(v);
+                    vehicleSearchRepository.index(v);
+                }
+            }
+        }
+
+        // Set the selected vehicle as default
+        vehicle.setParDefaut(true);
+        vehicle = vehicleRepository.save(vehicle);
+        vehicleSearchRepository.index(vehicle);
+
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, vehicle.getId().toString()))
+            .body(vehicle);
     }
 
     /**
@@ -157,6 +288,9 @@ public class VehicleResource {
                 }
                 if (vehicle.getActif() != null) {
                     existingVehicle.setActif(vehicle.getActif());
+                }
+                if (vehicle.getParDefaut() != null) {
+                    existingVehicle.setParDefaut(vehicle.getParDefaut());
                 }
 
                 return existingVehicle;

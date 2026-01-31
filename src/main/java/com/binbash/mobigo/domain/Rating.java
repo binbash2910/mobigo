@@ -42,6 +42,7 @@ public class Rating extends AbstractAuditingEntity<Long> implements Serializable
     @JsonIgnoreProperties(
         value = {
             "vehicules",
+            "savedPaymentMethods",
             "bookingsPassagers",
             "notationsPassagers",
             "notationsConducteurs",
@@ -57,6 +58,7 @@ public class Rating extends AbstractAuditingEntity<Long> implements Serializable
     @JsonIgnoreProperties(
         value = {
             "vehicules",
+            "savedPaymentMethods",
             "bookingsPassagers",
             "notationsPassagers",
             "notationsConducteurs",

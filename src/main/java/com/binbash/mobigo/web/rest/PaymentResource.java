@@ -1,8 +1,11 @@
 package com.binbash.mobigo.web.rest;
 
 import com.binbash.mobigo.domain.Payment;
+import com.binbash.mobigo.domain.enumeration.PaymentMethodEnum;
+import com.binbash.mobigo.domain.enumeration.PaymentStatusEnum;
 import com.binbash.mobigo.repository.PaymentRepository;
 import com.binbash.mobigo.repository.search.PaymentSearchRepository;
+import com.binbash.mobigo.service.PaymentService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
@@ -41,9 +44,87 @@ public class PaymentResource {
 
     private final PaymentSearchRepository paymentSearchRepository;
 
-    public PaymentResource(PaymentRepository paymentRepository, PaymentSearchRepository paymentSearchRepository) {
+    private final PaymentService paymentService;
+
+    public PaymentResource(
+        PaymentRepository paymentRepository,
+        PaymentSearchRepository paymentSearchRepository,
+        PaymentService paymentService
+    ) {
         this.paymentRepository = paymentRepository;
         this.paymentSearchRepository = paymentSearchRepository;
+        this.paymentService = paymentService;
+    }
+
+    /**
+     * {@code POST  /payments/process} : Process a payment for a booking.
+     *
+     * @param request the payment processing request.
+     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new payment.
+     * @throws URISyntaxException if the Location URI syntax is incorrect.
+     */
+    @PostMapping("/process")
+    public ResponseEntity<Payment> processPayment(@Valid @RequestBody ProcessPaymentRequest request) throws URISyntaxException {
+        LOG.debug("REST request to process Payment for booking {} with method {}", request.bookingId(), request.methode());
+        Payment payment = paymentService.processPayment(request.bookingId(), request.methode());
+        return ResponseEntity.created(new URI("/api/payments/" + payment.getId()))
+            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, payment.getId().toString()))
+            .body(payment);
+    }
+
+    /**
+     * {@code GET  /payments/my-payments} : get all payments for the current user.
+     *
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of payments in body.
+     */
+    @GetMapping("/my-payments")
+    public List<Payment> getMyPayments() {
+        LOG.debug("REST request to get current user Payments");
+        return paymentService.getPaymentsByCurrentUser();
+    }
+
+    /**
+     * {@code GET  /payments/booking/:bookingId} : get the payment for a booking.
+     *
+     * @param bookingId the booking id.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the payment, or with status {@code 404 (Not Found)}.
+     */
+    @GetMapping("/booking/{bookingId}")
+    public ResponseEntity<Payment> getPaymentByBooking(@PathVariable("bookingId") Long bookingId) {
+        LOG.debug("REST request to get Payment for booking {}", bookingId);
+        Optional<Payment> payment = paymentService.getPaymentByBooking(bookingId);
+        return ResponseUtil.wrapOrNotFound(payment);
+    }
+
+    /**
+     * {@code PATCH  /payments/:id/status} : Update the status of a payment.
+     *
+     * @param id the payment id.
+     * @param request the status update request.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated payment.
+     */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Payment> updatePaymentStatus(@PathVariable("id") Long id, @Valid @RequestBody UpdateStatusRequest request) {
+        LOG.debug("REST request to update Payment {} status to {}", id, request.statut());
+        Payment payment = paymentService.updatePaymentStatus(id, request.statut());
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(payment);
+    }
+
+    /**
+     * {@code POST  /payments/:id/confirm} : Confirm a payment.
+     *
+     * @param id the payment id.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the confirmed payment.
+     */
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<Payment> confirmPayment(@PathVariable("id") Long id) {
+        LOG.debug("REST request to confirm Payment {}", id);
+        Payment payment = paymentService.confirmPayment(id);
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(payment);
     }
 
     /**
@@ -59,8 +140,7 @@ public class PaymentResource {
         if (payment.getId() != null) {
             throw new BadRequestAlertException("A new payment cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        payment = paymentRepository.save(payment);
-        paymentSearchRepository.index(payment);
+        payment = paymentService.save(payment);
         return ResponseEntity.created(new URI("/api/payments/" + payment.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, payment.getId().toString()))
             .body(payment);
@@ -93,8 +173,7 @@ public class PaymentResource {
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
-        payment = paymentRepository.save(payment);
-        paymentSearchRepository.index(payment);
+        payment = paymentService.save(payment);
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, payment.getId().toString()))
             .body(payment);
@@ -166,7 +245,7 @@ public class PaymentResource {
     @GetMapping("")
     public List<Payment> getAllPayments() {
         LOG.debug("REST request to get all Payments");
-        return paymentRepository.findAll();
+        return paymentService.findAll();
     }
 
     /**
@@ -178,7 +257,7 @@ public class PaymentResource {
     @GetMapping("/{id}")
     public ResponseEntity<Payment> getPayment(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Payment : {}", id);
-        Optional<Payment> payment = paymentRepository.findById(id);
+        Optional<Payment> payment = paymentService.findOne(id);
         return ResponseUtil.wrapOrNotFound(payment);
     }
 
@@ -191,8 +270,7 @@ public class PaymentResource {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePayment(@PathVariable("id") Long id) {
         LOG.debug("REST request to delete Payment : {}", id);
-        paymentRepository.deleteById(id);
-        paymentSearchRepository.deleteFromIndexById(id);
+        paymentService.delete(id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
@@ -214,4 +292,14 @@ public class PaymentResource {
             throw ElasticsearchExceptionMapper.mapException(e);
         }
     }
+
+    /**
+     * Request body for processing a payment.
+     */
+    public record ProcessPaymentRequest(@NotNull Long bookingId, @NotNull PaymentMethodEnum methode) {}
+
+    /**
+     * Request body for updating payment status.
+     */
+    public record UpdateStatusRequest(@NotNull PaymentStatusEnum statut) {}
 }

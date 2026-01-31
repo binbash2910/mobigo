@@ -3,8 +3,8 @@ name: mobigo
 services:
   postgresql:
     image: postgres:17.4
-    # volumes:
-    #   - ~/volumes/jhipster/mobigo/postgresql/:/var/lib/postgresql/data/
+    #volumes:
+    #- C:/Users/lucie/OneDrive/Documents/Developpements/backend/mobigo/:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=mobigo
       - POSTGRES_HOST_AUTH_METHOD=trust

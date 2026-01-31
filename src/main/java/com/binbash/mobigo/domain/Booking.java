@@ -55,6 +55,7 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
     @JsonIgnoreProperties(
         value = {
             "vehicules",
+            "savedPaymentMethods",
             "bookingsPassagers",
             "notationsPassagers",
             "notationsConducteurs",

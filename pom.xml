@@ -75,6 +75,7 @@
         <spotless-maven-plugin.version>2.44.4</spotless-maven-plugin.version>
         <spring.profiles.active>dev</spring.profiles.active>
         <springdoc-openapi-starter-webmvc-api.version>2.8.8</springdoc-openapi-starter-webmvc-api.version>
+        <springdoc-openapi-starter-webmvc-ui.version>2.8.15</springdoc-openapi-starter-webmvc-ui.version>
         <testng.version>7.11.0</testng.version>
     </properties>
 
@@ -191,7 +192,7 @@
             <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
             <version>${springdoc-openapi-starter-webmvc-api.version}</version>
         </dependency>
-        <dependency>
+      <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-hibernate6</artifactId>
         </dependency>

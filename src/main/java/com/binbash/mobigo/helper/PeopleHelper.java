@@ -19,9 +19,6 @@ public class PeopleHelper {
 
     public Optional<People> getCurrentPeople() {
         Optional<User> userOpt = userHelper.getCurrentUser();
-        if (userOpt.isPresent()) {
-            return peopleRepository.findByUser(userOpt.get());
-        }
-        return Optional.empty();
+        return userOpt.map(user -> peopleRepository.findByUser(user).orElseThrow(() -> new RuntimeException("Current People not found")));
     }
 }

@@ -6,6 +6,5 @@ package com.binbash.mobigo.domain.enumeration;
 public enum PaymentStatusEnum {
     REUSSI,
     ECHOUE,
-    EN,
-    ATTENTE,
+    EN_ATTENTE,
 }

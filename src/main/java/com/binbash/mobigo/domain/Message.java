@@ -41,6 +41,7 @@ public class Message extends AbstractAuditingEntity<Long> implements Serializabl
     @JsonIgnoreProperties(
         value = {
             "vehicules",
+            "savedPaymentMethods",
             "bookingsPassagers",
             "notationsPassagers",
             "notationsConducteurs",
@@ -56,6 +57,7 @@ public class Message extends AbstractAuditingEntity<Long> implements Serializabl
     @JsonIgnoreProperties(
         value = {
             "vehicules",
+            "savedPaymentMethods",
             "bookingsPassagers",
             "notationsPassagers",
             "notationsConducteurs",

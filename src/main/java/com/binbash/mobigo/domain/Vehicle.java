@@ -59,7 +59,8 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String couleur;
 
-    @Column(name = "photo")
+    @Lob
+    @Column(name = "photo", columnDefinition = "TEXT")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String photo;
 
@@ -67,6 +68,10 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
     @Column(name = "actif", nullable = false)
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String actif;
+
+    @Column(name = "par_defaut")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Boolean)
+    private Boolean parDefaut = false;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "vehicule")
     @org.springframework.data.annotation.Transient
@@ -77,6 +82,7 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
     @JsonIgnoreProperties(
         value = {
             "vehicules",
+            "savedPaymentMethods",
             "bookingsPassagers",
             "notationsPassagers",
             "notationsConducteurs",
@@ -220,6 +226,19 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
         this.actif = actif;
     }
 
+    public Boolean getParDefaut() {
+        return this.parDefaut;
+    }
+
+    public Vehicle parDefaut(Boolean parDefaut) {
+        this.setParDefaut(parDefaut);
+        return this;
+    }
+
+    public void setParDefaut(Boolean parDefaut) {
+        this.parDefaut = parDefaut;
+    }
+
     public Set<Ride> getTrajets() {
         return this.trajets;
     }
@@ -297,6 +316,7 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
             ", couleur='" + getCouleur() + "'" +
             ", photo='" + getPhoto() + "'" +
             ", actif='" + getActif() + "'" +
+            ", parDefaut=" + getParDefaut() +
             "}";
     }
 }

@@ -2,8 +2,10 @@ package com.binbash.mobigo.service;
 
 import com.binbash.mobigo.config.Constants;
 import com.binbash.mobigo.domain.Authority;
+import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.User;
 import com.binbash.mobigo.repository.AuthorityRepository;
+import com.binbash.mobigo.repository.PeopleRepository;
 import com.binbash.mobigo.repository.UserRepository;
 import com.binbash.mobigo.repository.search.UserSearchRepository;
 import com.binbash.mobigo.security.AuthoritiesConstants;
@@ -11,6 +13,7 @@ import com.binbash.mobigo.security.SecurityUtils;
 import com.binbash.mobigo.service.dto.AdminUserDTO;
 import com.binbash.mobigo.service.dto.UserDTO;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,16 +44,20 @@ public class UserService {
 
     private final AuthorityRepository authorityRepository;
 
+    private final PeopleRepository peopleRepository;
+
     public UserService(
         UserRepository userRepository,
         PasswordEncoder passwordEncoder,
         UserSearchRepository userSearchRepository,
-        AuthorityRepository authorityRepository
+        AuthorityRepository authorityRepository,
+        PeopleRepository peopleRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userSearchRepository = userSearchRepository;
         this.authorityRepository = authorityRepository;
+        this.peopleRepository = peopleRepository;
     }
 
     public Optional<User> activateRegistration(String key) {
@@ -130,6 +137,22 @@ public class UserService {
         userRepository.save(newUser);
         userSearchRepository.save(newUser);
         LOG.debug("Created Information for User: {}", newUser);
+
+        // Create associated People entity for the new user
+        People newPeople = new People();
+        newPeople.setNom(userDTO.getLastName() != null ? userDTO.getLastName() : userDTO.getLogin());
+        newPeople.setPrenom(userDTO.getFirstName() != null ? userDTO.getFirstName() : "");
+        newPeople.setTelephone("0000000000"); // Default, user can update later
+        newPeople.setCni("PENDING"); // Default, user can update later
+        newPeople.setActif("TRUE");
+        newPeople.setDateNaissance(LocalDate.of(1990, 1, 1)); // Default, user can update later
+        newPeople.setPhoto(userDTO.getImageUrl());
+        newPeople.setConducteur("TRUE");
+        newPeople.setPassager("TRUE");
+        newPeople.setUser(newUser);
+        peopleRepository.save(newPeople);
+        LOG.debug("Created People profile for User: {}", newPeople);
+
         return newUser;
     }
 
@@ -174,6 +197,22 @@ public class UserService {
         userRepository.save(user);
         userSearchRepository.index(user);
         LOG.debug("Created Information for User: {}", user);
+
+        // Create associated People entity for the new user
+        People newPeople = new People();
+        newPeople.setNom(userDTO.getLastName() != null ? userDTO.getLastName() : userDTO.getLogin());
+        newPeople.setPrenom(userDTO.getFirstName() != null ? userDTO.getFirstName() : "");
+        newPeople.setTelephone("0000000000"); // Default, user can update later
+        newPeople.setCni("PENDING"); // Default, user can update later
+        newPeople.setActif("TRUE");
+        newPeople.setDateNaissance(LocalDate.of(1990, 1, 1)); // Default, user can update later
+        newPeople.setPhoto(userDTO.getImageUrl());
+        newPeople.setConducteur("TRUE");
+        newPeople.setPassager("TRUE");
+        newPeople.setUser(user);
+        peopleRepository.save(newPeople);
+        LOG.debug("Created People profile for User: {}", newPeople);
+
         return user;
     }
 
