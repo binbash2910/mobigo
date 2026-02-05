@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
@@ -57,25 +58,9 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     @Column(name = "date_naissance", nullable = false)
     private LocalDate dateNaissance;
 
-    @Column(name = "musique")
-    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
-    private String musique;
-
-    @Column(name = "discussion")
-    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
-    private String discussion;
-
-    @Column(name = "cigarette")
-    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
-    private String cigarette;
-
     @Column(name = "alcool")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String alcool;
-
-    @Column(name = "animaux")
-    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
-    private String animaux;
 
     @Column(name = "conducteur")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
@@ -84,6 +69,39 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
     @Column(name = "passager")
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String passager;
+
+    @Column(name = "cni_statut")
+    private String cniStatut;
+
+    @Column(name = "cni_photo_recto")
+    private String cniPhotoRecto;
+
+    @Column(name = "cni_photo_verso")
+    private String cniPhotoVerso;
+
+    @Column(name = "cni_numero")
+    private String cniNumero;
+
+    @Column(name = "cni_date_expiration")
+    private LocalDate cniDateExpiration;
+
+    @Column(name = "cni_sexe", length = 1)
+    private String cniSexe;
+
+    @Column(name = "cni_verifie_at")
+    private Instant cniVerifieAt;
+
+    @Column(name = "cni_nom_mrz")
+    private String cniNomMrz;
+
+    @Column(name = "cni_prenom_mrz")
+    private String cniPrenomMrz;
+
+    @Column(name = "cni_date_naissance_mrz")
+    private LocalDate cniDateNaissanceMrz;
+
+    @Column(name = "document_type")
+    private String documentType;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "proprietaire")
     @org.springframework.data.annotation.Transient
@@ -230,45 +248,6 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
         this.dateNaissance = dateNaissance;
     }
 
-    public String getMusique() {
-        return this.musique;
-    }
-
-    public People musique(String musique) {
-        this.setMusique(musique);
-        return this;
-    }
-
-    public void setMusique(String musique) {
-        this.musique = musique;
-    }
-
-    public String getDiscussion() {
-        return this.discussion;
-    }
-
-    public People discussion(String discussion) {
-        this.setDiscussion(discussion);
-        return this;
-    }
-
-    public void setDiscussion(String discussion) {
-        this.discussion = discussion;
-    }
-
-    public String getCigarette() {
-        return this.cigarette;
-    }
-
-    public People cigarette(String cigarette) {
-        this.setCigarette(cigarette);
-        return this;
-    }
-
-    public void setCigarette(String cigarette) {
-        this.cigarette = cigarette;
-    }
-
     public String getAlcool() {
         return this.alcool;
     }
@@ -280,19 +259,6 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
 
     public void setAlcool(String alcool) {
         this.alcool = alcool;
-    }
-
-    public String getAnimaux() {
-        return this.animaux;
-    }
-
-    public People animaux(String animaux) {
-        this.setAnimaux(animaux);
-        return this;
-    }
-
-    public void setAnimaux(String animaux) {
-        this.animaux = animaux;
     }
 
     public String getConducteur() {
@@ -551,6 +517,94 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
         return this;
     }
 
+    public String getCniStatut() {
+        return this.cniStatut;
+    }
+
+    public void setCniStatut(String cniStatut) {
+        this.cniStatut = cniStatut;
+    }
+
+    public String getCniPhotoRecto() {
+        return this.cniPhotoRecto;
+    }
+
+    public void setCniPhotoRecto(String cniPhotoRecto) {
+        this.cniPhotoRecto = cniPhotoRecto;
+    }
+
+    public String getCniPhotoVerso() {
+        return this.cniPhotoVerso;
+    }
+
+    public void setCniPhotoVerso(String cniPhotoVerso) {
+        this.cniPhotoVerso = cniPhotoVerso;
+    }
+
+    public String getCniNumero() {
+        return this.cniNumero;
+    }
+
+    public void setCniNumero(String cniNumero) {
+        this.cniNumero = cniNumero;
+    }
+
+    public LocalDate getCniDateExpiration() {
+        return this.cniDateExpiration;
+    }
+
+    public void setCniDateExpiration(LocalDate cniDateExpiration) {
+        this.cniDateExpiration = cniDateExpiration;
+    }
+
+    public String getCniSexe() {
+        return this.cniSexe;
+    }
+
+    public void setCniSexe(String cniSexe) {
+        this.cniSexe = cniSexe;
+    }
+
+    public Instant getCniVerifieAt() {
+        return this.cniVerifieAt;
+    }
+
+    public void setCniVerifieAt(Instant cniVerifieAt) {
+        this.cniVerifieAt = cniVerifieAt;
+    }
+
+    public String getCniNomMrz() {
+        return this.cniNomMrz;
+    }
+
+    public void setCniNomMrz(String cniNomMrz) {
+        this.cniNomMrz = cniNomMrz;
+    }
+
+    public String getCniPrenomMrz() {
+        return this.cniPrenomMrz;
+    }
+
+    public void setCniPrenomMrz(String cniPrenomMrz) {
+        this.cniPrenomMrz = cniPrenomMrz;
+    }
+
+    public LocalDate getCniDateNaissanceMrz() {
+        return this.cniDateNaissanceMrz;
+    }
+
+    public void setCniDateNaissanceMrz(LocalDate cniDateNaissanceMrz) {
+        this.cniDateNaissanceMrz = cniDateNaissanceMrz;
+    }
+
+    public String getDocumentType() {
+        return this.documentType;
+    }
+
+    public void setDocumentType(String documentType) {
+        this.documentType = documentType;
+    }
+
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
 
     @Override
@@ -582,11 +636,7 @@ public class People extends AbstractAuditingEntity<Long> implements Serializable
             ", photo='" + getPhoto() + "'" +
             ", actif='" + getActif() + "'" +
             ", dateNaissance='" + getDateNaissance() + "'" +
-            ", musique='" + getMusique() + "'" +
-            ", discussion='" + getDiscussion() + "'" +
-            ", cigarette='" + getCigarette() + "'" +
             ", alcool='" + getAlcool() + "'" +
-            ", animaux='" + getAnimaux() + "'" +
             ", conducteur='" + getConducteur() + "'" +
             ", passager='" + getPassager() + "'" +
             "}";

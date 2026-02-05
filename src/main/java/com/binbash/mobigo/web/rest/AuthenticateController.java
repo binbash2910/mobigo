@@ -4,13 +4,20 @@ import static com.binbash.mobigo.security.SecurityUtils.AUTHORITIES_CLAIM;
 import static com.binbash.mobigo.security.SecurityUtils.JWT_ALGORITHM;
 import static com.binbash.mobigo.security.SecurityUtils.USER_ID_CLAIM;
 
+import com.binbash.mobigo.domain.InvalidatedToken;
+import com.binbash.mobigo.repository.InvalidatedTokenRepository;
 import com.binbash.mobigo.security.DomainUserDetailsService.UserWithId;
 import com.binbash.mobigo.web.rest.vm.LoginVM;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +34,8 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -40,6 +49,8 @@ public class AuthenticateController {
 
     private final JwtEncoder jwtEncoder;
 
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
+
     @Value("${jhipster.security.authentication.jwt.token-validity-in-seconds:0}")
     private long tokenValidityInSeconds;
 
@@ -48,9 +59,14 @@ public class AuthenticateController {
 
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
-    public AuthenticateController(JwtEncoder jwtEncoder, AuthenticationManagerBuilder authenticationManagerBuilder) {
+    public AuthenticateController(
+        JwtEncoder jwtEncoder,
+        AuthenticationManagerBuilder authenticationManagerBuilder,
+        InvalidatedTokenRepository invalidatedTokenRepository
+    ) {
         this.jwtEncoder = jwtEncoder;
         this.authenticationManagerBuilder = authenticationManagerBuilder;
+        this.invalidatedTokenRepository = invalidatedTokenRepository;
     }
 
     @PostMapping("/authenticate")
@@ -103,6 +119,66 @@ public class AuthenticateController {
 
         JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();
         return this.jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, builder.build())).getTokenValue();
+    }
+
+    /**
+     * {@code POST /logout} : Invalidate the current JWT token.
+     *
+     * Adds the token to a blacklist so it cannot be reused, preventing identity theft
+     * even if the token is intercepted. Also cleans up expired blacklisted tokens.
+     *
+     * @param authentication the current authentication
+     * @param request the HTTP request containing the Bearer token
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)}
+     */
+    @PostMapping("/logout")
+    @Transactional
+    public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request) {
+        LOG.debug("REST request to logout user: {}", authentication.getName());
+
+        // Extract the raw token from the Authorization header
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            String tokenHash = computeTokenHash(token);
+
+            // Get token expiration from the JWT claims
+            Instant expiresAt;
+            if (authentication instanceof JwtAuthenticationToken jwtAuth) {
+                expiresAt = jwtAuth.getToken().getExpiresAt();
+            } else {
+                // Fallback: use max remember-me validity
+                expiresAt = Instant.now().plus(this.tokenValidityInSecondsForRememberMe, ChronoUnit.SECONDS);
+            }
+
+            // Store the token hash in the blacklist
+            if (!invalidatedTokenRepository.existsByTokenHash(tokenHash)) {
+                InvalidatedToken invalidatedToken = new InvalidatedToken();
+                invalidatedToken.setTokenHash(tokenHash);
+                invalidatedToken.setExpiresAt(expiresAt);
+                invalidatedToken.setInvalidatedAt(Instant.now());
+                invalidatedTokenRepository.save(invalidatedToken);
+            }
+
+            // Cleanup expired blacklisted tokens
+            invalidatedTokenRepository.deleteExpiredTokens(Instant.now());
+        }
+
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Compute SHA-256 hash of a token for secure storage.
+     */
+    public static String computeTokenHash(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
     }
 
     /**

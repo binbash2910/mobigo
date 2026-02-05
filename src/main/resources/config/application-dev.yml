@@ -26,6 +26,10 @@ management:
       enabled: false
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 25MB
   devtools:
     restart:
       enabled: true
@@ -104,4 +108,9 @@ jhipster:
 # https://www.jhipster.tech/common-application-properties/
 # ===================================================================
 
-# application:
+application:
+  tesseract:
+    data-path: ${user.dir}/tessdata
+    language: fra+eng
+  cni:
+    images-dir: content/images/cni

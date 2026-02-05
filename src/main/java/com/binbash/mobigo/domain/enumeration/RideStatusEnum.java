@@ -7,4 +7,5 @@ public enum RideStatusEnum {
     OUVERT,
     COMPLET,
     ANNULE,
+    EFFECTUE,
 }

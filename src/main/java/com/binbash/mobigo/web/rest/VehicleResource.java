@@ -2,6 +2,8 @@ package com.binbash.mobigo.web.rest;
 
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Vehicle;
+import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
+import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.VehicleRepository;
 import com.binbash.mobigo.repository.search.VehicleSearchRepository;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
@@ -53,9 +55,16 @@ public class VehicleResource {
 
     private final VehicleSearchRepository vehicleSearchRepository;
 
-    public VehicleResource(VehicleRepository vehicleRepository, VehicleSearchRepository vehicleSearchRepository) {
+    private final RideRepository rideRepository;
+
+    public VehicleResource(
+        VehicleRepository vehicleRepository,
+        VehicleSearchRepository vehicleSearchRepository,
+        RideRepository rideRepository
+    ) {
         this.vehicleRepository = vehicleRepository;
         this.vehicleSearchRepository = vehicleSearchRepository;
+        this.rideRepository = rideRepository;
     }
 
     /**
@@ -292,6 +301,18 @@ public class VehicleResource {
                 if (vehicle.getParDefaut() != null) {
                     existingVehicle.setParDefaut(vehicle.getParDefaut());
                 }
+                if (vehicle.getMusique() != null) {
+                    existingVehicle.setMusique(vehicle.getMusique());
+                }
+                if (vehicle.getDiscussion() != null) {
+                    existingVehicle.setDiscussion(vehicle.getDiscussion());
+                }
+                if (vehicle.getCigarette() != null) {
+                    existingVehicle.setCigarette(vehicle.getCigarette());
+                }
+                if (vehicle.getAnimaux() != null) {
+                    existingVehicle.setAnimaux(vehicle.getAnimaux());
+                }
 
                 return existingVehicle;
             })
@@ -332,16 +353,38 @@ public class VehicleResource {
     }
 
     /**
-     * {@code DELETE  /vehicles/:id} : delete the "id" vehicle.
+     * {@code DELETE  /vehicles/:id} : soft-delete the "id" vehicle by setting actif to FALSE.
      *
-     * @param id the id of the vehicle to delete.
+     * @param id the id of the vehicle to deactivate.
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVehicle(@PathVariable("id") Long id) {
-        LOG.debug("REST request to delete Vehicle : {}", id);
-        vehicleRepository.deleteById(id);
-        vehicleSearchRepository.deleteFromIndexById(id);
+        LOG.debug("REST request to soft-delete Vehicle : {}", id);
+
+        if (!vehicleRepository.existsById(id)) {
+            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
+        }
+
+        // Check if the vehicle is used in any ride with status OUVERT or COMPLET
+        long activeRideCount = rideRepository.countByVehiculeIdAndStatutIn(id, List.of(RideStatusEnum.OUVERT, RideStatusEnum.COMPLET));
+
+        if (activeRideCount > 0) {
+            throw new BadRequestAlertException(
+                "Ce véhicule est associé à un trajet ouvert ou complet et ne peut pas être désactivé",
+                ENTITY_NAME,
+                "vehicleinactiveride"
+            );
+        }
+
+        vehicleRepository
+            .findById(id)
+            .ifPresent(vehicle -> {
+                vehicle.setActif("FALSE");
+                vehicleRepository.save(vehicle);
+                vehicleSearchRepository.index(vehicle);
+            });
+
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();

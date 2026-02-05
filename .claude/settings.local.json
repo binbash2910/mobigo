@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["Bash(curl:*)", "Bash(timeout:*)", "WebFetch(domain:raw.githubusercontent.com)", "Bash(git clone:*)"]
+  }
+}

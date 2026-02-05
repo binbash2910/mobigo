@@ -1,6 +1,7 @@
 package com.binbash.mobigo.domain;
 
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
+import com.binbash.mobigo.domain.enumeration.PaymentMethodEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -41,6 +42,11 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
     @Column(name = "statut", nullable = false)
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private BookingStatusEnum statut;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "methode_payment")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
+    private PaymentMethodEnum methodePayment;
 
     @JsonIgnoreProperties(value = { "booking" }, allowSetters = true)
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "booking")
@@ -134,6 +140,19 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
         this.statut = statut;
     }
 
+    public PaymentMethodEnum getMethodePayment() {
+        return this.methodePayment;
+    }
+
+    public Booking methodePayment(PaymentMethodEnum methodePayment) {
+        this.setMethodePayment(methodePayment);
+        return this;
+    }
+
+    public void setMethodePayment(PaymentMethodEnum methodePayment) {
+        this.methodePayment = methodePayment;
+    }
+
     public Payment getPayement() {
         return this.payement;
     }
@@ -207,6 +226,7 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
             ", montantTotal=" + getMontantTotal() +
             ", dateReservation='" + getDateReservation() + "'" +
             ", statut='" + getStatut() + "'" +
+            ", methodePayment='" + getMethodePayment() + "'" +
             "}";
     }
 }

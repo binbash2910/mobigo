@@ -337,6 +337,11 @@
         <artifactId>lombok</artifactId>
         <optional>true</optional>
       </dependency>-->
+        <dependency>
+            <groupId>net.sourceforge.tess4j</groupId>
+            <artifactId>tess4j</artifactId>
+            <version>5.11.0</version>
+        </dependency>
     </dependencies>
 
     <build>

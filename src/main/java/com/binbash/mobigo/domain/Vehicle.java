@@ -73,6 +73,22 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Boolean)
     private Boolean parDefaut = false;
 
+    @Column(name = "musique")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String musique;
+
+    @Column(name = "discussion")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String discussion;
+
+    @Column(name = "cigarette")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String cigarette;
+
+    @Column(name = "animaux")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String animaux;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "vehicule")
     @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "steps", "bookingsTrajets", "notations", "vehicule" }, allowSetters = true)
@@ -239,6 +255,58 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
         this.parDefaut = parDefaut;
     }
 
+    public String getMusique() {
+        return this.musique;
+    }
+
+    public Vehicle musique(String musique) {
+        this.setMusique(musique);
+        return this;
+    }
+
+    public void setMusique(String musique) {
+        this.musique = musique;
+    }
+
+    public String getDiscussion() {
+        return this.discussion;
+    }
+
+    public Vehicle discussion(String discussion) {
+        this.setDiscussion(discussion);
+        return this;
+    }
+
+    public void setDiscussion(String discussion) {
+        this.discussion = discussion;
+    }
+
+    public String getCigarette() {
+        return this.cigarette;
+    }
+
+    public Vehicle cigarette(String cigarette) {
+        this.setCigarette(cigarette);
+        return this;
+    }
+
+    public void setCigarette(String cigarette) {
+        this.cigarette = cigarette;
+    }
+
+    public String getAnimaux() {
+        return this.animaux;
+    }
+
+    public Vehicle animaux(String animaux) {
+        this.setAnimaux(animaux);
+        return this;
+    }
+
+    public void setAnimaux(String animaux) {
+        this.animaux = animaux;
+    }
+
     public Set<Ride> getTrajets() {
         return this.trajets;
     }
@@ -317,6 +385,10 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
             ", photo='" + getPhoto() + "'" +
             ", actif='" + getActif() + "'" +
             ", parDefaut=" + getParDefaut() +
+            ", musique='" + getMusique() + "'" +
+            ", discussion='" + getDiscussion() + "'" +
+            ", cigarette='" + getCigarette() + "'" +
+            ", animaux='" + getAnimaux() + "'" +
             "}";
     }
 }

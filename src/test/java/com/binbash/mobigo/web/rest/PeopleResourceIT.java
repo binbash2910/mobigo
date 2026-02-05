@@ -63,20 +63,8 @@ class PeopleResourceIT {
     private static final LocalDate DEFAULT_DATE_NAISSANCE = LocalDate.ofEpochDay(0L);
     private static final LocalDate UPDATED_DATE_NAISSANCE = LocalDate.now(ZoneId.systemDefault());
 
-    private static final String DEFAULT_MUSIQUE = "AAAAAAAAAA";
-    private static final String UPDATED_MUSIQUE = "BBBBBBBBBB";
-
-    private static final String DEFAULT_DISCUSSION = "AAAAAAAAAA";
-    private static final String UPDATED_DISCUSSION = "BBBBBBBBBB";
-
-    private static final String DEFAULT_CIGARETTE = "AAAAAAAAAA";
-    private static final String UPDATED_CIGARETTE = "BBBBBBBBBB";
-
     private static final String DEFAULT_ALCOOL = "AAAAAAAAAA";
     private static final String UPDATED_ALCOOL = "BBBBBBBBBB";
-
-    private static final String DEFAULT_ANIMAUX = "AAAAAAAAAA";
-    private static final String UPDATED_ANIMAUX = "BBBBBBBBBB";
 
     private static final String DEFAULT_CONDUCTEUR = "AAAAAAAAAA";
     private static final String UPDATED_CONDUCTEUR = "BBBBBBBBBB";
@@ -128,11 +116,7 @@ class PeopleResourceIT {
             .photo(DEFAULT_PHOTO)
             .actif(DEFAULT_ACTIF)
             .dateNaissance(DEFAULT_DATE_NAISSANCE)
-            .musique(DEFAULT_MUSIQUE)
-            .discussion(DEFAULT_DISCUSSION)
-            .cigarette(DEFAULT_CIGARETTE)
             .alcool(DEFAULT_ALCOOL)
-            .animaux(DEFAULT_ANIMAUX)
             .conducteur(DEFAULT_CONDUCTEUR)
             .passager(DEFAULT_PASSAGER);
     }
@@ -152,11 +136,7 @@ class PeopleResourceIT {
             .photo(UPDATED_PHOTO)
             .actif(UPDATED_ACTIF)
             .dateNaissance(UPDATED_DATE_NAISSANCE)
-            .musique(UPDATED_MUSIQUE)
-            .discussion(UPDATED_DISCUSSION)
-            .cigarette(UPDATED_CIGARETTE)
             .alcool(UPDATED_ALCOOL)
-            .animaux(UPDATED_ANIMAUX)
             .conducteur(UPDATED_CONDUCTEUR)
             .passager(UPDATED_PASSAGER);
     }
@@ -344,11 +324,7 @@ class PeopleResourceIT {
             .andExpect(jsonPath("$.[*].photo").value(hasItem(DEFAULT_PHOTO)))
             .andExpect(jsonPath("$.[*].actif").value(hasItem(DEFAULT_ACTIF)))
             .andExpect(jsonPath("$.[*].dateNaissance").value(hasItem(DEFAULT_DATE_NAISSANCE.toString())))
-            .andExpect(jsonPath("$.[*].musique").value(hasItem(DEFAULT_MUSIQUE)))
-            .andExpect(jsonPath("$.[*].discussion").value(hasItem(DEFAULT_DISCUSSION)))
-            .andExpect(jsonPath("$.[*].cigarette").value(hasItem(DEFAULT_CIGARETTE)))
             .andExpect(jsonPath("$.[*].alcool").value(hasItem(DEFAULT_ALCOOL)))
-            .andExpect(jsonPath("$.[*].animaux").value(hasItem(DEFAULT_ANIMAUX)))
             .andExpect(jsonPath("$.[*].conducteur").value(hasItem(DEFAULT_CONDUCTEUR)))
             .andExpect(jsonPath("$.[*].passager").value(hasItem(DEFAULT_PASSAGER)));
     }
@@ -372,11 +348,7 @@ class PeopleResourceIT {
             .andExpect(jsonPath("$.photo").value(DEFAULT_PHOTO))
             .andExpect(jsonPath("$.actif").value(DEFAULT_ACTIF))
             .andExpect(jsonPath("$.dateNaissance").value(DEFAULT_DATE_NAISSANCE.toString()))
-            .andExpect(jsonPath("$.musique").value(DEFAULT_MUSIQUE))
-            .andExpect(jsonPath("$.discussion").value(DEFAULT_DISCUSSION))
-            .andExpect(jsonPath("$.cigarette").value(DEFAULT_CIGARETTE))
             .andExpect(jsonPath("$.alcool").value(DEFAULT_ALCOOL))
-            .andExpect(jsonPath("$.animaux").value(DEFAULT_ANIMAUX))
             .andExpect(jsonPath("$.conducteur").value(DEFAULT_CONDUCTEUR))
             .andExpect(jsonPath("$.passager").value(DEFAULT_PASSAGER));
     }
@@ -410,11 +382,7 @@ class PeopleResourceIT {
             .photo(UPDATED_PHOTO)
             .actif(UPDATED_ACTIF)
             .dateNaissance(UPDATED_DATE_NAISSANCE)
-            .musique(UPDATED_MUSIQUE)
-            .discussion(UPDATED_DISCUSSION)
-            .cigarette(UPDATED_CIGARETTE)
             .alcool(UPDATED_ALCOOL)
-            .animaux(UPDATED_ANIMAUX)
             .conducteur(UPDATED_CONDUCTEUR)
             .passager(UPDATED_PASSAGER);
 
@@ -512,7 +480,7 @@ class PeopleResourceIT {
         People partialUpdatedPeople = new People();
         partialUpdatedPeople.setId(people.getId());
 
-        partialUpdatedPeople.cni(UPDATED_CNI).photo(UPDATED_PHOTO).actif(UPDATED_ACTIF).musique(UPDATED_MUSIQUE).alcool(UPDATED_ALCOOL);
+        partialUpdatedPeople.cni(UPDATED_CNI).photo(UPDATED_PHOTO).actif(UPDATED_ACTIF).alcool(UPDATED_ALCOOL);
 
         restPeopleMockMvc
             .perform(
@@ -548,11 +516,7 @@ class PeopleResourceIT {
             .photo(UPDATED_PHOTO)
             .actif(UPDATED_ACTIF)
             .dateNaissance(UPDATED_DATE_NAISSANCE)
-            .musique(UPDATED_MUSIQUE)
-            .discussion(UPDATED_DISCUSSION)
-            .cigarette(UPDATED_CIGARETTE)
             .alcool(UPDATED_ALCOOL)
-            .animaux(UPDATED_ANIMAUX)
             .conducteur(UPDATED_CONDUCTEUR)
             .passager(UPDATED_PASSAGER);
 
@@ -673,11 +637,7 @@ class PeopleResourceIT {
             .andExpect(jsonPath("$.[*].photo").value(hasItem(DEFAULT_PHOTO)))
             .andExpect(jsonPath("$.[*].actif").value(hasItem(DEFAULT_ACTIF)))
             .andExpect(jsonPath("$.[*].dateNaissance").value(hasItem(DEFAULT_DATE_NAISSANCE.toString())))
-            .andExpect(jsonPath("$.[*].musique").value(hasItem(DEFAULT_MUSIQUE)))
-            .andExpect(jsonPath("$.[*].discussion").value(hasItem(DEFAULT_DISCUSSION)))
-            .andExpect(jsonPath("$.[*].cigarette").value(hasItem(DEFAULT_CIGARETTE)))
             .andExpect(jsonPath("$.[*].alcool").value(hasItem(DEFAULT_ALCOOL)))
-            .andExpect(jsonPath("$.[*].animaux").value(hasItem(DEFAULT_ANIMAUX)))
             .andExpect(jsonPath("$.[*].conducteur").value(hasItem(DEFAULT_CONDUCTEUR)))
             .andExpect(jsonPath("$.[*].passager").value(hasItem(DEFAULT_PASSAGER)));
     }

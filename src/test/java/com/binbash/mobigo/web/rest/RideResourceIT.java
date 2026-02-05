@@ -75,6 +75,12 @@ class RideResourceIT {
     private static final RideStatusEnum DEFAULT_STATUT = RideStatusEnum.OUVERT;
     private static final RideStatusEnum UPDATED_STATUT = RideStatusEnum.COMPLET;
 
+    private static final String DEFAULT_LIEU_DIT_DEPART = "AAAAAAAAAA";
+    private static final String UPDATED_LIEU_DIT_DEPART = "BBBBBBBBBB";
+
+    private static final String DEFAULT_LIEU_DIT_ARRIVEE = "AAAAAAAAAA";
+    private static final String UPDATED_LIEU_DIT_ARRIVEE = "BBBBBBBBBB";
+
     private static final String ENTITY_API_URL = "/api/rides";
     private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
     private static final String ENTITY_SEARCH_API_URL = "/api/rides/_search";
@@ -119,7 +125,9 @@ class RideResourceIT {
             .minuteArrivee(DEFAULT_MINUTE_ARRIVEE)
             .prixParPlace(DEFAULT_PRIX_PAR_PLACE)
             .nbrePlaceDisponible(DEFAULT_NBRE_PLACE_DISPONIBLE)
-            .statut(DEFAULT_STATUT);
+            .statut(DEFAULT_STATUT)
+            .lieuDitDepart(DEFAULT_LIEU_DIT_DEPART)
+            .lieuDitArrivee(DEFAULT_LIEU_DIT_ARRIVEE);
     }
 
     /**
@@ -140,7 +148,9 @@ class RideResourceIT {
             .minuteArrivee(UPDATED_MINUTE_ARRIVEE)
             .prixParPlace(UPDATED_PRIX_PAR_PLACE)
             .nbrePlaceDisponible(UPDATED_NBRE_PLACE_DISPONIBLE)
-            .statut(UPDATED_STATUT);
+            .statut(UPDATED_STATUT)
+            .lieuDitDepart(UPDATED_LIEU_DIT_DEPART)
+            .lieuDitArrivee(UPDATED_LIEU_DIT_ARRIVEE);
     }
 
     @BeforeEach
@@ -449,7 +459,9 @@ class RideResourceIT {
             .andExpect(jsonPath("$.[*].minuteArrivee").value(hasItem(DEFAULT_MINUTE_ARRIVEE)))
             .andExpect(jsonPath("$.[*].prixParPlace").value(hasItem(DEFAULT_PRIX_PAR_PLACE.doubleValue())))
             .andExpect(jsonPath("$.[*].nbrePlaceDisponible").value(hasItem(DEFAULT_NBRE_PLACE_DISPONIBLE)))
-            .andExpect(jsonPath("$.[*].statut").value(hasItem(DEFAULT_STATUT.toString())));
+            .andExpect(jsonPath("$.[*].statut").value(hasItem(DEFAULT_STATUT.toString())))
+            .andExpect(jsonPath("$.[*].lieuDitDepart").value(hasItem(DEFAULT_LIEU_DIT_DEPART)))
+            .andExpect(jsonPath("$.[*].lieuDitArrivee").value(hasItem(DEFAULT_LIEU_DIT_ARRIVEE)));
     }
 
     @Test
@@ -474,7 +486,9 @@ class RideResourceIT {
             .andExpect(jsonPath("$.minuteArrivee").value(DEFAULT_MINUTE_ARRIVEE))
             .andExpect(jsonPath("$.prixParPlace").value(DEFAULT_PRIX_PAR_PLACE.doubleValue()))
             .andExpect(jsonPath("$.nbrePlaceDisponible").value(DEFAULT_NBRE_PLACE_DISPONIBLE))
-            .andExpect(jsonPath("$.statut").value(DEFAULT_STATUT.toString()));
+            .andExpect(jsonPath("$.statut").value(DEFAULT_STATUT.toString()))
+            .andExpect(jsonPath("$.lieuDitDepart").value(DEFAULT_LIEU_DIT_DEPART))
+            .andExpect(jsonPath("$.lieuDitArrivee").value(DEFAULT_LIEU_DIT_ARRIVEE));
     }
 
     @Test
@@ -509,7 +523,9 @@ class RideResourceIT {
             .minuteArrivee(UPDATED_MINUTE_ARRIVEE)
             .prixParPlace(UPDATED_PRIX_PAR_PLACE)
             .nbrePlaceDisponible(UPDATED_NBRE_PLACE_DISPONIBLE)
-            .statut(UPDATED_STATUT);
+            .statut(UPDATED_STATUT)
+            .lieuDitDepart(UPDATED_LIEU_DIT_DEPART)
+            .lieuDitArrivee(UPDATED_LIEU_DIT_ARRIVEE);
 
         restRideMockMvc
             .perform(
@@ -648,7 +664,9 @@ class RideResourceIT {
             .minuteArrivee(UPDATED_MINUTE_ARRIVEE)
             .prixParPlace(UPDATED_PRIX_PAR_PLACE)
             .nbrePlaceDisponible(UPDATED_NBRE_PLACE_DISPONIBLE)
-            .statut(UPDATED_STATUT);
+            .statut(UPDATED_STATUT)
+            .lieuDitDepart(UPDATED_LIEU_DIT_DEPART)
+            .lieuDitArrivee(UPDATED_LIEU_DIT_ARRIVEE);
 
         restRideMockMvc
             .perform(
@@ -768,7 +786,9 @@ class RideResourceIT {
             .andExpect(jsonPath("$.[*].minuteArrivee").value(hasItem(DEFAULT_MINUTE_ARRIVEE)))
             .andExpect(jsonPath("$.[*].prixParPlace").value(hasItem(DEFAULT_PRIX_PAR_PLACE.doubleValue())))
             .andExpect(jsonPath("$.[*].nbrePlaceDisponible").value(hasItem(DEFAULT_NBRE_PLACE_DISPONIBLE)))
-            .andExpect(jsonPath("$.[*].statut").value(hasItem(DEFAULT_STATUT.toString())));
+            .andExpect(jsonPath("$.[*].statut").value(hasItem(DEFAULT_STATUT.toString())))
+            .andExpect(jsonPath("$.[*].lieuDitDepart").value(hasItem(DEFAULT_LIEU_DIT_DEPART)))
+            .andExpect(jsonPath("$.[*].lieuDitArrivee").value(hasItem(DEFAULT_LIEU_DIT_ARRIVEE)));
     }
 
     protected long getRepositoryCount() {

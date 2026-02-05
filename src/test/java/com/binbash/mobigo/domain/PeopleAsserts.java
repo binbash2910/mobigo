@@ -54,11 +54,7 @@ public class PeopleAsserts {
             .satisfies(a -> assertThat(a.getPhoto()).as("check photo").isEqualTo(expected.getPhoto()))
             .satisfies(a -> assertThat(a.getActif()).as("check actif").isEqualTo(expected.getActif()))
             .satisfies(a -> assertThat(a.getDateNaissance()).as("check dateNaissance").isEqualTo(expected.getDateNaissance()))
-            .satisfies(a -> assertThat(a.getMusique()).as("check musique").isEqualTo(expected.getMusique()))
-            .satisfies(a -> assertThat(a.getDiscussion()).as("check discussion").isEqualTo(expected.getDiscussion()))
-            .satisfies(a -> assertThat(a.getCigarette()).as("check cigarette").isEqualTo(expected.getCigarette()))
             .satisfies(a -> assertThat(a.getAlcool()).as("check alcool").isEqualTo(expected.getAlcool()))
-            .satisfies(a -> assertThat(a.getAnimaux()).as("check animaux").isEqualTo(expected.getAnimaux()))
             .satisfies(a -> assertThat(a.getConducteur()).as("check conducteur").isEqualTo(expected.getConducteur()))
             .satisfies(a -> assertThat(a.getPassager()).as("check passager").isEqualTo(expected.getPassager()));
     }

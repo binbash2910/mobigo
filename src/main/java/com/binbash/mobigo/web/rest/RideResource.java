@@ -3,6 +3,7 @@ package com.binbash.mobigo.web.rest;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.search.RideSearchRepository;
+import com.binbash.mobigo.service.RideService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
@@ -41,9 +42,12 @@ public class RideResource {
 
     private final RideSearchRepository rideSearchRepository;
 
-    public RideResource(RideRepository rideRepository, RideSearchRepository rideSearchRepository) {
+    private final RideService rideService;
+
+    public RideResource(RideRepository rideRepository, RideSearchRepository rideSearchRepository, RideService rideService) {
         this.rideRepository = rideRepository;
         this.rideSearchRepository = rideSearchRepository;
+        this.rideService = rideService;
     }
 
     /**
@@ -162,6 +166,21 @@ public class RideResource {
                 if (ride.getStatut() != null) {
                     existingRide.setStatut(ride.getStatut());
                 }
+                if (ride.getDescription() != null) {
+                    existingRide.setDescription(ride.getDescription());
+                }
+                if (ride.getLieuDitDepart() != null) {
+                    existingRide.setLieuDitDepart(ride.getLieuDitDepart());
+                }
+                if (ride.getLieuDitArrivee() != null) {
+                    existingRide.setLieuDitArrivee(ride.getLieuDitArrivee());
+                }
+                if (ride.getDistanceKm() != null) {
+                    existingRide.setDistanceKm(ride.getDistanceKm());
+                }
+                if (ride.getDurationMinutes() != null) {
+                    existingRide.setDurationMinutes(ride.getDurationMinutes());
+                }
 
                 return existingRide;
             })
@@ -185,7 +204,7 @@ public class RideResource {
     @GetMapping("")
     public List<Ride> getAllRides() {
         LOG.debug("REST request to get all Rides");
-        return rideRepository.findAll();
+        return rideRepository.findAllWithVehiculeAndProprietaire();
     }
 
     /**
@@ -197,7 +216,7 @@ public class RideResource {
     @GetMapping("/{id}")
     public ResponseEntity<Ride> getRide(@PathVariable("id") Long id) {
         LOG.debug("REST request to get Ride : {}", id);
-        Optional<Ride> ride = rideRepository.findById(id);
+        Optional<Ride> ride = rideRepository.findByIdWithVehiculeAndProprietaire(id);
         return ResponseUtil.wrapOrNotFound(ride);
     }
 
@@ -215,6 +234,50 @@ public class RideResource {
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    /**
+     * {@code PUT  /rides/:id/complete} : Mark a ride as completed (EFFECTUE).
+     * Cascades to bookings: pending bookings are confirmed.
+     *
+     * @param id the id of the ride to complete.
+     * @return the updated ride.
+     */
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<Ride> completeRide(@PathVariable("id") Long id) {
+        LOG.debug("REST request to complete Ride : {}", id);
+        try {
+            Ride ride = rideService.completeRide(id);
+            return ResponseEntity.ok()
+                .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+                .body(ride);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "idnotfound");
+        } catch (IllegalStateException e) {
+            throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "invalidstatus");
+        }
+    }
+
+    /**
+     * {@code PUT  /rides/:id/cancel} : Cancel a ride (ANNULE).
+     * Cascades to bookings: all active bookings are cancelled.
+     *
+     * @param id the id of the ride to cancel.
+     * @return the updated ride.
+     */
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Ride> cancelRide(@PathVariable("id") Long id) {
+        LOG.debug("REST request to cancel Ride : {}", id);
+        try {
+            Ride ride = rideService.cancelRide(id);
+            return ResponseEntity.ok()
+                .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+                .body(ride);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "idnotfound");
+        } catch (IllegalStateException e) {
+            throw new BadRequestAlertException(e.getMessage(), ENTITY_NAME, "invalidstatus");
+        }
     }
 
     /**

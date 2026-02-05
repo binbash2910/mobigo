@@ -20,7 +20,9 @@ public class RideTestSamples {
             .heureArrivee("heureArrivee1")
             .minuteDepart("minuteDepart1")
             .minuteArrivee("minuteArrivee1")
-            .nbrePlaceDisponible(1);
+            .nbrePlaceDisponible(1)
+            .lieuDitDepart("lieuDitDepart1")
+            .lieuDitArrivee("lieuDitArrivee1");
     }
 
     public static Ride getRideSample2() {
@@ -32,7 +34,9 @@ public class RideTestSamples {
             .heureArrivee("heureArrivee2")
             .minuteDepart("minuteDepart2")
             .minuteArrivee("minuteArrivee2")
-            .nbrePlaceDisponible(2);
+            .nbrePlaceDisponible(2)
+            .lieuDitDepart("lieuDitDepart2")
+            .lieuDitArrivee("lieuDitArrivee2");
     }
 
     public static Ride getRideRandomSampleGenerator() {
@@ -44,6 +48,8 @@ public class RideTestSamples {
             .heureArrivee(UUID.randomUUID().toString())
             .minuteDepart(UUID.randomUUID().toString())
             .minuteArrivee(UUID.randomUUID().toString())
-            .nbrePlaceDisponible(intCount.incrementAndGet());
+            .nbrePlaceDisponible(intCount.incrementAndGet())
+            .lieuDitDepart(UUID.randomUUID().toString())
+            .lieuDitArrivee(UUID.randomUUID().toString());
     }
 }

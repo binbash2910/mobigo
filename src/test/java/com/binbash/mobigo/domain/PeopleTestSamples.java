@@ -18,11 +18,7 @@ public class PeopleTestSamples {
             .cni("cni1")
             .photo("photo1")
             .actif("actif1")
-            .musique("musique1")
-            .discussion("discussion1")
-            .cigarette("cigarette1")
             .alcool("alcool1")
-            .animaux("animaux1")
             .conducteur("conducteur1")
             .passager("passager1");
     }
@@ -36,11 +32,7 @@ public class PeopleTestSamples {
             .cni("cni2")
             .photo("photo2")
             .actif("actif2")
-            .musique("musique2")
-            .discussion("discussion2")
-            .cigarette("cigarette2")
             .alcool("alcool2")
-            .animaux("animaux2")
             .conducteur("conducteur2")
             .passager("passager2");
     }
@@ -54,11 +46,7 @@ public class PeopleTestSamples {
             .cni(UUID.randomUUID().toString())
             .photo(UUID.randomUUID().toString())
             .actif(UUID.randomUUID().toString())
-            .musique(UUID.randomUUID().toString())
-            .discussion(UUID.randomUUID().toString())
-            .cigarette(UUID.randomUUID().toString())
             .alcool(UUID.randomUUID().toString())
-            .animaux(UUID.randomUUID().toString())
             .conducteur(UUID.randomUUID().toString())
             .passager(UUID.randomUUID().toString());
     }

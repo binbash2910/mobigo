@@ -3,6 +3,8 @@ package com.binbash.mobigo.config;
 import static com.binbash.mobigo.security.SecurityUtils.JWT_ALGORITHM;
 
 import com.binbash.mobigo.management.SecurityMetersService;
+import com.binbash.mobigo.repository.InvalidatedTokenRepository;
+import com.binbash.mobigo.web.rest.AuthenticateController;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.util.Base64;
 import javax.crypto.SecretKey;
@@ -14,6 +16,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
@@ -28,12 +31,21 @@ public class SecurityJwtConfiguration {
     private String jwtKey;
 
     @Bean
-    public JwtDecoder jwtDecoder(SecurityMetersService metersService) {
+    public JwtDecoder jwtDecoder(SecurityMetersService metersService, InvalidatedTokenRepository invalidatedTokenRepository) {
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(getSecretKey()).macAlgorithm(JWT_ALGORITHM).build();
         return token -> {
             try {
-                return jwtDecoder.decode(token);
-            } catch (Exception e) {
+                var jwt = jwtDecoder.decode(token);
+
+                // Check if the token has been invalidated (blacklisted after logout)
+                String tokenHash = AuthenticateController.computeTokenHash(token);
+                if (invalidatedTokenRepository.existsByTokenHash(tokenHash)) {
+                    LOG.warn("Rejected invalidated JWT token for subject: {}", jwt.getSubject());
+                    throw new JwtException("Token has been invalidated");
+                }
+
+                return jwt;
+            } catch (JwtException e) {
                 if (e.getMessage().contains("Invalid signature")) {
                     metersService.trackTokenInvalidSignature();
                 } else if (e.getMessage().contains("Jwt expired at")) {
@@ -44,7 +56,7 @@ public class SecurityJwtConfiguration {
                     e.getMessage().contains("Invalid unsecured/JWS/JWE")
                 ) {
                     metersService.trackTokenMalformed();
-                } else {
+                } else if (!e.getMessage().contains("Token has been invalidated")) {
                     LOG.error("Unknown JWT error {}", e.getMessage());
                 }
                 throw e;

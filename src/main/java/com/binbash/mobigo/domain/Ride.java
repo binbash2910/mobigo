@@ -81,6 +81,26 @@ public class Ride extends AbstractAuditingEntity<Long> implements Serializable {
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private RideStatusEnum statut;
 
+    @Column(name = "description")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String description;
+
+    @Column(name = "lieu_dit_depart")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String lieuDitDepart;
+
+    @Column(name = "lieu_dit_arrivee")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String lieuDitArrivee;
+
+    @Column(name = "distance_km")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Float)
+    private Float distanceKm;
+
+    @Column(name = "duration_minutes")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Integer)
+    private Integer durationMinutes;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "trajet")
     @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "trajet" }, allowSetters = true)
@@ -97,7 +117,7 @@ public class Ride extends AbstractAuditingEntity<Long> implements Serializable {
     private Set<Rating> notations = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JsonIgnoreProperties(value = { "trajets", "proprietaire" }, allowSetters = true)
+    @JsonIgnoreProperties(value = { "trajets" }, allowSetters = true)
     private Vehicle vehicule;
 
     // jhipster-needle-entity-add-field - JHipster will add fields here
@@ -258,6 +278,71 @@ public class Ride extends AbstractAuditingEntity<Long> implements Serializable {
         this.statut = statut;
     }
 
+    public String getDescription() {
+        return this.description;
+    }
+
+    public Ride description(String description) {
+        this.setDescription(description);
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getLieuDitDepart() {
+        return this.lieuDitDepart;
+    }
+
+    public Ride lieuDitDepart(String lieuDitDepart) {
+        this.setLieuDitDepart(lieuDitDepart);
+        return this;
+    }
+
+    public void setLieuDitDepart(String lieuDitDepart) {
+        this.lieuDitDepart = lieuDitDepart;
+    }
+
+    public String getLieuDitArrivee() {
+        return this.lieuDitArrivee;
+    }
+
+    public Ride lieuDitArrivee(String lieuDitArrivee) {
+        this.setLieuDitArrivee(lieuDitArrivee);
+        return this;
+    }
+
+    public void setLieuDitArrivee(String lieuDitArrivee) {
+        this.lieuDitArrivee = lieuDitArrivee;
+    }
+
+    public Float getDistanceKm() {
+        return this.distanceKm;
+    }
+
+    public Ride distanceKm(Float distanceKm) {
+        this.setDistanceKm(distanceKm);
+        return this;
+    }
+
+    public void setDistanceKm(Float distanceKm) {
+        this.distanceKm = distanceKm;
+    }
+
+    public Integer getDurationMinutes() {
+        return this.durationMinutes;
+    }
+
+    public Ride durationMinutes(Integer durationMinutes) {
+        this.setDurationMinutes(durationMinutes);
+        return this;
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+
     public Set<Step> getSteps() {
         return this.steps;
     }
@@ -399,6 +484,11 @@ public class Ride extends AbstractAuditingEntity<Long> implements Serializable {
             ", prixParPlace=" + getPrixParPlace() +
             ", nbrePlaceDisponible=" + getNbrePlaceDisponible() +
             ", statut='" + getStatut() + "'" +
+            ", description='" + getDescription() + "'" +
+            ", lieuDitDepart='" + getLieuDitDepart() + "'" +
+            ", lieuDitArrivee='" + getLieuDitArrivee() + "'" +
+            ", distanceKm=" + getDistanceKm() +
+            ", durationMinutes=" + getDurationMinutes() +
             "}";
     }
 }

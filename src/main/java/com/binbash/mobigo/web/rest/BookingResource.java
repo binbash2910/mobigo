@@ -3,6 +3,7 @@ package com.binbash.mobigo.web.rest;
 import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.repository.BookingRepository;
 import com.binbash.mobigo.repository.search.BookingSearchRepository;
+import com.binbash.mobigo.service.BookingService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
@@ -41,9 +42,16 @@ public class BookingResource {
 
     private final BookingSearchRepository bookingSearchRepository;
 
-    public BookingResource(BookingRepository bookingRepository, BookingSearchRepository bookingSearchRepository) {
+    private final BookingService bookingService;
+
+    public BookingResource(
+        BookingRepository bookingRepository,
+        BookingSearchRepository bookingSearchRepository,
+        BookingService bookingService
+    ) {
         this.bookingRepository = bookingRepository;
         this.bookingSearchRepository = bookingSearchRepository;
+        this.bookingService = bookingService;
     }
 
     /**
@@ -56,11 +64,7 @@ public class BookingResource {
     @PostMapping("")
     public ResponseEntity<Booking> createBooking(@Valid @RequestBody Booking booking) throws URISyntaxException {
         LOG.debug("REST request to save Booking : {}", booking);
-        if (booking.getId() != null) {
-            throw new BadRequestAlertException("A new booking cannot already have an ID", ENTITY_NAME, "idexists");
-        }
-        booking = bookingRepository.save(booking);
-        bookingSearchRepository.index(booking);
+        booking = bookingService.createBooking(booking);
         return ResponseEntity.created(new URI("/api/bookings/" + booking.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, booking.getId().toString()))
             .body(booking);
@@ -143,6 +147,9 @@ public class BookingResource {
                 if (booking.getStatut() != null) {
                     existingBooking.setStatut(booking.getStatut());
                 }
+                if (booking.getMethodePayment() != null) {
+                    existingBooking.setMethodePayment(booking.getMethodePayment());
+                }
 
                 return existingBooking;
             })
@@ -203,6 +210,42 @@ public class BookingResource {
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    /**
+     * {@code PUT  /bookings/:id/accept} : Accept a pending booking (driver action).
+     */
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<Booking> acceptBooking(@PathVariable("id") Long id) {
+        LOG.debug("REST request to accept Booking : {}", id);
+        Booking booking = bookingService.acceptBooking(id);
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(booking);
+    }
+
+    /**
+     * {@code PUT  /bookings/:id/reject} : Reject a pending booking (driver action).
+     */
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<Booking> rejectBooking(@PathVariable("id") Long id) {
+        LOG.debug("REST request to reject Booking : {}", id);
+        Booking booking = bookingService.rejectBooking(id);
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(booking);
+    }
+
+    /**
+     * {@code PUT  /bookings/:id/cancel} : Cancel a booking (passenger or driver action).
+     */
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Booking> cancelBooking(@PathVariable("id") Long id) {
+        LOG.debug("REST request to cancel Booking : {}", id);
+        Booking booking = bookingService.cancelBooking(id);
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(booking);
     }
 
     /**

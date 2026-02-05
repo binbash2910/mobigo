@@ -59,7 +59,9 @@ public class RideAsserts {
             .satisfies(a ->
                 assertThat(a.getNbrePlaceDisponible()).as("check nbrePlaceDisponible").isEqualTo(expected.getNbrePlaceDisponible())
             )
-            .satisfies(a -> assertThat(a.getStatut()).as("check statut").isEqualTo(expected.getStatut()));
+            .satisfies(a -> assertThat(a.getStatut()).as("check statut").isEqualTo(expected.getStatut()))
+            .satisfies(a -> assertThat(a.getLieuDitDepart()).as("check lieuDitDepart").isEqualTo(expected.getLieuDitDepart()))
+            .satisfies(a -> assertThat(a.getLieuDitArrivee()).as("check lieuDitArrivee").isEqualTo(expected.getLieuDitArrivee()));
     }
 
     /**

@@ -7,4 +7,5 @@ public enum BookingStatusEnum {
     CONFIRME,
     ANNULE,
     EN_ATTENTE,
+    REFUSE,
 }
