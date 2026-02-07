@@ -7,7 +7,7 @@ COPY mvnw .
 RUN ./mvnw -B -q dependency:go-offline
 
 COPY src src
-RUN ./mvnw -Pprod clean package -DskipTests -Dsonar.skip=true
+RUN ./mvnw -Pprod clean package -DskipTests
 
 
 # ===== Run stage =====
