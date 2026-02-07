@@ -15,6 +15,6 @@ RUN ./mvnw -Pprod clean package -DskipTests -Dskip.npm -Dskip.yarn -Dskip.fronte
 FROM eclipse-temurin:21-jre
 ENV JAVA_OPTS="-Xmx512m"
 WORKDIR /app
-COPY --from=build /app/target/*.jar mobigo.jar
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/mobigo.jar"]
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
