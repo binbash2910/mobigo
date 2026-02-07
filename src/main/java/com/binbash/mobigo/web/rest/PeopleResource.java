@@ -100,7 +100,8 @@ public class PeopleResource {
 
             String filename = "people_" + id + extension;
 
-            Path uploadDir = Paths.get("src/main/webapp/" + PEOPLE_IMAGES_DIR);
+            //Path uploadDir = Paths.get("src/main/webapp/" + PEOPLE_IMAGES_DIR);
+            Path uploadDir = Path.of("src/main/webapp/", PEOPLE_IMAGES_DIR);
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
@@ -186,12 +187,9 @@ public class PeopleResource {
     public ResponseEntity<CniVerificationDTO> getCniStatus(@PathVariable("id") Long id) {
         LOG.debug("REST request to get CNI status for People : {}", id);
 
-        Optional<People> optionalPeople = peopleRepository.findById(id);
-        if (optionalPeople.isEmpty()) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
-
-        People people = optionalPeople.get();
+        People people = peopleRepository
+            .findById(id)
+            .orElseThrow(() -> new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
         CniVerificationDTO dto = new CniVerificationDTO();
         dto.setStatus(people.getCniStatut() != null ? people.getCniStatut() : "PENDING");
         dto.setVerified("VERIFIED".equals(people.getCniStatut()));

@@ -167,8 +167,7 @@ public class CniVerificationService {
      */
     private String storeImage(Long peopleId, MultipartFile file, String side) {
         try {
-            String imagesDir = "src/main/webapp/" + applicationProperties.getCni().getImagesDir();
-            Path uploadDir = Paths.get(imagesDir);
+            Path uploadDir = Path.of("src/main/webapp/", applicationProperties.getCni().getImagesDir());
             Files.createDirectories(uploadDir);
 
             String originalFilename = file.getOriginalFilename();
@@ -199,7 +198,7 @@ public class CniVerificationService {
             tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
             tesseract.setLanguage(applicationProperties.getTesseract().getLanguage());
 
-            BufferedImage originalImage = ImageIO.read(new File(imagePath));
+            BufferedImage originalImage = ImageIO.read(Path.of(imagePath).toFile());
             if (originalImage == null) {
                 LOG.error("Could not read image at: {}", imagePath);
                 return "";

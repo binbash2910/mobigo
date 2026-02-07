@@ -107,7 +107,7 @@ public class VehicleResource {
             String filename = "vehicle_" + id + extension;
 
             // Get the webapp directory path (relative to the application)
-            Path uploadDir = Paths.get("src/main/webapp/" + VEHICLE_IMAGES_DIR);
+            Path uploadDir = Path.of("src/main/webapp/", VEHICLE_IMAGES_DIR);
 
             // Create directory if it doesn't exist
             if (!Files.exists(uploadDir)) {
@@ -151,12 +151,9 @@ public class VehicleResource {
     public ResponseEntity<Vehicle> setDefaultVehicle(@PathVariable("id") Long id) {
         LOG.debug("REST request to set Vehicle as default : {}", id);
 
-        Optional<Vehicle> vehicleOpt = vehicleRepository.findById(id);
-        if (vehicleOpt.isEmpty()) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
-
-        Vehicle vehicle = vehicleOpt.get();
+        Vehicle vehicle = vehicleRepository
+            .findById(id)
+            .orElseThrow(() -> new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
         People owner = vehicle.getProprietaire();
 
         if (owner != null) {

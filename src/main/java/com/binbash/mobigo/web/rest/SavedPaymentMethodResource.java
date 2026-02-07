@@ -233,12 +233,9 @@ public class SavedPaymentMethodResource {
     public ResponseEntity<SavedPaymentMethod> setDefaultSavedPaymentMethod(@PathVariable("id") Long id) {
         LOG.debug("REST request to set SavedPaymentMethod as default : {}", id);
 
-        Optional<SavedPaymentMethod> methodOpt = savedPaymentMethodRepository.findById(id);
-        if (methodOpt.isEmpty()) {
-            throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
-        }
-
-        SavedPaymentMethod method = methodOpt.get();
+        SavedPaymentMethod method = savedPaymentMethodRepository
+            .findById(id)
+            .orElseThrow(() -> new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound"));
         People owner = method.getProprietaire();
 
         if (owner != null) {
