@@ -7,7 +7,8 @@ COPY mvnw .
 RUN ./mvnw -B -q dependency:go-offline
 
 COPY src src
-RUN ./mvnw -Pprod clean package -DskipTests
+RUN ./mvnw -Pprod clean package -DskipTests -Dsonar.skip=true
+
 
 # ===== Run stage =====
 FROM eclipse-temurin:21-jre
