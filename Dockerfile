@@ -1,20 +1,25 @@
-# ===== Build stage =====
+# ===== BUILD =====
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
+
 COPY pom.xml .
 COPY .mvn .mvn
 COPY mvnw .
-RUN ./mvnw -B -q dependency:go-offline
+RUN ./mvnw -B dependency:go-offline
 
 COPY src src
-RUN ./mvnw -Pprod clean package -DskipTests -Dskip.npm -Dskip.yarn -Dskip.frontend
+RUN ./mvnw clean package \
+  -Pprod \
+  -DskipTests \
+  -Dskip.npm \
+  -Dskip.yarn \
+  -Dskip.frontend \
+  -Dspring-boot.repackage.skip=false
 
-
-
-# ===== Run stage =====
+# ===== RUN =====
 FROM eclipse-temurin:21-jre
-ENV JAVA_OPTS="-Xmx256m"
 WORKDIR /app
+ENV JAVA_OPTS="-Xmx512m"
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
