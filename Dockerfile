@@ -13,7 +13,7 @@ RUN ./mvnw -Pprod clean package -DskipTests -Dskip.npm -Dskip.yarn -Dskip.fronte
 
 # ===== Run stage =====
 FROM eclipse-temurin:21-jre
-ENV JAVA_OPTS="-Xmx512m"
+ENV JAVA_OPTS="-Xmx256m"
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
