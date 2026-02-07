@@ -7,7 +7,8 @@ COPY mvnw .
 RUN ./mvnw -B -q dependency:go-offline
 
 COPY src src
-RUN ./mvnw -Pprod clean package -DskipTests
+RUN ./mvnw -Pprod clean package -DskipTests -Dskip.npm -Dskip.yarn -Dskip.frontend
+
 
 
 # ===== Run stage =====
