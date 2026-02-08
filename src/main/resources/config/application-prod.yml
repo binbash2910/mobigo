@@ -29,6 +29,10 @@ management:
         enabled: false
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 25MB
   docker:
     compose:
       enabled: false
@@ -139,3 +143,8 @@ jhipster:
 application:
   elasticsearch:
     enabled: false
+  storage:
+    base-dir: ${UPLOAD_DIR:/var/data/images}
+  tesseract:
+    data-path: ${user.dir}/tessdata
+    language: fra+eng

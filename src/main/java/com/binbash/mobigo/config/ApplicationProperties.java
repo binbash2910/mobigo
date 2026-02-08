@@ -14,6 +14,7 @@ public class ApplicationProperties {
     private final Tesseract tesseract = new Tesseract();
     private final Cni cni = new Cni();
     private final Elasticsearch elasticsearch = new Elasticsearch();
+    private final Storage storage = new Storage();
 
     public Tesseract getTesseract() {
         return tesseract;
@@ -25,6 +26,10 @@ public class ApplicationProperties {
 
     public Elasticsearch getElasticsearch() {
         return elasticsearch;
+    }
+
+    public Storage getStorage() {
+        return storage;
     }
 
     public static class Tesseract {
@@ -72,6 +77,46 @@ public class ApplicationProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class Storage {
+
+        private String baseDir = "./uploads";
+        private String peopleDir = "people";
+        private String vehiclesDir = "vehicles";
+        private String cniDir = "cni";
+
+        public String getBaseDir() {
+            return baseDir;
+        }
+
+        public void setBaseDir(String baseDir) {
+            this.baseDir = baseDir;
+        }
+
+        public String getPeopleDir() {
+            return peopleDir;
+        }
+
+        public void setPeopleDir(String peopleDir) {
+            this.peopleDir = peopleDir;
+        }
+
+        public String getVehiclesDir() {
+            return vehiclesDir;
+        }
+
+        public void setVehiclesDir(String vehiclesDir) {
+            this.vehiclesDir = vehiclesDir;
+        }
+
+        public String getCniDir() {
+            return cniDir;
+        }
+
+        public void setCniDir(String cniDir) {
+            this.cniDir = cniDir;
         }
     }
 }

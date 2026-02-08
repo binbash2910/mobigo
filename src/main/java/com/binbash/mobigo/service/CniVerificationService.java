@@ -7,12 +7,8 @@ import com.binbash.mobigo.service.dto.CniVerificationDTO;
 import com.binbash.mobigo.service.dto.MrzData;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -43,15 +39,18 @@ public class CniVerificationService {
     private final ApplicationProperties applicationProperties;
     private final PeopleRepository peopleRepository;
     private final CniMrzParserService mrzParserService;
+    private final FileStorageService fileStorageService;
 
     public CniVerificationService(
         ApplicationProperties applicationProperties,
         PeopleRepository peopleRepository,
-        CniMrzParserService mrzParserService
+        CniMrzParserService mrzParserService,
+        FileStorageService fileStorageService
     ) {
         this.applicationProperties = applicationProperties;
         this.peopleRepository = peopleRepository;
         this.mrzParserService = mrzParserService;
+        this.fileStorageService = fileStorageService;
     }
 
     /**
@@ -164,25 +163,11 @@ public class CniVerificationService {
 
     /**
      * Store an uploaded document image to the filesystem.
+     * Returns the absolute filesystem path (used for OCR processing).
      */
     private String storeImage(Long peopleId, MultipartFile file, String side) {
         try {
-            Path uploadDir = Path.of("src/main/webapp/", applicationProperties.getCni().getImagesDir());
-            Files.createDirectories(uploadDir);
-
-            String originalFilename = file.getOriginalFilename();
-            String extension = ".jpg";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-
-            String filename = "cni_" + side + "_" + peopleId + extension;
-            Path targetPath = uploadDir.resolve(filename);
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-
-            String storedPath = "/" + applicationProperties.getCni().getImagesDir() + "/" + filename;
-            LOG.debug("Stored {} image for people {} at {}", side, peopleId, storedPath);
-            return targetPath.toAbsolutePath().toString();
+            return fileStorageService.storeCniImage(peopleId, file, side);
         } catch (IOException e) {
             throw new RuntimeException("Failed to store " + side + " image: " + e.getMessage(), e);
         }

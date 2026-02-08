@@ -6,6 +6,7 @@ import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
 import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.VehicleRepository;
 import com.binbash.mobigo.repository.search.VehicleSearchRepository;
+import com.binbash.mobigo.service.FileStorageService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import jakarta.validation.Valid;
@@ -13,10 +14,6 @@ import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +43,6 @@ public class VehicleResource {
     private static final Logger LOG = LoggerFactory.getLogger(VehicleResource.class);
 
     private static final String ENTITY_NAME = "vehicle";
-    private static final String VEHICLE_IMAGES_DIR = "content/images/vehicles";
 
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
@@ -57,14 +53,18 @@ public class VehicleResource {
 
     private final RideRepository rideRepository;
 
+    private final FileStorageService fileStorageService;
+
     public VehicleResource(
         VehicleRepository vehicleRepository,
         VehicleSearchRepository vehicleSearchRepository,
-        RideRepository rideRepository
+        RideRepository rideRepository,
+        FileStorageService fileStorageService
     ) {
         this.vehicleRepository = vehicleRepository;
         this.vehicleSearchRepository = vehicleSearchRepository;
         this.rideRepository = rideRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     /**
@@ -93,35 +93,8 @@ public class VehicleResource {
         }
 
         try {
-            // Get the file extension
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            } else {
-                // Default to .jpg if no extension
-                extension = ".jpg";
-            }
+            String photoPath = fileStorageService.storeVehiclePhoto(id, file);
 
-            // Create filename based on vehicle ID
-            String filename = "vehicle_" + id + extension;
-
-            // Get the webapp directory path (relative to the application)
-            Path uploadDir = Path.of("src/main/webapp/", VEHICLE_IMAGES_DIR);
-
-            // Create directory if it doesn't exist
-            if (!Files.exists(uploadDir)) {
-                Files.createDirectories(uploadDir);
-            }
-
-            // Save the file
-            Path filePath = uploadDir.resolve(filename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // The photo path that will be stored in the database (relative URL)
-            String photoPath = "/" + VEHICLE_IMAGES_DIR + "/" + filename;
-
-            // Update the vehicle with the photo path
             vehicleRepository
                 .findById(id)
                 .ifPresent(vehicle -> {

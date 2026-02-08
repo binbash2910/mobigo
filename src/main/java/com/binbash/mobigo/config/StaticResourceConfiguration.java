@@ -1,21 +1,49 @@
 package com.binbash.mobigo.config;
 
+import java.nio.file.Path;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Configuration for serving static resources like uploaded vehicle images.
+ * Configuration for serving uploaded images from the configurable storage directory.
+ * The base directory is set via application.storage.base-dir (env var UPLOAD_DIR in production).
  */
 @Configuration
 public class StaticResourceConfiguration implements WebMvcConfigurer {
 
+    private final ApplicationProperties applicationProperties;
+
+    public StaticResourceConfiguration(ApplicationProperties applicationProperties) {
+        this.applicationProperties = applicationProperties;
+    }
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Serve vehicle images from the webapp directory
-        registry.addResourceHandler("/content/images/vehicles/**").addResourceLocations("file:src/main/webapp/content/images/vehicles/");
+        String baseDir = applicationProperties.getStorage().getBaseDir();
+        Path basePath = Path.of(baseDir).toAbsolutePath();
 
-        // Serve people profile images from the webapp directory
-        registry.addResourceHandler("/content/images/people/**").addResourceLocations("file:src/main/webapp/content/images/people/");
+        String peopleDir = applicationProperties.getStorage().getPeopleDir();
+        String vehiclesDir = applicationProperties.getStorage().getVehiclesDir();
+
+        // New URL pattern: /api/images/people/** -> file:{baseDir}/people/
+        registry
+            .addResourceHandler("/api/images/" + peopleDir + "/**")
+            .addResourceLocations(basePath.resolve(peopleDir).toUri().toString());
+
+        // New URL pattern: /api/images/vehicles/** -> file:{baseDir}/vehicles/
+        registry
+            .addResourceHandler("/api/images/" + vehiclesDir + "/**")
+            .addResourceLocations(basePath.resolve(vehiclesDir).toUri().toString());
+
+        // Backward compatibility: /content/images/people/** and /content/images/vehicles/**
+        // These map to the same directories so old DB paths still resolve.
+        registry
+            .addResourceHandler("/content/images/" + peopleDir + "/**")
+            .addResourceLocations(basePath.resolve(peopleDir).toUri().toString());
+
+        registry
+            .addResourceHandler("/content/images/" + vehiclesDir + "/**")
+            .addResourceLocations(basePath.resolve(vehiclesDir).toUri().toString());
     }
 }

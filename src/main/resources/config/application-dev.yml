@@ -109,6 +109,8 @@ jhipster:
 # ===================================================================
 
 application:
+  storage:
+    base-dir: ./uploads
   tesseract:
     data-path: ${user.dir}/tessdata
     language: fra+eng

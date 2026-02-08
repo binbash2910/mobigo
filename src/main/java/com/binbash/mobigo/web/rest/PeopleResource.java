@@ -4,6 +4,7 @@ import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.repository.PeopleRepository;
 import com.binbash.mobigo.repository.search.PeopleSearchRepository;
 import com.binbash.mobigo.service.CniVerificationService;
+import com.binbash.mobigo.service.FileStorageService;
 import com.binbash.mobigo.service.dto.CniVerificationDTO;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
@@ -12,10 +13,6 @@ import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +41,6 @@ public class PeopleResource {
     private static final Logger LOG = LoggerFactory.getLogger(PeopleResource.class);
 
     private static final String ENTITY_NAME = "people";
-    private static final String PEOPLE_IMAGES_DIR = "content/images/people";
 
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
@@ -55,14 +51,18 @@ public class PeopleResource {
 
     private final CniVerificationService cniVerificationService;
 
+    private final FileStorageService fileStorageService;
+
     public PeopleResource(
         PeopleRepository peopleRepository,
         PeopleSearchRepository peopleSearchRepository,
-        CniVerificationService cniVerificationService
+        CniVerificationService cniVerificationService,
+        FileStorageService fileStorageService
     ) {
         this.peopleRepository = peopleRepository;
         this.peopleSearchRepository = peopleSearchRepository;
         this.cniVerificationService = cniVerificationService;
+        this.fileStorageService = fileStorageService;
     }
 
     /**
@@ -90,26 +90,7 @@ public class PeopleResource {
         }
 
         try {
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            } else {
-                extension = ".jpg";
-            }
-
-            String filename = "people_" + id + extension;
-
-            //Path uploadDir = Paths.get("src/main/webapp/" + PEOPLE_IMAGES_DIR);
-            Path uploadDir = Path.of("src/main/webapp/", PEOPLE_IMAGES_DIR);
-            if (!Files.exists(uploadDir)) {
-                Files.createDirectories(uploadDir);
-            }
-
-            Path filePath = uploadDir.resolve(filename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            String photoPath = "/" + PEOPLE_IMAGES_DIR + "/" + filename;
+            String photoPath = fileStorageService.storePeoplePhoto(id, file);
 
             peopleRepository
                 .findById(id)
