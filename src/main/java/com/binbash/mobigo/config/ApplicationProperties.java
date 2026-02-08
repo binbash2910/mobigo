@@ -13,6 +13,7 @@ public class ApplicationProperties {
 
     private final Tesseract tesseract = new Tesseract();
     private final Cni cni = new Cni();
+    private final Elasticsearch elasticsearch = new Elasticsearch();
 
     public Tesseract getTesseract() {
         return tesseract;
@@ -20,6 +21,10 @@ public class ApplicationProperties {
 
     public Cni getCni() {
         return cni;
+    }
+
+    public Elasticsearch getElasticsearch() {
+        return elasticsearch;
     }
 
     public static class Tesseract {
@@ -54,6 +59,19 @@ public class ApplicationProperties {
 
         public void setImagesDir(String imagesDir) {
             this.imagesDir = imagesDir;
+        }
+    }
+
+    public static class Elasticsearch {
+
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }
