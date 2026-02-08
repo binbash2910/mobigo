@@ -59,10 +59,16 @@ spring:
     hibernate:
       ddl-auto: update
   mail:
-    host: localhost
-    port: 25
-    username:
-    password:
+    host: smtp-relay.brevo.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   thymeleaf:
     cache: true
 
@@ -123,7 +129,8 @@ jhipster:
         token-validity-in-seconds: 86400
         token-validity-in-seconds-for-remember-me: 2592000
   mail: # specific JHipster mail property, for standard properties see MailProperties
-    base-url: http://my-server-url-to-change # Modify according to your server's URL
+    from: ${JHIPSTER_MAIL_FROM:noreply@mobigo.onrender.com}
+    base-url: https://mobigo.onrender.com
   logging:
     use-json-format: false # By default, logs are not in Json format
     logstash: # Forward logs to logstash over a socket, used by LoggingConfiguration

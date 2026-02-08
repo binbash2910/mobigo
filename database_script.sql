@@ -17,3 +17,5 @@ ALTER TABLE payment ADD CONSTRAINT payment_methode_check CHECK (
 ALTER TABLE payment DROP CONSTRAINT IF EXISTS payment_statut_check;
 ALTER TABLE payment ADD CONSTRAINT payment_statut_check CHECK (((statut)::text =
   ANY ((ARRAY['REUSSI'::character varying, 'ECHOUE'::character varying, 'EN_ATTENTE'::character varying])::text[])));
+
+ALTER TABLE vehicle ADD COLUMN bagages VARCHAR(255) NULL;

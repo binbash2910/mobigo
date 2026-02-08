@@ -43,7 +43,12 @@
       "Bash(findstr:*)",
       "Bash(git commit:*)",
       "mcp__plugin_playwright_playwright__browser_wait_for",
-      "WebFetch(domain:mobigo.onrender.com)"
+      "WebFetch(domain:mobigo.onrender.com)",
+      "Bash(./mvnw spring-boot:run:*)",
+      "Bash(mvn --version:*)",
+      "Bash(mvn spring-boot:run:*)",
+      "Bash(mvn wrapper:wrapper:*)",
+      "Bash(cmd //c \"taskkill /PID 20588 /F\")"
     ]
   }
 }

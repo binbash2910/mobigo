@@ -1,0 +1,8 @@
+- Ajouter numero cni et photo recto verso et verifier la correspondance
+- Ajouter la verification du numero de telephone et le supprimer de la saisie des infos personnelles
+- Ajouter l'option bagages au vehicule
+-Securisation du mot de passe. Captcha + caractere speciaux
+-L'ajout d'un trajet se fait uniquement si le profil est vérifié
+- La session user doit expirer max 15 min sans utilisation
+- Sortir le stockage des images et le rendre paramétrable dans les fichier properties
+- Avoir un serveur de mail et SMS
