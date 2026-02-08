@@ -283,6 +283,9 @@ public class VehicleResource {
                 if (vehicle.getAnimaux() != null) {
                     existingVehicle.setAnimaux(vehicle.getAnimaux());
                 }
+                if (vehicle.getBagages() != null) {
+                    existingVehicle.setBagages(vehicle.getBagages());
+                }
 
                 return existingVehicle;
             })

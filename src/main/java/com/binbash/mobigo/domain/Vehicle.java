@@ -89,6 +89,10 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
     private String animaux;
 
+    @Column(name = "bagages")
+    @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Text)
+    private String bagages;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "vehicule")
     @org.springframework.data.annotation.Transient
     @JsonIgnoreProperties(value = { "steps", "bookingsTrajets", "notations", "vehicule" }, allowSetters = true)
@@ -307,6 +311,19 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
         this.animaux = animaux;
     }
 
+    public String getBagages() {
+        return this.bagages;
+    }
+
+    public Vehicle bagages(String bagages) {
+        this.setBagages(bagages);
+        return this;
+    }
+
+    public void setBagages(String bagages) {
+        this.bagages = bagages;
+    }
+
     public Set<Ride> getTrajets() {
         return this.trajets;
     }
@@ -389,6 +406,7 @@ public class Vehicle extends AbstractAuditingEntity<Long> implements Serializabl
             ", discussion='" + getDiscussion() + "'" +
             ", cigarette='" + getCigarette() + "'" +
             ", animaux='" + getAnimaux() + "'" +
+            ", bagages='" + getBagages() + "'" +
             "}";
     }
 }
