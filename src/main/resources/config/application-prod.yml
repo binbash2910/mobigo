@@ -20,12 +20,18 @@ logging:
     com.binbash.mobigo: INFO
 
 management:
+  health:
+    elasticsearch:
+      enabled: false
   prometheus:
     metrics:
       export:
         enabled: false
 
 spring:
+  docker:
+    compose:
+      enabled: false
   devtools:
     restart:
       enabled: false
@@ -40,10 +46,10 @@ spring:
       poolName: Hikari
       auto-commit: false
   elasticsearch:
-    uris: http://localhost:9200
+    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
   mail:
     host: localhost
     port: 25
