@@ -1,0 +1,289 @@
+# Mobigo - Contexte Projet
+
+## Description
+
+Mobigo est une application de covoiturage (carpooling) camerounaise/africaine permettant aux conducteurs de proposer des trajets et aux passagers de les reserver. Le projet est developpe par **binbash** (GitHub: binbash2910) et heberge sur GitHub sous le nom `mobigo`.
+
+## Stack Technique
+
+| Composant       | Technologie                          | Version   |
+|-----------------|--------------------------------------|-----------|
+| Framework       | JHipster                             | 8.11.0    |
+| Backend         | Spring Boot                          | 3.4.5     |
+| Langage         | Java                                 | 17        |
+| Frontend        | Angular                              | 19        |
+| Base de donnees | PostgreSQL                           | -         |
+| Recherche       | Elasticsearch (optionnel en prod)    | -         |
+| Auth            | JWT (OAuth2 Resource Server)         | -         |
+| Build           | Maven                                | 3.2.5+    |
+| Node.js         | Node                                 | 22.15.0   |
+| ORM             | Hibernate (JPA)                      | -         |
+| Mapping DTO     | MapStruct                            | 1.6.3     |
+| API-First       | OpenAPI Generator (delegate pattern) | 7.13.0    |
+| OCR             | Tess4J (Tesseract)                   | 5.11.0    |
+| Tests           | JUnit 5, Cucumber, Testcontainers    | -         |
+| Serveur Web     | Undertow (pas Tomcat)                | -         |
+| WebSocket       | Spring WebSocket                     | -         |
+| Docker          | Multi-stage build (Temurin 21)       | -         |
+| Monitoring      | Micrometer + Prometheus              | -         |
+
+## Architecture
+
+Application monolithique avec separation claire :
+
+```
+com.binbash.mobigo/
+  domain/              # Entites JPA + annotations Elasticsearch
+    enumeration/       # Enums metier (statuts, methodes paiement)
+  repository/          # Spring Data JPA repositories
+    search/            # Elasticsearch repositories (exclus du scan JPA en prod)
+  service/             # Logique metier
+    dto/               # Data Transfer Objects
+    mapper/            # MapStruct mappers (Entity <-> DTO)
+    api/dto/           # DTOs generes par OpenAPI
+  web/
+    rest/              # Controleurs REST (JHipster)
+    api/               # Interfaces API generees par OpenAPI
+  config/              # Configuration Spring
+    DatabaseConfiguration.java         # JPA repos (exclut search/)
+    ElasticsearchRepositoryConfig.java # ES repos (conditionnel, actif par defaut)
+    NoOpSearchRepositoryConfig.java    # Proxies no-op quand ES desactive
+    ApplicationProperties.java         # Props custom (tesseract, cni, elasticsearch)
+  security/            # JWT, SecurityUtils
+  helper/              # Classes utilitaires (UserHelper, PeopleHelper)
+```
+
+## Modele de Domaine
+
+### Entites principales et leurs relations
+
+```
+User (JHipster) ──1:1──> People (profil utilisateur)
+                            |
+                            |──1:N──> Vehicle (vehicules possedes)
+                            |──1:N──> Booking (reservations en tant que passager)
+                            |──1:N──> Rating (notations donnees/recues)
+                            |──1:N──> Message (messages envoyes/recus)
+                            +──1:N──> SavedPaymentMethod (methodes de paiement sauvegardees)
+
+Vehicle ──1:N──> Ride (trajets proposes)
+
+Ride (trajet)
+  |──1:N──> Step (etapes intermediaires)
+  |──1:N──> Booking (reservations de passagers)
+  +──1:N──> Rating (notations du trajet)
+
+Booking (reservation)
+  |──N:1──> Ride (trajet reserve)
+  |──N:1──> People (passager)
+  +──1:1──> Payment (paiement associe)
+
+Group ──1:N──> GroupMember
+Group ──1:N──> GroupAuthority
+```
+
+### People (Profil utilisateur)
+
+Champs principaux :
+- `nom`, `prenom`, `telephone`, `dateNaissance`
+- `cni` (Carte Nationale d'Identite) - obligatoire
+- `photo`, `actif`, `alcool`
+- `conducteur`, `passager` (roles de l'utilisateur)
+- Verification CNI : `cniStatut`, `cniPhotoRecto`, `cniPhotoVerso`, `cniNumero`, `cniDateExpiration`, `cniSexe`, `cniVerifieAt`, `cniNomMrz`, `cniPrenomMrz`, `cniDateNaissanceMrz`, `documentType`
+
+### Ride (Trajet)
+
+- `villeDepart`, `villeArrivee` - villes de depart et arrivee
+- `dateDepart`, `dateArrivee` - dates
+- `heureDepart`, `minuteDepart`, `heureArrivee`, `minuteArrivee` - horaires
+- `prixParPlace` (Float) - prix par place en FCFA
+- `nbrePlaceDisponible` (Integer) - places restantes
+- `statut` (RideStatusEnum) - etat du trajet
+- `description`, `lieuDitDepart`, `lieuDitArrivee` - details
+- `distanceKm`, `durationMinutes` - informations de distance
+- Lie a un `Vehicle` (vehicule utilise)
+
+### Booking (Reservation)
+
+- `nbPlacesReservees`, `montantTotal`, `dateReservation`
+- `statut` (BookingStatusEnum), `methodePayment` (PaymentMethodEnum)
+- Lie a un `Ride` (trajet) et un `People` (passager)
+- A un `Payment` associe
+
+### Enumerations metier
+
+| Enum                | Valeurs                                                        |
+|---------------------|----------------------------------------------------------------|
+| RideStatusEnum      | OUVERT, COMPLET, ANNULE, EFFECTUE                              |
+| BookingStatusEnum   | CONFIRME, ANNULE, EN_ATTENTE, REFUSE                           |
+| PaymentStatusEnum   | REUSSI, ECHOUE, EN_ATTENTE                                     |
+| PaymentMethodEnum   | CARTE_BANCAIRE, VIREMENT, PAYPAL, ORANGE_MONEY, MTN_MOBILE_MONEY |
+| MessageStatusEnum   | (voir enumeration)                                             |
+
+## Services metier
+
+| Service                  | Responsabilite                                    |
+|--------------------------|---------------------------------------------------|
+| RideService              | Gestion des trajets (CRUD, recherche, statuts)    |
+| BookingService           | Reservations de places                            |
+| PaymentService           | Gestion des paiements                             |
+| CniVerificationService   | Verification de la CNI des utilisateurs           |
+| CniMrzParserService      | Extraction OCR des donnees MRZ de la CNI (Tess4J) |
+| UserService              | Gestion des comptes utilisateurs (JHipster)       |
+| MailService              | Envoi d'emails                                    |
+| GroupService             | Gestion des groupes                               |
+| GroupMemberService       | Gestion des membres de groupe                     |
+| GroupAuthorityService    | Gestion des permissions de groupe                 |
+| AuthorityService         | Gestion des roles                                 |
+
+## Controleurs REST
+
+| Resource                    | Endpoint de base          |
+|-----------------------------|---------------------------|
+| RideResource                | /api/rides                |
+| BookingResource             | /api/bookings             |
+| PaymentResource             | /api/payments             |
+| PeopleResource              | /api/people               |
+| VehicleResource             | /api/vehicles             |
+| StepResource                | /api/steps                |
+| RatingResource              | /api/ratings              |
+| MessageResource             | /api/messages             |
+| SavedPaymentMethodResource  | /api/saved-payment-methods|
+| GroupResource               | /api/groups               |
+| GroupMemberResource         | /api/group-members        |
+| GroupAuthorityResource      | /api/group-authorities    |
+| AccountResource             | /api/account              |
+| UserResource                | /api/admin/users          |
+| PublicUserResource           | /api/users                |
+
+## API-First (OpenAPI)
+
+- Specification : `src/main/resources/swagger/api.yml`
+- Generation via `./mvnw generate-sources`
+- Pattern delegate : interfaces generees dans `com.binbash.mobigo.web.api`, DTOs dans `com.binbash.mobigo.service.api.dto`
+- Note : Le fichier api.yml actuel a des paths vides (`paths: {}`) - les endpoints principaux sont definis directement dans les controleurs REST JHipster
+
+## Configuration
+
+### Profils Spring
+
+- **dev** (defaut) : PostgreSQL local (localhost:5432/mobigo), Elasticsearch local, Mailpit (SMTP fictif), `ddl-auto: update`
+- **prod** : Variables d'environnement pour DB, JWT secret par env var, `ddl-auto: update`, Elasticsearch desactive
+- **api-docs** : Active la documentation Springdoc/Swagger
+
+### Elasticsearch en production
+
+Elasticsearch est **desactive en prod** via :
+- `application.elasticsearch.enabled: false` dans `application-prod.yml`
+- `NoOpSearchRepositoryConfig` fournit des proxies Java no-op pour les 13 search repositories
+- Les auto-configurations ES de Spring Boot sont exclues
+- Les recherches retournent des resultats vides, l'indexation est ignoree silencieusement
+
+En dev, Elasticsearch est actif par defaut (`ElasticsearchRepositoryConfig` avec `matchIfMissing=true`).
+
+### Base de donnees
+
+- Pas de Liquibase (migrations supprimees)
+- Hibernate `ddl-auto: update` en dev et prod
+- Strategy de nommage : CamelCase vers underscores
+- Cache Hibernate desactive
+- `@EnableJpaRepositories` exclut le package `repository.search` via `excludeFilters` (REGEX)
+
+### ApplicationProperties
+
+`@ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)` - toute propriete sous `application.*` dans les YAML doit avoir un champ correspondant dans cette classe. Proprietes actuelles :
+- `application.tesseract.dataPath`, `application.tesseract.language`
+- `application.cni.imagesDir`
+- `application.elasticsearch.enabled`
+
+### CORS (dev)
+
+Origines autorisees : localhost sur ports 3000, 4200, 5173, 5174, 8100, 9000
+
+### Docker
+
+- `Dockerfile` : Multi-stage build (Maven 3.9.6 + Temurin 21 JDK pour build, Temurin 21 JRE pour run)
+- `src/main/docker/services.yml` : PostgreSQL, Elasticsearch, Mailpit
+- Spring Boot Docker Compose demarre automatiquement les services en dev (desactive en prod)
+
+### Fonctionnalites speciales
+
+- **Verification CNI** : OCR via Tess4J pour extraire les donnees MRZ des cartes d'identite
+  - Tesseract data path : `${user.dir}/tessdata`
+  - Langues : `fra+eng`
+  - Images CNI stockees dans : `content/images/cni`
+- **Multipart** : Upload de fichiers jusqu'a 10MB (requete totale 25MB)
+- **WebSocket** : Support temps reel pour tracking
+- **i18n** : Francais (langue native) et Anglais
+
+### React Client
+
+Client TypeScript/Axios genere depuis l'API du backend :
+- Genere dans `src/main/react-client/generated/`
+- Commande : `./npmw run generate:react-client` (backend doit tourner)
+
+## Deploiement sur Render
+
+### Infrastructure
+
+| Ressource   | ID                                  | Details                            |
+|-------------|-------------------------------------|------------------------------------|
+| Web Service | `srv-d63ir56r433s73dpr6qg`          | Free tier, Oregon, Docker          |
+| PostgreSQL  | `dpg-d63hfr7gi27c739gbrog-a`       | Free tier, internal hostname       |
+| URL         | https://mobigo.onrender.com         | Health check: `/management/health` |
+
+### Variables d'environnement en production
+
+| Variable                                         | Description                               |
+|--------------------------------------------------|-------------------------------------------|
+| SPRING_PROFILES_ACTIVE                           | `prod`                                    |
+| SPRING_DATASOURCE_URL                            | URL JDBC PostgreSQL (interne Render)      |
+| SPRING_DATASOURCE_USERNAME                       | Utilisateur DB                            |
+| SPRING_DATASOURCE_PASSWORD                       | Mot de passe DB                           |
+| JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET | Secret JWT en Base64                    |
+| JHIPSTER_CORS_ALLOWED_ORIGINS                    | `https://mobigo.onrender.com`             |
+| JAVA_OPTS                                        | `-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m` |
+
+### Specificites du deploiement
+
+- **Temps de demarrage** : ~212 secondes sur free tier (0.1 CPU, 512MB RAM)
+- **JVM** : `-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m` (heap 300MB max pour container 512MB)
+- **PostgreSQL interne** : Format URL `jdbc:postgresql://dpg-<id>-a:5432/<dbname>` (meme region)
+- **Premier deploy** : Render detecte le port 8080, redemarre pour configurer le reseau
+- **Fat JAR** : `spring-boot-maven-plugin` doit etre dans `<plugins>` ET `<pluginManagement>`
+- **Docker Compose** desactive en prod : `spring.docker.compose.enabled: false`
+
+## Commandes utiles
+
+```bash
+# Developpement
+./mvnw                          # Demarrer le backend
+./npmw start                    # Demarrer le frontend Angular
+./npmw run services:up          # Demarrer les services Docker
+
+# Tests
+./mvnw verify                   # Tests backend (unit + integration)
+./npmw test                     # Tests frontend
+./mvnw test -Dtest=RideResourceIT  # Test specifique
+
+# Build
+./mvnw -Pprod clean verify     # Build production
+./mvnw generate-sources        # Generer le code API OpenAPI
+./npmw run generate:react-client # Generer le client React
+
+# Qualite
+./npmw run lint                 # Lint frontend
+./npmw run prettier:format      # Formater le code
+```
+
+## Conventions
+
+- **Langue du code** : Noms de champs et entites en francais (nom, prenom, villeDepart, conducteur, passager, trajet, etc.)
+- **Langue des enums** : Valeurs en francais (OUVERT, CONFIRME, ANNULE, etc.)
+- **Package de base** : `com.binbash.mobigo`
+- **Tests d'integration** : Annotation `@IntegrationTest` (inclut `@EmbeddedElasticsearch` et `@EmbeddedSQL`)
+- **Nommage** :
+  - Entites : PascalCase (People, Ride, Booking)
+  - Tables : snake_case (via CamelCaseToUnderscoresNamingStrategy)
+  - Tests IT : `*IT.java` ou `*IntTest.java`
+  - Tests unitaires : `*Test.java`
