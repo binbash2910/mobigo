@@ -1,5 +1,6 @@
 package com.binbash.mobigo.web.rest;
 
+import com.binbash.mobigo.config.ApplicationProperties;
 import com.binbash.mobigo.domain.User;
 import com.binbash.mobigo.repository.UserRepository;
 import com.binbash.mobigo.security.SecurityUtils;
@@ -11,11 +12,13 @@ import com.binbash.mobigo.web.rest.errors.*;
 import com.binbash.mobigo.web.rest.vm.KeyAndPasswordVM;
 import com.binbash.mobigo.web.rest.vm.ManagedUserVM;
 import jakarta.validation.Valid;
+import java.net.URI;
 import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -40,10 +43,18 @@ public class AccountResource {
 
     private final MailService mailService;
 
-    public AccountResource(UserRepository userRepository, UserService userService, MailService mailService) {
+    private final ApplicationProperties applicationProperties;
+
+    public AccountResource(
+        UserRepository userRepository,
+        UserService userService,
+        MailService mailService,
+        ApplicationProperties applicationProperties
+    ) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.mailService = mailService;
+        this.applicationProperties = applicationProperties;
     }
 
     /**
@@ -65,17 +76,22 @@ public class AccountResource {
     }
 
     /**
-     * {@code GET  /activate} : activate the registered user.
+     * {@code GET  /activate} : activate the registered user and redirect to frontend login page.
      *
      * @param key the activation key.
-     * @throws RuntimeException {@code 500 (Internal Server Error)} if the user couldn't be activated.
+     * @return a redirect to the frontend login page.
      */
     @GetMapping("/activate")
-    public void activateAccount(@RequestParam(value = "key") String key) {
+    public ResponseEntity<Void> activateAccount(@RequestParam(value = "key") String key) {
+        String frontendUrl = applicationProperties.getFrontendUrl();
         Optional<User> user = userService.activateRegistration(key);
-        if (!user.isPresent()) {
-            throw new AccountResourceException("No user was found for this activation key");
+        String redirectUrl;
+        if (user.isPresent()) {
+            redirectUrl = frontendUrl + "/login?activated=true";
+        } else {
+            redirectUrl = frontendUrl + "/login?activationError=true";
         }
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
     }
 
     /**

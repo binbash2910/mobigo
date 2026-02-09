@@ -11,10 +11,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)
 public class ApplicationProperties {
 
+    private String frontendUrl = "http://localhost:4200";
     private final Tesseract tesseract = new Tesseract();
     private final Cni cni = new Cni();
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Storage storage = new Storage();
+
+    public String getFrontendUrl() {
+        return frontendUrl;
+    }
+
+    public void setFrontendUrl(String frontendUrl) {
+        this.frontendUrl = frontendUrl;
+    }
 
     public Tesseract getTesseract() {
         return tesseract;

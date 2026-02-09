@@ -148,6 +148,7 @@ jhipster:
 # ===================================================================
 
 application:
+  frontend-url: ${FRONTEND_URL:https://rideshare-web.vercel.app}
   elasticsearch:
     enabled: false
   storage:
