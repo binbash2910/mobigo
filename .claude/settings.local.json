@@ -48,7 +48,10 @@
       "Bash(mvn --version:*)",
       "Bash(mvn spring-boot:run:*)",
       "Bash(mvn wrapper:wrapper:*)",
-      "Bash(cmd //c \"taskkill /PID 20588 /F\")"
+      "Bash(cmd //c \"taskkill /PID 20588 /F\")",
+      "Bash(del \"C:\\\\Users\\\\lucie\\\\OneDrive\\\\Documents\\\\Developpements\\\\backend\\\\mobigo\\\\nul\")",
+      "Bash(powershell:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate"
     ]
   }
 }

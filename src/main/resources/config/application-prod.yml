@@ -130,7 +130,7 @@ jhipster:
         token-validity-in-seconds-for-remember-me: 2592000
   mail: # specific JHipster mail property, for standard properties see MailProperties
     from: ${JHIPSTER_MAIL_FROM:noreply@mobigo.onrender.com}
-    base-url: https://mobigo.onrender.com
+    base-url: ${FRONTEND_URL:https://rideshare-web-ten.vercel.app}
   logging:
     use-json-format: false # By default, logs are not in Json format
     logstash: # Forward logs to logstash over a socket, used by LoggingConfiguration
