@@ -152,7 +152,7 @@ Champs principaux :
 | GroupResource               | /api/groups               |
 | GroupMemberResource         | /api/group-members        |
 | GroupAuthorityResource      | /api/group-authorities    |
-| AccountResource             | /api/account              |
+| AccountResource             | /api/account, /api/activate, /api/register |
 | UserResource                | /api/admin/users          |
 | PublicUserResource           | /api/users                |
 
@@ -192,19 +192,67 @@ En dev, Elasticsearch est actif par defaut (`ElasticsearchRepositoryConfig` avec
 ### ApplicationProperties
 
 `@ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)` - toute propriete sous `application.*` dans les YAML doit avoir un champ correspondant dans cette classe. Proprietes actuelles :
+- `application.frontend-url` - URL du frontend rideshare-web (defaut: `http://localhost:4200` en dev, `https://rideshare-web.vercel.app` en prod via `${FRONTEND_URL}`)
 - `application.tesseract.dataPath`, `application.tesseract.language`
 - `application.cni.imagesDir`
 - `application.elasticsearch.enabled`
+- `application.storage.baseDir`, `application.storage.peopleDir`, `application.storage.vehiclesDir`, `application.storage.cniDir`
 
-### CORS (dev)
+### Securite
 
-Origines autorisees : localhost sur ports 3000, 4200, 5173, 5174, 8100, 9000
+- **JWT** : Authentification via `Authorization: Bearer <token>`
+- **Endpoints publics** : `/api/authenticate`, `/api/register`, `/api/activate`, `/api/account/reset-password/*`
+- **Endpoints admin** : `/api/admin/**`, `/management/**` (sauf health, info, prometheus)
+- **CORS (dev)** : localhost sur ports 3000, 4200, 5173, 5174, 8100, 9000
+- **CORS (prod)** : `${JHIPSTER_CORS_ALLOWED_ORIGINS}`
 
 ### Docker
 
 - `Dockerfile` : Multi-stage build (Maven 3.9.6 + Temurin 21 JDK pour build, Temurin 21 JRE pour run)
+  - Build : copie pom.xml + deps offline, puis sources + configs Angular, `mvnw package -Pprod`
+  - `frontend-maven-plugin` telecharge Node.js v22.15.0 / npm 11.3.0 et build Angular
+  - `COPY webpack webpack/` (pas `COPY webpack ./` qui aplatirait le contenu)
+  - Run : JRE 21, JAVA_OPTS pour memoire contrainte
+- `.dockerignore` : exclut `node_modules/`, `target/`, `.git/`
 - `src/main/docker/services.yml` : PostgreSQL, Elasticsearch, Mailpit
 - Spring Boot Docker Compose demarre automatiquement les services en dev (desactive en prod)
+
+### Frontend externe (rideshare-web)
+
+- **URL prod** : `https://rideshare-web.vercel.app`
+- Application frontend separee qui consomme l'API Mobigo
+- Le backend redirige les utilisateurs vers ce frontend apres activation de compte
+- Query params supportes : `?activated=true`, `?activationError=true`
+
+### Email (Brevo SMTP)
+
+- **SMTP** : `smtp-relay.brevo.com:587` avec STARTTLS
+- **Credentials** : via `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD`
+- **Expediteur** : `JHIPSTER_MAIL_FROM` (defaut: `noreply@mobigo.onrender.com`)
+- **Templates Thymeleaf** : `src/main/resources/templates/mail/`
+  - `activationEmail.html` - Activation de compte (lien vers `/api/activate?key=xxx`)
+  - `creationEmail.html` - Creation de compte (lien reset password)
+  - `passwordResetEmail.html` - Reset mot de passe
+
+### Flux d'activation de compte
+
+1. L'utilisateur s'inscrit via `POST /api/register`
+2. Un email d'activation est envoye avec un lien `${baseUrl}/api/activate?key=${activationKey}`
+3. Le clic sur le lien appelle directement le backend `GET /api/activate?key=xxx`
+4. Le backend active le compte et redirige (HTTP 302) vers `${frontendUrl}/login?activated=true`
+5. En cas de cle invalide, redirige vers `${frontendUrl}/login?activationError=true`
+6. `frontendUrl` = `https://rideshare-web.vercel.app` en prod (configurable via `FRONTEND_URL`)
+
+### Logging (production)
+
+- **Console** : Toujours actif (stdout, visible dans Render dashboard)
+- **Fichier** : `/app/logs/mobigo.log` (profil prod uniquement)
+  - Rotation quotidienne, max 10MB/fichier, 7 jours d'historique, cap 100MB
+  - Configurable via `LOG_PATH` (defaut: `/app/logs`)
+- **Endpoint actuator** : `GET /management/logfile` (requiert JWT admin)
+  - Authentification : `POST /api/authenticate` avec `{"username":"admin","password":"admin"}`
+  - Puis : `curl -H "Authorization: Bearer <token>" https://mobigo.onrender.com/management/logfile`
+- **Note** : Filesystem ephemere sur Render free tier (logs fichier perdus a chaque deploy)
 
 ### Fonctionnalites speciales
 
@@ -243,6 +291,10 @@ Client TypeScript/Axios genere depuis l'API du backend :
 | JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET | Secret JWT en Base64                    |
 | JHIPSTER_CORS_ALLOWED_ORIGINS                    | `https://mobigo.onrender.com`             |
 | JAVA_OPTS                                        | `-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m` |
+| SPRING_MAIL_USERNAME                             | Login SMTP Brevo                          |
+| SPRING_MAIL_PASSWORD                             | Cle API SMTP Brevo                        |
+| JHIPSTER_MAIL_FROM                               | Adresse expediteur des emails             |
+| FRONTEND_URL                                     | URL du frontend rideshare-web (defaut: `https://rideshare-web.vercel.app`) |
 
 ### Specificites du deploiement
 
@@ -252,6 +304,9 @@ Client TypeScript/Axios genere depuis l'API du backend :
 - **Premier deploy** : Render detecte le port 8080, redemarre pour configurer le reseau
 - **Fat JAR** : `spring-boot-maven-plugin` doit etre dans `<plugins>` ET `<pluginManagement>`
 - **Docker Compose** desactive en prod : `spring.docker.compose.enabled: false`
+- **Angular frontend** : Inclus dans le build Docker via `frontend-maven-plugin` (telechage Node.js/npm)
+- **`.dockerignore`** : Exclut `node_modules/` (500k+ fichiers), `target/`, `.git/`
+- **Filesystem ephemere** : Render free tier reset le filesystem a chaque deploy
 
 ## Commandes utiles
 
