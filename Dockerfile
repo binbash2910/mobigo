@@ -20,6 +20,13 @@ RUN ./mvnw clean package \
 # ===== RUN =====
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /app/logs
+
 ENV JAVA_OPTS="-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m"
 COPY --from=build /app/target/mobigo-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080

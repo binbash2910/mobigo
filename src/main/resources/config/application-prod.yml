@@ -156,5 +156,5 @@ application:
   storage:
     base-dir: ${UPLOAD_DIR:/var/data/images}
   tesseract:
-    data-path: ${user.dir}/tessdata
+    data-path: ${TESSDATA_PREFIX:/usr/share/tesseract-ocr/5/tessdata}
     language: fra+eng
