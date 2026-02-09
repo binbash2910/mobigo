@@ -7,11 +7,17 @@ import com.binbash.mobigo.service.dto.CniVerificationDTO;
 import com.binbash.mobigo.service.dto.MrzData;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
@@ -34,7 +40,7 @@ public class CniVerificationService {
     private static final Logger LOG = LoggerFactory.getLogger(CniVerificationService.class);
 
     // All known MRZ prefixes for the first-pass OCR detection
-    private static final String[] KNOWN_MRZ_PREFIXES = { "IDCMR", "IDFRA", "IRFRA", "P<CMR", "P<FRA", "POCMR", "POFRA" };
+    private static final String[] KNOWN_MRZ_PREFIXES = { "IDCMR", "IDFRA", "IRFRA", "I<CMR", "I<FRA", "P<CMR", "P<FRA", "POCMR", "POFRA" };
 
     private final ApplicationProperties applicationProperties;
     private final PeopleRepository peopleRepository;
@@ -88,17 +94,26 @@ public class CniVerificationService {
             fallbackPath = versoPath != null ? rectoPath : null;
         }
 
-        String ocrText = runOcr(primaryPath);
-        LOG.debug("OCR primary result for people {}: {}", peopleId, ocrText);
+        // 2b. OCR + parse: try each strategy until a valid MRZ is found
+        LOG.info("Starting CNI verification for people {} — primary image: {}", peopleId, primaryPath);
+        MrzData mrzData = ocrAndParse(primaryPath);
 
-        // 3. Parse MRZ
-        MrzData mrzData = mrzParserService.parseMrz(ocrText);
+        // 3. If MRZ dates unreadable but names/doc OK, try visual text extraction
+        if (!mrzData.isValid() && mrzData.getNom() != null) {
+            LOG.info("MRZ dates unreadable — attempting visual text extraction for people {}", peopleId);
+            supplementWithVisualText(mrzData, primaryPath, fallbackPath);
+        }
 
-        // 4. If MRZ not found on primary side, try fallback
+        // 4. If still not valid, try full MRZ on fallback side
         if (!mrzData.isValid() && fallbackPath != null) {
-            LOG.debug("MRZ not found on primary side, trying fallback for people {}", peopleId);
-            String fallbackOcrText = runOcr(fallbackPath);
-            mrzData = mrzParserService.parseMrz(fallbackOcrText);
+            LOG.info("Trying fallback image: {}", fallbackPath);
+            MrzData fallbackMrz = ocrAndParse(fallbackPath);
+            if (fallbackMrz.isValid()) {
+                mrzData = fallbackMrz;
+            } else if (fallbackMrz.getNom() != null) {
+                supplementWithVisualText(fallbackMrz, fallbackPath, primaryPath);
+                if (fallbackMrz.isValid()) mrzData = fallbackMrz;
+            }
         }
 
         // 5. Build result
@@ -174,10 +189,15 @@ public class CniVerificationService {
     }
 
     /**
-     * Run Tesseract OCR on an image file, optimized for MRZ reading.
-     * Uses a multi-strategy approach with different crop ratios and charsets.
+     * Run OCR with multiple strategies and parse MRZ, returning the first valid result.
+     * Each strategy's OCR output is immediately parsed — only a valid MRZ (with parseable dates)
+     * is accepted. This prevents garbled full-image OCR from short-circuiting better crop results.
+     *
+     * Strategy order: bottom crops first (isolated MRZ zone), then sharpened crops,
+     * then full image as fallback. Tracks the best partial result (names OK, dates failed)
+     * for the text extraction fallback in the caller.
      */
-    private String runOcr(String imagePath) {
+    private MrzData ocrAndParse(String imagePath) {
         try {
             Tesseract tesseract = new Tesseract();
             tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
@@ -186,62 +206,157 @@ public class CniVerificationService {
             BufferedImage originalImage = ImageIO.read(Path.of(imagePath).toFile());
             if (originalImage == null) {
                 LOG.error("Could not read image at: {}", imagePath);
-                return "";
+                return invalidMrzData();
             }
 
-            // Prepare images: full + multiple bottom crops at different ratios
-            BufferedImage fullImage = preprocessForMrz(originalImage);
-            double[] cropRatios = { 0.25, 0.15 };
+            double[] cropRatios = { 0.35, 0.25, 0.20, 0.15 };
+            MrzData bestPartial = null;
 
-            // Strategy 1: Full image, restricted charset (PSM 6)
-            String mrzText = ocrWithCharset(tesseract, fullImage, true);
-            if (containsAnyPrefix(mrzText)) {
-                LOG.debug("MRZ found: full image, restricted charset");
-                return mrzText;
-            }
-
-            // Strategy 2-3: Bottom crops, restricted charset (PSM 6)
+            // --- Phase 1: Bottom crops with preprocessing, restricted charset (best for MRZ) ---
             for (double ratio : cropRatios) {
-                BufferedImage crop = cropBottom(originalImage, ratio);
-                BufferedImage processedCrop = preprocessForMrz(crop);
-                // Scale up small crops for better OCR accuracy
-                if (processedCrop.getHeight() < 300) {
-                    processedCrop = scaleUp(processedCrop, 300.0 / processedCrop.getHeight());
-                }
-                mrzText = ocrWithCharset(tesseract, processedCrop, true);
-                if (containsAnyPrefix(mrzText)) {
-                    LOG.debug("MRZ found: bottom {}% crop, restricted charset", (int) (ratio * 100));
-                    return mrzText;
-                }
+                MrzData result = tryOcrStrategy(
+                    tesseract,
+                    originalImage,
+                    ratio,
+                    true,
+                    true,
+                    String.format("bottom %d%% crop, preprocessed, restricted charset", (int) (ratio * 100))
+                );
+                if (result.isValid()) return result;
+                if (bestPartial == null && result.getNom() != null) bestPartial = result;
             }
 
-            // Strategy 4: Full image, full charset (PSM 3)
-            mrzText = ocrWithCharset(tesseract, fullImage, false);
-            if (containsAnyPrefix(mrzText)) {
-                LOG.debug("MRZ found: full image, full charset");
-                return mrzText;
-            }
-
-            // Strategy 5-6: Bottom crops, full charset (PSM 3)
+            // --- Phase 2: Bottom crops with preprocessing, full charset ---
             for (double ratio : cropRatios) {
-                BufferedImage crop = cropBottom(originalImage, ratio);
-                BufferedImage processedCrop = preprocessForMrz(crop);
-                if (processedCrop.getHeight() < 300) {
-                    processedCrop = scaleUp(processedCrop, 300.0 / processedCrop.getHeight());
-                }
-                mrzText = ocrWithCharset(tesseract, processedCrop, false);
-                if (containsAnyPrefix(mrzText)) {
-                    LOG.debug("MRZ found: bottom {}% crop, full charset", (int) (ratio * 100));
-                    return mrzText;
-                }
+                MrzData result = tryOcrStrategy(
+                    tesseract,
+                    originalImage,
+                    ratio,
+                    true,
+                    false,
+                    String.format("bottom %d%% crop, preprocessed, full charset", (int) (ratio * 100))
+                );
+                if (result.isValid()) return result;
+                if (bestPartial == null && result.getNom() != null) bestPartial = result;
             }
 
-            LOG.warn("MRZ not found after all OCR strategies for image: {}", imagePath);
-            return mrzText;
+            // --- Phase 3: Raw bottom crops (no preprocessing), restricted charset ---
+            for (double ratio : cropRatios) {
+                MrzData result = tryOcrStrategy(
+                    tesseract,
+                    originalImage,
+                    ratio,
+                    false,
+                    true,
+                    String.format("bottom %d%% raw crop, restricted charset", (int) (ratio * 100))
+                );
+                if (result.isValid()) return result;
+                if (bestPartial == null && result.getNom() != null) bestPartial = result;
+            }
+
+            // --- Phase 4: Sharpened bottom crops, preprocessed, restricted charset ---
+            BufferedImage sharpenedImage = sharpen(originalImage);
+            for (double ratio : new double[] { 0.35, 0.25 }) {
+                MrzData result = tryOcrStrategy(
+                    tesseract,
+                    sharpenedImage,
+                    ratio,
+                    true,
+                    true,
+                    String.format("bottom %d%% sharpened crop, restricted charset", (int) (ratio * 100))
+                );
+                if (result.isValid()) return result;
+                if (bestPartial == null && result.getNom() != null) bestPartial = result;
+            }
+
+            // --- Phase 5: Full image, restricted charset ---
+            {
+                MrzData result = tryOcrStrategy(tesseract, originalImage, 0, true, true, "full image, preprocessed, restricted charset");
+                if (result.isValid()) return result;
+                if (bestPartial == null && result.getNom() != null) bestPartial = result;
+            }
+
+            // --- Phase 6: Full image, full charset ---
+            {
+                MrzData result = tryOcrStrategy(tesseract, originalImage, 0, true, false, "full image, preprocessed, full charset");
+                if (result.isValid()) return result;
+                if (bestPartial == null && result.getNom() != null) bestPartial = result;
+            }
+
+            LOG.warn("No valid MRZ found after all strategies for: {}", imagePath);
+
+            // Return best partial result (has names/doc but dates failed) for text extraction fallback
+            if (bestPartial != null) {
+                LOG.info(
+                    "Returning partial MRZ (nom={}, doc={}, dates failed) for text extraction",
+                    bestPartial.getNom(),
+                    bestPartial.getDocumentNumber()
+                );
+                return bestPartial;
+            }
+
+            return invalidMrzData();
         } catch (TesseractException | IOException e) {
             LOG.error("OCR failed for image {}: {}", imagePath, e.getMessage());
-            return "";
+            return invalidMrzData();
         }
+    }
+
+    /**
+     * Try a single OCR strategy: crop (or full image), optionally preprocess, OCR, then parse MRZ.
+     *
+     * @param cropRatio 0 = full image, > 0 = bottom crop ratio
+     * @param preprocess true = apply Otsu binarization + contrast stretching
+     * @param restricted true = restricted MRZ charset (PSM 6), false = full charset (PSM 3)
+     */
+    private MrzData tryOcrStrategy(
+        Tesseract tesseract,
+        BufferedImage originalImage,
+        double cropRatio,
+        boolean preprocess,
+        boolean restricted,
+        String strategyName
+    ) throws TesseractException {
+        BufferedImage image;
+        if (cropRatio > 0) {
+            image = cropBottom(originalImage, cropRatio);
+        } else {
+            image = originalImage;
+        }
+
+        if (preprocess) {
+            image = preprocessForMrz(image);
+        }
+
+        if (image.getHeight() < 300) {
+            image = scaleUp(image, 300.0 / image.getHeight());
+        }
+
+        String ocrText = ocrWithCharset(tesseract, image, restricted);
+        MrzData mrzData = mrzParserService.parseMrz(ocrText);
+
+        if (mrzData.isValid()) {
+            LOG.info(
+                "SUCCESS via strategy [{}] — doc={}, nom={}, dob={}",
+                strategyName,
+                mrzData.getDocumentNumber(),
+                mrzData.getNom(),
+                mrzData.getDateNaissance()
+            );
+        } else {
+            // Log first 120 chars of OCR output for debugging
+            String preview = ocrText == null ? "null" : ocrText.replace("\n", " | ").trim();
+            if (preview.length() > 120) preview = preview.substring(0, 120) + "...";
+            LOG.info("FAIL via strategy [{}] — OCR: {}", strategyName, preview);
+        }
+
+        return mrzData;
+    }
+
+    private MrzData invalidMrzData() {
+        MrzData data = new MrzData();
+        data.setValid(false);
+        return data;
     }
 
     /**
@@ -282,20 +397,122 @@ public class CniVerificationService {
     }
 
     /**
-     * Check if OCR text contains any known MRZ prefix.
+     * Apply a 3x3 sharpening kernel to enhance edge contrast.
+     * Helps Tesseract distinguish digits from patterned card backgrounds.
      */
-    private boolean containsAnyPrefix(String text) {
-        for (String prefix : KNOWN_MRZ_PREFIXES) {
-            if (text.contains(prefix)) {
-                return true;
-            }
-        }
-        return false;
+    private BufferedImage sharpen(BufferedImage image) {
+        // Ensure compatible image type for ConvolveOp
+        BufferedImage compatible = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+        compatible.getGraphics().drawImage(image, 0, 0, null);
+
+        float[] kernel = { 0, -1, 0, -1, 5, -1, 0, -1, 0 };
+        ConvolveOp op = new ConvolveOp(new Kernel(3, 3, kernel), ConvolveOp.EDGE_NO_OP, null);
+        return op.filter(compatible, null);
     }
 
     /**
-     * Pre-process image for better OCR results using Otsu's binarization.
-     * Converts to grayscale, then applies Otsu's automatic thresholding
+     * Supplement partial MRZ data (where names/doc parsed but dates failed) with dates
+     * extracted from the human-readable text visible on the card photos.
+     * Looks for DD.MM.YYYY patterns, sex indicators, etc.
+     */
+    private void supplementWithVisualText(MrzData partial, String... imagePaths) {
+        try {
+            Tesseract tesseract = new Tesseract();
+            tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
+            tesseract.setLanguage(applicationProperties.getTesseract().getLanguage());
+            tesseract.setPageSegMode(3); // Fully automatic segmentation
+            tesseract.setVariable("tessedit_char_whitelist", ""); // Full charset
+
+            // Flexible date patterns: DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY
+            // Also handle OCR artifacts like extra spaces around separators
+            Pattern datePattern = Pattern.compile("(\\d{2})\\s*[./\\-,;:\\s]\\s*(\\d{2})\\s*[./\\-,;:\\s]\\s*(\\d{4})");
+            LocalDate now = LocalDate.now();
+
+            // Collect ALL dates from ALL images first, then pick best DOB/expiry
+            List<LocalDate> allDates = new ArrayList<>();
+            String combinedText = "";
+
+            for (String path : imagePaths) {
+                if (path == null) continue;
+                BufferedImage img = ImageIO.read(Path.of(path).toFile());
+                if (img == null) continue;
+
+                // Try multiple image variants to maximize date extraction
+                // Raw image may miss dates on colored backgrounds; preprocessed/sharpened can help
+                BufferedImage[] variants = { img, preprocessForMrz(img), sharpen(img) };
+                String[] variantNames = { "raw", "preprocessed", "sharpened" };
+
+                for (int v = 0; v < variants.length; v++) {
+                    String text = tesseract.doOCR(variants[v]);
+                    String preview = text.length() > 500 ? text.substring(0, 500) + "..." : text;
+                    LOG.info("Visual text [{}] from {} ({} chars):\n{}", variantNames[v], path, text.length(), preview);
+                    combinedText += " " + text;
+
+                    Matcher matcher = datePattern.matcher(text);
+                    while (matcher.find()) {
+                        try {
+                            int dd = Integer.parseInt(matcher.group(1));
+                            int mm = Integer.parseInt(matcher.group(2));
+                            int yyyy = Integer.parseInt(matcher.group(3));
+                            if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900 || yyyy > 2100) continue;
+                            LocalDate d = LocalDate.of(yyyy, mm, dd);
+                            allDates.add(d);
+                            LOG.info("Found date in visual text [{}]: {} (raw: '{}')", variantNames[v], d, matcher.group());
+                        } catch (Exception e) {
+                            // skip invalid date
+                        }
+                    }
+                }
+            }
+
+            LOG.info("Total dates found across all images: {}", allDates.size());
+
+            // DOB = oldest date (furthest in the past, before now - 5 years)
+            // Expiry = newest date (furthest in the future, after now)
+            for (LocalDate d : allDates) {
+                if (d.isBefore(now.minusYears(5))) {
+                    if (partial.getDateNaissance() == null || d.isBefore(partial.getDateNaissance())) {
+                        partial.setDateNaissance(d);
+                    }
+                } else if (d.isAfter(now)) {
+                    if (partial.getDateExpiration() == null || d.isAfter(partial.getDateExpiration())) {
+                        partial.setDateExpiration(d);
+                    }
+                }
+            }
+
+            if (partial.getDateNaissance() != null) LOG.info("Extracted DOB: {}", partial.getDateNaissance());
+            if (partial.getDateExpiration() != null) LOG.info("Extracted expiry: {}", partial.getDateExpiration());
+            if (partial.getDateExpiration() == null) LOG.warn("Could NOT extract expiry date from visual text — all dates: {}", allDates);
+
+            // Extract sex near "SEX" label
+            if (partial.getSexe() == null) {
+                Pattern sexPattern = Pattern.compile("SEX[E]?[\\s/|:]*([MF])\\b", Pattern.CASE_INSENSITIVE);
+                Matcher sexMatcher = sexPattern.matcher(combinedText);
+                if (sexMatcher.find()) {
+                    partial.setSexe(sexMatcher.group(1).toUpperCase());
+                    LOG.info("Extracted sex from visual text: {}", partial.getSexe());
+                }
+            }
+
+            // Re-validate: names from MRZ + dates from visual text
+            partial.setValid(partial.getNom() != null && partial.getDateNaissance() != null);
+            if (partial.isValid()) {
+                LOG.info(
+                    "Visual text extraction SUCCESS — DOB={}, expiry={}, sex={}",
+                    partial.getDateNaissance(),
+                    partial.getDateExpiration(),
+                    partial.getSexe()
+                );
+            }
+        } catch (TesseractException | IOException e) {
+            LOG.error("Visual text extraction failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Pre-process image for better OCR results using contrast stretching + Otsu's binarization.
+     * Converts to grayscale, enhances contrast, then applies Otsu's automatic thresholding
      * to produce a clean black-and-white image optimal for MRZ reading.
      */
     private BufferedImage preprocessForMrz(BufferedImage original) {
@@ -308,6 +525,20 @@ public class CniVerificationService {
             for (int x = 0; x < width; x++) {
                 Color color = new Color(original.getRGB(x, y));
                 grayValues[y * width + x] = (int) (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue());
+            }
+        }
+
+        // Step 1.5: Contrast stretching — normalize gray range to full 0-255
+        // Helps with colored card backgrounds (e.g. green new Cameroon CNI)
+        int minGray = 255, maxGray = 0;
+        for (int v : grayValues) {
+            if (v < minGray) minGray = v;
+            if (v > maxGray) maxGray = v;
+        }
+        int grayRange = maxGray - minGray;
+        if (grayRange > 20 && grayRange < 230) {
+            for (int i = 0; i < grayValues.length; i++) {
+                grayValues[i] = Math.min(255, Math.max(0, (int) (((grayValues[i] - minGray) * 255.0) / grayRange)));
             }
         }
 

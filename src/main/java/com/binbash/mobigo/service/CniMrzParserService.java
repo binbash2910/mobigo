@@ -28,7 +28,8 @@ public class CniMrzParserService {
     private static final Pattern MRZ_LINE_PATTERN = Pattern.compile("^[A-Z0-9<]{28,44}$");
 
     // Supported ID card prefixes (CNI)
-    private static final String[] ID_PREFIXES = { "IDCMR", "IDFRA" };
+    // Supports both old format (IDCMR) and new format (I<CMR) prefixes
+    private static final String[] ID_PREFIXES = { "IDCMR", "IDFRA", "I<CMR", "I<FRA" };
 
     // Supported residence permit prefixes (titre de sejour / carte de sejour)
     private static final String[] RESIDENCE_PREFIXES = { "IRFRA" };
@@ -46,13 +47,16 @@ public class CniMrzParserService {
         }
 
         List<String> mrzLines = extractMrzLines(ocrText);
-        LOG.debug("Extracted {} MRZ lines from OCR text", mrzLines.size());
+        LOG.info("Extracted {} MRZ-candidate lines from OCR text ({} chars)", mrzLines.size(), ocrText.length());
+        for (int i = 0; i < mrzLines.size(); i++) {
+            LOG.info("  MRZ line {}: [{}] (len={})", i, mrzLines.get(i), mrzLines.get(i).length());
+        }
 
         if (mrzLines.size() >= 3) {
             // Try TD1 format (ID cards / residence permits): 3 lines x 30 chars
             List<String> td1Lines = findTD1Lines(mrzLines);
             if (td1Lines != null) {
-                LOG.debug("Detected TD1 format (ID card / residence permit)");
+                LOG.info("Detected TD1 format (ID card / residence permit)");
                 return parseTD1(td1Lines);
             }
         }
@@ -61,14 +65,14 @@ public class CniMrzParserService {
             // Try TD3 format (passports): 2 lines x 44 chars — check BEFORE TD2
             List<String> td3Lines = findTD3Lines(mrzLines);
             if (td3Lines != null) {
-                LOG.debug("Detected TD3 format (Passport)");
+                LOG.info("Detected TD3 format (Passport)");
                 return parseTD3(td3Lines);
             }
 
             // Try TD2 format (older ID cards): 2 lines x 36 chars
             List<String> td2Lines = findTD2Lines(mrzLines);
             if (td2Lines != null) {
-                LOG.debug("Detected TD2 format (older ID card)");
+                LOG.info("Detected TD2 format (older ID card)");
                 return parseTD2(td2Lines);
             }
         }
@@ -94,6 +98,8 @@ public class CniMrzParserService {
                 .replace("»", "<")
                 .replace("(", "<")
                 .replace(")", "<")
+                .replace("{", "<")
+                .replace("[", "<")
                 .toUpperCase();
 
             if (MRZ_LINE_PATTERN.matcher(cleaned).matches() && cleaned.length() >= 28) {
@@ -105,6 +111,7 @@ public class CniMrzParserService {
 
     /**
      * Find 3 consecutive TD1 lines (each ~30 chars, starting with an ID or residence permit prefix).
+     * Uses flexible matching: I + any char + known country code, to handle OCR misreadings of '<'.
      */
     private List<String> findTD1Lines(List<String> mrzLines) {
         for (int i = 0; i <= mrzLines.size() - 3; i++) {
@@ -113,15 +120,35 @@ public class CniMrzParserService {
             String l3 = padOrTrim(mrzLines.get(i + 2), 30);
 
             if (
-                (hasPrefix(l1, ID_PREFIXES) || hasPrefix(l1, RESIDENCE_PREFIXES)) &&
+                (hasPrefix(l1, ID_PREFIXES) || hasPrefix(l1, RESIDENCE_PREFIXES) || looksLikeIdCardLine(l1)) &&
                 l1.length() >= 28 &&
                 l2.length() >= 28 &&
                 l3.length() >= 28
             ) {
+                // Normalize the second char to '<' if it was misread by OCR
+                if (!hasPrefix(l1, ID_PREFIXES) && !hasPrefix(l1, RESIDENCE_PREFIXES) && looksLikeIdCardLine(l1)) {
+                    l1 = l1.charAt(0) + "<" + l1.substring(2);
+                    LOG.debug("Normalized TD1 line 1 prefix: {}", l1.substring(0, 5));
+                }
                 return List.of(l1, l2, l3);
             }
         }
         return null;
+    }
+
+    /**
+     * Flexible detection: line starts with 'I' + any char + known country code.
+     * Handles cases where OCR misreads '<' as K, C, or other characters.
+     * Excludes 'IR' prefix (residence permits) which are handled separately.
+     */
+    private boolean looksLikeIdCardLine(String line) {
+        if (line.length() < 5 || line.charAt(0) != 'I') return false;
+        if (line.charAt(1) == 'R') return false; // Residence permit, handled by RESIDENCE_PREFIXES
+        String country = line.substring(2, 5).replace("<", "");
+        for (String c : PASSPORT_COUNTRIES) {
+            if (c.equals(country)) return true;
+        }
+        return false;
     }
 
     /**
@@ -198,6 +225,15 @@ public class CniMrzParserService {
             // Line 1: document number at positions 5-13
             String docNumber = line1.substring(5, 14).replace("<", "");
             data.setDocumentNumber(docNumber);
+
+            // New format CMR cards (I< prefix): the user-visible NIC number is in optional data (pos 15-29)
+            // e.g. I<CMR1002275191AA10340702<<<<<< → NIC = AA10340702
+            if ("I<".equals(docTypeCode) && "CMR".equals(issuingCountry)) {
+                String optionalData = line1.substring(15).replace("<", "").trim();
+                if (!optionalData.isEmpty()) {
+                    data.setDocumentNumber(optionalData);
+                }
+            }
 
             // Line 2: DOB at positions 0-5, sex at 7, expiry at 8-13
             String dobStr = line2.substring(0, 6);
@@ -354,7 +390,7 @@ public class CniMrzParserService {
 
             return LocalDate.of(year, mm, dd);
         } catch (Exception e) {
-            LOG.debug("Failed to parse MRZ date '{}': {}", dateStr, e.getMessage());
+            LOG.info("Failed to parse MRZ date '{}': {}", dateStr, e.getMessage());
             return null;
         }
     }
