@@ -98,7 +98,7 @@ public class UserService {
             });
     }
 
-    public User registerUser(AdminUserDTO userDTO, String password) {
+    public User registerUser(AdminUserDTO userDTO, String password, String phone) {
         userRepository
             .findOneByLogin(userDTO.getLogin().toLowerCase())
             .ifPresent(existingUser -> {
@@ -142,7 +142,7 @@ public class UserService {
         People newPeople = new People();
         newPeople.setNom(userDTO.getLastName() != null ? userDTO.getLastName() : userDTO.getLogin());
         newPeople.setPrenom(userDTO.getFirstName() != null ? userDTO.getFirstName() : "");
-        newPeople.setTelephone("0000000000"); // Default, user can update later
+        newPeople.setTelephone(phone != null && !phone.isBlank() ? phone : "0000000000");
         newPeople.setCni("PENDING"); // Default, user can update later
         newPeople.setActif("TRUE");
         newPeople.setDateNaissance(LocalDate.of(1990, 1, 1)); // Default, user can update later
