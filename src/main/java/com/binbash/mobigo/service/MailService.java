@@ -1,10 +1,15 @@
 package com.binbash.mobigo.service;
 
+import com.binbash.mobigo.domain.Booking;
+import com.binbash.mobigo.domain.People;
+import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.domain.User;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
@@ -116,5 +121,102 @@ public class MailService {
     public void sendPasswordResetMail(User user) {
         LOG.debug("Sending password reset email to '{}'", user.getEmail());
         sendEmailFromTemplateSync(user, "mail/passwordResetEmail", "email.reset.title");
+    }
+
+    // ── Booking notification emails ─────────────────────────────────────
+
+    private static final Map<String, String> STATUS_STYLES = Map.of(
+        "CONFIRME",
+        "background-color: #d1fae5; color: #065f46;",
+        "REFUSE",
+        "background-color: #fee2e2; color: #991b1b;",
+        "ANNULE",
+        "background-color: #fee2e2; color: #991b1b;",
+        "EFFECTUE",
+        "background-color: #dbeafe; color: #1e40af;",
+        "EN_ATTENTE",
+        "background-color: #fef3c7; color: #92400e;"
+    );
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /**
+     * Send a booking notification email (async).
+     *
+     * @param recipientEmail the recipient email address
+     * @param recipientName  the recipient first name (for greeting)
+     * @param booking        the booking (with trajet loaded)
+     * @param ride           the ride
+     * @param action         the action key: ACCEPTED, REJECTED, CANCELLED, COMPLETED, NEW_BOOKING, RIDE_CANCELLED
+     * @param isDriver       true if recipient is the driver, false if passenger
+     */
+    @Async
+    public void sendBookingNotificationEmail(
+        String recipientEmail,
+        String recipientName,
+        Booking booking,
+        Ride ride,
+        String action,
+        boolean isDriver
+    ) {
+        if (recipientEmail == null) {
+            LOG.debug("Cannot send booking notification: recipient email is null");
+            return;
+        }
+
+        LOG.debug("Sending booking notification email to '{}' for action '{}'", recipientEmail, action);
+
+        Locale locale = Locale.FRENCH;
+        String baseUrl = jHipsterProperties.getMail().getBaseUrl();
+
+        String subject = messageSource.getMessage("email.booking." + action + ".subject", null, locale);
+        String headerSubtitle = messageSource.getMessage("email.booking." + action + ".header", null, locale);
+        String mainMessage = resolveMainMessage(action, isDriver, recipientName, booking, ride, locale);
+        String statusLabel = messageSource.getMessage("email.booking." + action + ".status", null, locale);
+        String statusStyle = STATUS_STYLES.getOrDefault(resolveStatusKey(action), STATUS_STYLES.get("EN_ATTENTE"));
+
+        String heureDepart = ride.getHeureDepart() + "h" + ride.getMinuteDepart();
+        String montant = String.format("%.0f FCFA", booking.getMontantTotal());
+
+        Context context = new Context(locale);
+        context.setVariable("subject", subject);
+        context.setVariable("headerSubtitle", headerSubtitle);
+        context.setVariable("statusLabel", statusLabel);
+        context.setVariable("statusStyle", statusStyle);
+        context.setVariable("greeting", messageSource.getMessage("email.booking.greeting", new Object[] { recipientName }, locale));
+        context.setVariable("mainMessage", mainMessage);
+        context.setVariable("villeDepart", ride.getVilleDepart());
+        context.setVariable("villeArrivee", ride.getVilleArrivee());
+        context.setVariable("lieuDitDepart", ride.getLieuDitDepart());
+        context.setVariable("lieuDitArrivee", ride.getLieuDitArrivee());
+        context.setVariable("dateDepart", ride.getDateDepart().format(DATE_FORMATTER));
+        context.setVariable("heureDepart", heureDepart);
+        context.setVariable("nbPlaces", String.valueOf(booking.getNbPlacesReservees()));
+        context.setVariable("montant", montant);
+        context.setVariable("actionUrl", baseUrl + (isDriver ? "/my-trips" : "/bookings"));
+        context.setVariable(
+            "actionLabel",
+            messageSource.getMessage(isDriver ? "email.booking.action.viewTrips" : "email.booking.action.viewBookings", null, locale)
+        );
+
+        String content = templateEngine.process("mail/bookingNotificationEmail", context);
+        sendEmailSync(recipientEmail, subject, content, false, true);
+    }
+
+    private String resolveMainMessage(String action, boolean isDriver, String name, Booking booking, Ride ride, Locale locale) {
+        String route = ride.getVilleDepart() + " → " + ride.getVilleArrivee();
+        String key = "email.booking." + action + (isDriver ? ".message.driver" : ".message.passenger");
+        return messageSource.getMessage(key, new Object[] { route }, locale);
+    }
+
+    private String resolveStatusKey(String action) {
+        return switch (action) {
+            case "ACCEPTED" -> "CONFIRME";
+            case "REJECTED" -> "REFUSE";
+            case "CANCELLED", "RIDE_CANCELLED" -> "ANNULE";
+            case "COMPLETED" -> "EFFECTUE";
+            case "NEW_BOOKING" -> "EN_ATTENTE";
+            default -> "EN_ATTENTE";
+        };
     }
 }

@@ -16,6 +16,7 @@ import com.binbash.mobigo.repository.MessageRepository;
 import com.binbash.mobigo.repository.search.MessageSearchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -45,8 +46,8 @@ class MessageResourceIT {
     private static final String DEFAULT_CONTENU = "AAAAAAAAAA";
     private static final String UPDATED_CONTENU = "BBBBBBBBBB";
 
-    private static final LocalDate DEFAULT_DATE_ENVOI = LocalDate.ofEpochDay(0L);
-    private static final LocalDate UPDATED_DATE_ENVOI = LocalDate.now(ZoneId.systemDefault());
+    private static final Instant DEFAULT_DATE_ENVOI = Instant.ofEpochMilli(0);
+    private static final Instant UPDATED_DATE_ENVOI = Instant.now();
 
     private static final MessageStatusEnum DEFAULT_STATUT = MessageStatusEnum.ENVOYE;
     private static final MessageStatusEnum UPDATED_STATUT = MessageStatusEnum.ECHEC;

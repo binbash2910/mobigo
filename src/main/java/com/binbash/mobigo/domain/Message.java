@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -30,7 +31,7 @@ public class Message extends AbstractAuditingEntity<Long> implements Serializabl
 
     @NotNull
     @Column(name = "date_envoi", nullable = false)
-    private LocalDate dateEnvoi;
+    private Instant dateEnvoi;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "statut")
@@ -97,16 +98,16 @@ public class Message extends AbstractAuditingEntity<Long> implements Serializabl
         this.contenu = contenu;
     }
 
-    public LocalDate getDateEnvoi() {
+    public Instant getDateEnvoi() {
         return this.dateEnvoi;
     }
 
-    public Message dateEnvoi(LocalDate dateEnvoi) {
+    public Message dateEnvoi(Instant dateEnvoi) {
         this.setDateEnvoi(dateEnvoi);
         return this;
     }
 
-    public void setDateEnvoi(LocalDate dateEnvoi) {
+    public void setDateEnvoi(Instant dateEnvoi) {
         this.dateEnvoi = dateEnvoi;
     }
 

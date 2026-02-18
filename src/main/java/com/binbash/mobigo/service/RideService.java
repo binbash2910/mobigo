@@ -1,6 +1,7 @@
 package com.binbash.mobigo.service;
 
 import com.binbash.mobigo.domain.Booking;
+import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
 import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
@@ -23,10 +24,12 @@ public class RideService {
 
     private final RideRepository rideRepository;
     private final BookingRepository bookingRepository;
+    private final MailService mailService;
 
-    public RideService(RideRepository rideRepository, BookingRepository bookingRepository) {
+    public RideService(RideRepository rideRepository, BookingRepository bookingRepository, MailService mailService) {
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
+        this.mailService = mailService;
     }
 
     /**
@@ -64,6 +67,10 @@ public class RideService {
         }
 
         LOG.info("Ride {} completed successfully", rideId);
+
+        // Send email notifications to all passengers with active bookings
+        sendRideNotificationEmails(rideId, ride, "COMPLETED");
+
         return ride;
     }
 
@@ -104,6 +111,54 @@ public class RideService {
         ride = rideRepository.save(ride);
 
         LOG.info("Ride {} cancelled successfully. {} bookings cancelled, {} seats restored.", rideId, activeBookings.size(), restoredSeats);
+
+        // Send email notifications to all passengers with cancelled bookings
+        sendRideNotificationEmails(rideId, ride, "RIDE_CANCELLED");
+
         return ride;
+    }
+
+    /**
+     * Send notification emails to all passengers of a ride (and the driver) after a ride-level action.
+     */
+    private void sendRideNotificationEmails(Long rideId, Ride ride, String action) {
+        try {
+            List<Booking> bookingsWithRelations = bookingRepository.findByTrajetIdWithRelations(rideId);
+            if (bookingsWithRelations.isEmpty()) {
+                return;
+            }
+
+            // Get driver info from the first booking's ride -> vehicule -> proprietaire
+            People driver = bookingsWithRelations.get(0).getTrajet().getVehicule().getProprietaire();
+
+            for (Booking booking : bookingsWithRelations) {
+                People passenger = booking.getPassager();
+                if (passenger != null && passenger.getUser() != null) {
+                    mailService.sendBookingNotificationEmail(
+                        passenger.getUser().getEmail(),
+                        passenger.getPrenom() != null ? passenger.getPrenom() : passenger.getNom(),
+                        booking,
+                        ride,
+                        action,
+                        false
+                    );
+                }
+            }
+
+            // Notify driver
+            if (driver != null && driver.getUser() != null) {
+                // Use the first booking as reference for email context
+                mailService.sendBookingNotificationEmail(
+                    driver.getUser().getEmail(),
+                    driver.getPrenom() != null ? driver.getPrenom() : driver.getNom(),
+                    bookingsWithRelations.get(0),
+                    ride,
+                    action,
+                    true
+                );
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to send ride notification emails for ride {}: {}", rideId, e.getMessage());
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.binbash.mobigo.service;
 
 import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.Payment;
+import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
 import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
@@ -29,17 +30,20 @@ public class BookingService {
     private final RideRepository rideRepository;
     private final BookingSearchRepository bookingSearchRepository;
     private final PaymentService paymentService;
+    private final MailService mailService;
 
     public BookingService(
         BookingRepository bookingRepository,
         RideRepository rideRepository,
         BookingSearchRepository bookingSearchRepository,
-        PaymentService paymentService
+        PaymentService paymentService,
+        MailService mailService
     ) {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
         this.bookingSearchRepository = bookingSearchRepository;
         this.paymentService = paymentService;
+        this.mailService = mailService;
     }
 
     /**
@@ -79,6 +83,10 @@ public class BookingService {
             ride.getId(),
             booking.getNbPlacesReservees()
         );
+
+        // Send email notifications
+        sendBookingEmails(booking.getId(), "NEW_BOOKING");
+
         return booking;
     }
 
@@ -134,6 +142,10 @@ public class BookingService {
         }
 
         LOG.info("Booking {} accepted for ride {}", bookingId, ride.getId());
+
+        // Send email notifications
+        sendBookingEmails(bookingId, "ACCEPTED");
+
         return booking;
     }
 
@@ -157,6 +169,10 @@ public class BookingService {
         bookingSearchRepository.index(booking);
 
         LOG.info("Booking {} rejected for ride {}", bookingId, booking.getTrajet().getId());
+
+        // Send email notifications
+        sendBookingEmails(bookingId, "REJECTED");
+
         return booking;
     }
 
@@ -201,6 +217,52 @@ public class BookingService {
             LOG.info("Booking {} cancelled (was EN_ATTENTE)", bookingId);
         }
 
+        // Send email notifications
+        sendBookingEmails(bookingId, "CANCELLED");
+
         return booking;
+    }
+
+    /**
+     * Load booking with all relations and send notification emails to both passenger and driver.
+     */
+    private void sendBookingEmails(Long bookingId, String action) {
+        try {
+            Booking fullBooking = bookingRepository.findByIdWithRelations(bookingId).orElse(null);
+            if (fullBooking == null) {
+                LOG.warn("Cannot send booking notification: booking {} not found with relations", bookingId);
+                return;
+            }
+
+            Ride ride = fullBooking.getTrajet();
+            People passenger = fullBooking.getPassager();
+            People driver = ride.getVehicule().getProprietaire();
+
+            // Notify passenger
+            if (passenger != null && passenger.getUser() != null) {
+                mailService.sendBookingNotificationEmail(
+                    passenger.getUser().getEmail(),
+                    passenger.getPrenom() != null ? passenger.getPrenom() : passenger.getNom(),
+                    fullBooking,
+                    ride,
+                    action,
+                    false
+                );
+            }
+
+            // Notify driver
+            if (driver != null && driver.getUser() != null) {
+                mailService.sendBookingNotificationEmail(
+                    driver.getUser().getEmail(),
+                    driver.getPrenom() != null ? driver.getPrenom() : driver.getNom(),
+                    fullBooking,
+                    ride,
+                    action,
+                    true
+                );
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to send booking notification emails for booking {}: {}", bookingId, e.getMessage());
+        }
     }
 }

@@ -22,4 +22,6 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 
     @Query("SELECT COUNT(r) FROM Ride r WHERE r.vehicule.id = :vehicleId AND r.statut IN :statuts")
     long countByVehiculeIdAndStatutIn(@Param("vehicleId") Long vehicleId, @Param("statuts") List<RideStatusEnum> statuts);
+
+    List<Ride> findByCreatedBy(String login);
 }
