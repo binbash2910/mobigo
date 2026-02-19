@@ -21,6 +21,9 @@ import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -203,7 +206,12 @@ public class CniVerificationService {
             tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
             tesseract.setLanguage(applicationProperties.getTesseract().getLanguage());
 
-            BufferedImage originalImage = ImageIO.read(Path.of(imagePath).toFile());
+            BufferedImage originalImage;
+            if (imagePath.toLowerCase().endsWith(".pdf")) {
+                originalImage = convertPdfToImage(imagePath);
+            } else {
+                originalImage = ImageIO.read(Path.of(imagePath).toFile());
+            }
             if (originalImage == null) {
                 LOG.error("Could not read image at: {}", imagePath);
                 return invalidMrzData();
@@ -360,6 +368,23 @@ public class CniVerificationService {
     }
 
     /**
+     * Convert the first page of a PDF file to a BufferedImage for OCR processing.
+     *
+     * @param pdfPath absolute path to the PDF file
+     * @return BufferedImage of the first page, or null if conversion fails
+     */
+    private BufferedImage convertPdfToImage(String pdfPath) {
+        try (PDDocument document = Loader.loadPDF(Path.of(pdfPath).toFile())) {
+            PDFRenderer renderer = new PDFRenderer(document);
+            // Render first page at 300 DPI for good OCR quality
+            return renderer.renderImageWithDPI(0, 300);
+        } catch (IOException e) {
+            LOG.error("Failed to convert PDF to image: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Run OCR on an image with either restricted MRZ charset or full charset.
      */
     private String ocrWithCharset(Tesseract tesseract, BufferedImage image, boolean restricted) throws TesseractException {
@@ -434,7 +459,12 @@ public class CniVerificationService {
 
             for (String path : imagePaths) {
                 if (path == null) continue;
-                BufferedImage img = ImageIO.read(Path.of(path).toFile());
+                BufferedImage img;
+                if (path.toLowerCase().endsWith(".pdf")) {
+                    img = convertPdfToImage(path);
+                } else {
+                    img = ImageIO.read(Path.of(path).toFile());
+                }
                 if (img == null) continue;
 
                 // Try multiple image variants to maximize date extraction

@@ -18,6 +18,8 @@ public class LoginVM {
 
     private boolean rememberMe;
 
+    private String captchaToken;
+
     public String getUsername() {
         return username;
     }
@@ -40,6 +42,14 @@ public class LoginVM {
 
     public void setRememberMe(boolean rememberMe) {
         this.rememberMe = rememberMe;
+    }
+
+    public String getCaptchaToken() {
+        return captchaToken;
+    }
+
+    public void setCaptchaToken(String captchaToken) {
+        this.captchaToken = captchaToken;
     }
 
     // prettier-ignore

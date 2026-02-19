@@ -144,13 +144,13 @@ public class PeopleResource {
         }
 
         String rectoType = recto.getContentType();
-        if (rectoType == null || !rectoType.startsWith("image/")) {
-            throw new BadRequestAlertException("Files must be images", ENTITY_NAME, "invalidfiletype");
+        if (rectoType == null || (!rectoType.startsWith("image/") && !"application/pdf".equals(rectoType))) {
+            throw new BadRequestAlertException("Files must be images or PDF", ENTITY_NAME, "invalidfiletype");
         }
         if (verso != null && !verso.isEmpty()) {
             String versoType = verso.getContentType();
-            if (versoType == null || !versoType.startsWith("image/")) {
-                throw new BadRequestAlertException("Files must be images", ENTITY_NAME, "invalidfiletype");
+            if (versoType == null || (!versoType.startsWith("image/") && !"application/pdf".equals(versoType))) {
+                throw new BadRequestAlertException("Files must be images or PDF", ENTITY_NAME, "invalidfiletype");
             }
         }
 

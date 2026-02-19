@@ -7,6 +7,7 @@ import static com.binbash.mobigo.security.SecurityUtils.USER_ID_CLAIM;
 import com.binbash.mobigo.domain.InvalidatedToken;
 import com.binbash.mobigo.repository.InvalidatedTokenRepository;
 import com.binbash.mobigo.security.DomainUserDetailsService.UserWithId;
+import com.binbash.mobigo.service.CaptchaService;
 import com.binbash.mobigo.web.rest.vm.LoginVM;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,6 +52,8 @@ public class AuthenticateController {
 
     private final InvalidatedTokenRepository invalidatedTokenRepository;
 
+    private final CaptchaService captchaService;
+
     @Value("${jhipster.security.authentication.jwt.token-validity-in-seconds:0}")
     private long tokenValidityInSeconds;
 
@@ -62,15 +65,21 @@ public class AuthenticateController {
     public AuthenticateController(
         JwtEncoder jwtEncoder,
         AuthenticationManagerBuilder authenticationManagerBuilder,
-        InvalidatedTokenRepository invalidatedTokenRepository
+        InvalidatedTokenRepository invalidatedTokenRepository,
+        CaptchaService captchaService
     ) {
         this.jwtEncoder = jwtEncoder;
         this.authenticationManagerBuilder = authenticationManagerBuilder;
         this.invalidatedTokenRepository = invalidatedTokenRepository;
+        this.captchaService = captchaService;
     }
 
     @PostMapping("/authenticate")
     public ResponseEntity<JWTToken> authorize(@Valid @RequestBody LoginVM loginVM) {
+        if (!captchaService.verifyCaptcha(loginVM.getCaptchaToken())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
             loginVM.getUsername(),
             loginVM.getPassword()

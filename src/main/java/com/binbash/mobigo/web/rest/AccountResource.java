@@ -3,6 +3,7 @@ package com.binbash.mobigo.web.rest;
 import com.binbash.mobigo.domain.User;
 import com.binbash.mobigo.repository.UserRepository;
 import com.binbash.mobigo.security.SecurityUtils;
+import com.binbash.mobigo.service.CaptchaService;
 import com.binbash.mobigo.service.MailService;
 import com.binbash.mobigo.service.UserService;
 import com.binbash.mobigo.service.dto.AdminUserDTO;
@@ -40,10 +41,13 @@ public class AccountResource {
 
     private final MailService mailService;
 
-    public AccountResource(UserRepository userRepository, UserService userService, MailService mailService) {
+    private final CaptchaService captchaService;
+
+    public AccountResource(UserRepository userRepository, UserService userService, MailService mailService, CaptchaService captchaService) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.mailService = mailService;
+        this.captchaService = captchaService;
     }
 
     /**
@@ -57,6 +61,9 @@ public class AccountResource {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public void registerAccount(@Valid @RequestBody ManagedUserVM managedUserVM) {
+        if (!captchaService.verifyCaptcha(managedUserVM.getCaptchaToken())) {
+            throw new BadRequestAlertException("CAPTCHA verification failed", "userManagement", "captchainvalid");
+        }
         if (isPasswordLengthInvalid(managedUserVM.getPassword())) {
             throw new InvalidPasswordException();
         }
