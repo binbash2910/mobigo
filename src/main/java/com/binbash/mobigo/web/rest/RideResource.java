@@ -6,6 +6,7 @@ import com.binbash.mobigo.repository.search.RideSearchRepository;
 import com.binbash.mobigo.service.RideService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
+import com.binbash.mobigo.web.websocket.WebSocketNotificationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -44,10 +45,18 @@ public class RideResource {
 
     private final RideService rideService;
 
-    public RideResource(RideRepository rideRepository, RideSearchRepository rideSearchRepository, RideService rideService) {
+    private final WebSocketNotificationService webSocketNotificationService;
+
+    public RideResource(
+        RideRepository rideRepository,
+        RideSearchRepository rideSearchRepository,
+        RideService rideService,
+        WebSocketNotificationService webSocketNotificationService
+    ) {
         this.rideRepository = rideRepository;
         this.rideSearchRepository = rideSearchRepository;
         this.rideService = rideService;
+        this.webSocketNotificationService = webSocketNotificationService;
     }
 
     /**
@@ -65,6 +74,7 @@ public class RideResource {
         }
         ride = rideRepository.save(ride);
         rideSearchRepository.index(ride);
+        webSocketNotificationService.notifyDataChanged("RIDES_CHANGED");
         return ResponseEntity.created(new URI("/api/rides/" + ride.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, ride.getId().toString()))
             .body(ride);
@@ -97,6 +107,7 @@ public class RideResource {
 
         ride = rideRepository.save(ride);
         rideSearchRepository.index(ride);
+        webSocketNotificationService.notifyDataChanged("RIDES_CHANGED");
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, ride.getId().toString()))
             .body(ride);
@@ -231,6 +242,7 @@ public class RideResource {
         LOG.debug("REST request to delete Ride : {}", id);
         rideRepository.deleteById(id);
         rideSearchRepository.deleteFromIndexById(id);
+        webSocketNotificationService.notifyDataChanged("RIDES_CHANGED");
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
@@ -248,6 +260,7 @@ public class RideResource {
         LOG.debug("REST request to complete Ride : {}", id);
         try {
             Ride ride = rideService.completeRide(id);
+            webSocketNotificationService.notifyDataChanged("RIDES_CHANGED");
             return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
                 .body(ride);
@@ -270,6 +283,7 @@ public class RideResource {
         LOG.debug("REST request to cancel Ride : {}", id);
         try {
             Ride ride = rideService.cancelRide(id);
+            webSocketNotificationService.notifyDataChanged("RIDES_CHANGED");
             return ResponseEntity.ok()
                 .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
                 .body(ride);

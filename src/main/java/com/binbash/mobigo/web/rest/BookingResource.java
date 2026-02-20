@@ -6,6 +6,7 @@ import com.binbash.mobigo.repository.search.BookingSearchRepository;
 import com.binbash.mobigo.service.BookingService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
+import com.binbash.mobigo.web.websocket.WebSocketNotificationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -44,14 +45,18 @@ public class BookingResource {
 
     private final BookingService bookingService;
 
+    private final WebSocketNotificationService webSocketNotificationService;
+
     public BookingResource(
         BookingRepository bookingRepository,
         BookingSearchRepository bookingSearchRepository,
-        BookingService bookingService
+        BookingService bookingService,
+        WebSocketNotificationService webSocketNotificationService
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingSearchRepository = bookingSearchRepository;
         this.bookingService = bookingService;
+        this.webSocketNotificationService = webSocketNotificationService;
     }
 
     /**
@@ -65,6 +70,7 @@ public class BookingResource {
     public ResponseEntity<Booking> createBooking(@Valid @RequestBody Booking booking) throws URISyntaxException {
         LOG.debug("REST request to save Booking : {}", booking);
         booking = bookingService.createBooking(booking);
+        webSocketNotificationService.notifyDataChanged("BOOKINGS_CHANGED");
         return ResponseEntity.created(new URI("/api/bookings/" + booking.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, booking.getId().toString()))
             .body(booking);
@@ -207,6 +213,7 @@ public class BookingResource {
         LOG.debug("REST request to delete Booking : {}", id);
         bookingRepository.deleteById(id);
         bookingSearchRepository.deleteFromIndexById(id);
+        webSocketNotificationService.notifyDataChanged("BOOKINGS_CHANGED");
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
@@ -219,6 +226,7 @@ public class BookingResource {
     public ResponseEntity<Booking> acceptBooking(@PathVariable("id") Long id) {
         LOG.debug("REST request to accept Booking : {}", id);
         Booking booking = bookingService.acceptBooking(id);
+        webSocketNotificationService.notifyDataChanged("BOOKINGS_CHANGED");
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .body(booking);
@@ -231,6 +239,7 @@ public class BookingResource {
     public ResponseEntity<Booking> rejectBooking(@PathVariable("id") Long id) {
         LOG.debug("REST request to reject Booking : {}", id);
         Booking booking = bookingService.rejectBooking(id);
+        webSocketNotificationService.notifyDataChanged("BOOKINGS_CHANGED");
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .body(booking);
@@ -243,6 +252,7 @@ public class BookingResource {
     public ResponseEntity<Booking> cancelBooking(@PathVariable("id") Long id) {
         LOG.debug("REST request to cancel Booking : {}", id);
         Booking booking = bookingService.cancelBooking(id);
+        webSocketNotificationService.notifyDataChanged("BOOKINGS_CHANGED");
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .body(booking);

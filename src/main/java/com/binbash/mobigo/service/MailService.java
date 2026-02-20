@@ -176,7 +176,7 @@ public class MailService {
         String statusStyle = STATUS_STYLES.getOrDefault(resolveStatusKey(action), STATUS_STYLES.get("EN_ATTENTE"));
 
         String heureDepart = ride.getHeureDepart() + "h" + ride.getMinuteDepart();
-        String montant = String.format("%.0f FCFA", booking.getMontantTotal());
+        String montant = booking.getMontantTotal() != null ? String.format("%.0f FCFA", booking.getMontantTotal()) : "N/A";
 
         Context context = new Context(locale);
         context.setVariable("subject", subject);

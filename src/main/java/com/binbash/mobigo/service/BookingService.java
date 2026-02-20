@@ -10,6 +10,7 @@ import com.binbash.mobigo.repository.BookingRepository;
 import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.search.BookingSearchRepository;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,19 +32,22 @@ public class BookingService {
     private final BookingSearchRepository bookingSearchRepository;
     private final PaymentService paymentService;
     private final MailService mailService;
+    private final EntityManager entityManager;
 
     public BookingService(
         BookingRepository bookingRepository,
         RideRepository rideRepository,
         BookingSearchRepository bookingSearchRepository,
         PaymentService paymentService,
-        MailService mailService
+        MailService mailService,
+        EntityManager entityManager
     ) {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
         this.bookingSearchRepository = bookingSearchRepository;
         this.paymentService = paymentService;
         this.mailService = mailService;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -228,6 +232,11 @@ public class BookingService {
      */
     private void sendBookingEmails(Long bookingId, String action) {
         try {
+            // Flush pending changes to DB and clear first-level cache
+            // so that findByIdWithRelations loads fresh entities with all associations
+            entityManager.flush();
+            entityManager.clear();
+
             Booking fullBooking = bookingRepository.findByIdWithRelations(bookingId).orElse(null);
             if (fullBooking == null) {
                 LOG.warn("Cannot send booking notification: booking {} not found with relations", bookingId);
@@ -236,7 +245,18 @@ public class BookingService {
 
             Ride ride = fullBooking.getTrajet();
             People passenger = fullBooking.getPassager();
-            People driver = ride.getVehicule().getProprietaire();
+            People driver = ride.getVehicule() != null && ride.getVehicule().getProprietaire() != null
+                ? ride.getVehicule().getProprietaire()
+                : null;
+
+            LOG.info(
+                "Booking {} email: passenger={} (user={}), driver={} (user={})",
+                bookingId,
+                passenger != null ? passenger.getId() : "null",
+                passenger != null && passenger.getUser() != null ? passenger.getUser().getEmail() : "null",
+                driver != null ? driver.getId() : "null",
+                driver != null && driver.getUser() != null ? driver.getUser().getEmail() : "null"
+            );
 
             // Notify passenger
             if (passenger != null && passenger.getUser() != null) {
@@ -248,6 +268,8 @@ public class BookingService {
                     action,
                     false
                 );
+            } else {
+                LOG.warn("Cannot notify passenger for booking {}: passenger or user is null", bookingId);
             }
 
             // Notify driver
@@ -260,9 +282,11 @@ public class BookingService {
                     action,
                     true
                 );
+            } else {
+                LOG.warn("Cannot notify driver for booking {}: driver or user is null", bookingId);
             }
         } catch (Exception e) {
-            LOG.warn("Failed to send booking notification emails for booking {}: {}", bookingId, e.getMessage());
+            LOG.warn("Failed to send booking notification emails for booking {}: {}", bookingId, e.getMessage(), e);
         }
     }
 }

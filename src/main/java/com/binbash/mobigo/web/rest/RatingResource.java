@@ -5,6 +5,7 @@ import com.binbash.mobigo.repository.RatingRepository;
 import com.binbash.mobigo.repository.search.RatingSearchRepository;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
+import com.binbash.mobigo.web.websocket.WebSocketNotificationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
@@ -41,9 +42,16 @@ public class RatingResource {
 
     private final RatingSearchRepository ratingSearchRepository;
 
-    public RatingResource(RatingRepository ratingRepository, RatingSearchRepository ratingSearchRepository) {
+    private final WebSocketNotificationService webSocketNotificationService;
+
+    public RatingResource(
+        RatingRepository ratingRepository,
+        RatingSearchRepository ratingSearchRepository,
+        WebSocketNotificationService webSocketNotificationService
+    ) {
         this.ratingRepository = ratingRepository;
         this.ratingSearchRepository = ratingSearchRepository;
+        this.webSocketNotificationService = webSocketNotificationService;
     }
 
     /**
@@ -61,6 +69,7 @@ public class RatingResource {
         }
         rating = ratingRepository.save(rating);
         ratingSearchRepository.index(rating);
+        webSocketNotificationService.notifyDataChanged("RATINGS_CHANGED");
         return ResponseEntity.created(new URI("/api/ratings/" + rating.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, rating.getId().toString()))
             .body(rating);
@@ -95,6 +104,7 @@ public class RatingResource {
 
         rating = ratingRepository.save(rating);
         ratingSearchRepository.index(rating);
+        webSocketNotificationService.notifyDataChanged("RATINGS_CHANGED");
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, rating.getId().toString()))
             .body(rating);
@@ -190,6 +200,7 @@ public class RatingResource {
         LOG.debug("REST request to delete Rating : {}", id);
         ratingRepository.deleteById(id);
         ratingSearchRepository.deleteFromIndexById(id);
+        webSocketNotificationService.notifyDataChanged("RATINGS_CHANGED");
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();

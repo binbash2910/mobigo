@@ -23,11 +23,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(
         "SELECT b FROM Booking b " +
         "JOIN FETCH b.passager p " +
-        "JOIN FETCH p.user " +
+        "LEFT JOIN FETCH p.user " +
         "JOIN FETCH b.trajet r " +
-        "JOIN FETCH r.vehicule v " +
-        "JOIN FETCH v.proprietaire prop " +
-        "JOIN FETCH prop.user " +
+        "LEFT JOIN FETCH r.vehicule v " +
+        "LEFT JOIN FETCH v.proprietaire prop " +
+        "LEFT JOIN FETCH prop.user " +
         "WHERE b.id = :id"
     )
     Optional<Booking> findByIdWithRelations(@Param("id") Long id);
@@ -35,11 +35,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(
         "SELECT b FROM Booking b " +
         "JOIN FETCH b.passager p " +
-        "JOIN FETCH p.user " +
+        "LEFT JOIN FETCH p.user " +
         "JOIN FETCH b.trajet r " +
-        "JOIN FETCH r.vehicule v " +
-        "JOIN FETCH v.proprietaire prop " +
-        "JOIN FETCH prop.user " +
+        "LEFT JOIN FETCH r.vehicule v " +
+        "LEFT JOIN FETCH v.proprietaire prop " +
+        "LEFT JOIN FETCH prop.user " +
         "WHERE r.id = :rideId"
     )
     List<Booking> findByTrajetIdWithRelations(@Param("rideId") Long rideId);

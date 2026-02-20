@@ -7,6 +7,7 @@ import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
 import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
 import com.binbash.mobigo.repository.BookingRepository;
 import com.binbash.mobigo.repository.RideRepository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +26,18 @@ public class RideService {
     private final RideRepository rideRepository;
     private final BookingRepository bookingRepository;
     private final MailService mailService;
+    private final EntityManager entityManager;
 
-    public RideService(RideRepository rideRepository, BookingRepository bookingRepository, MailService mailService) {
+    public RideService(
+        RideRepository rideRepository,
+        BookingRepository bookingRepository,
+        MailService mailService,
+        EntityManager entityManager
+    ) {
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
         this.mailService = mailService;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -123,13 +131,21 @@ public class RideService {
      */
     private void sendRideNotificationEmails(Long rideId, Ride ride, String action) {
         try {
+            // Flush pending changes to DB and clear first-level cache
+            // so that findByTrajetIdWithRelations loads fresh entities with all associations
+            entityManager.flush();
+            entityManager.clear();
+
             List<Booking> bookingsWithRelations = bookingRepository.findByTrajetIdWithRelations(rideId);
             if (bookingsWithRelations.isEmpty()) {
                 return;
             }
 
             // Get driver info from the first booking's ride -> vehicule -> proprietaire
-            People driver = bookingsWithRelations.get(0).getTrajet().getVehicule().getProprietaire();
+            Ride bookingRide = bookingsWithRelations.get(0).getTrajet();
+            People driver = bookingRide.getVehicule() != null && bookingRide.getVehicule().getProprietaire() != null
+                ? bookingRide.getVehicule().getProprietaire()
+                : null;
 
             for (Booking booking : bookingsWithRelations) {
                 People passenger = booking.getPassager();
