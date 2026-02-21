@@ -19,7 +19,7 @@ logging:
   level:
     ROOT: INFO
     tech.jhipster: INFO
-    com.binbash.mobigo: INFO
+    com.binbash.mobigo: DEBUG
 
 management:
   health:
