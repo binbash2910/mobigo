@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,11 @@ public class FileStorageService {
             try {
                 Files.createDirectories(dir);
                 if (Files.isWritable(dir)) {
-                    LOG.info("[FileStorageService] Directory OK (writable): {}", dir);
+                    long fileCount = 0;
+                    try (Stream<Path> files = Files.list(dir)) {
+                        fileCount = files.filter(Files::isRegularFile).count();
+                    }
+                    LOG.info("[FileStorageService] Directory OK (writable): {} ({} files)", dir, fileCount);
                 } else {
                     LOG.warn("[FileStorageService] Directory NOT writable: {}", dir);
                 }
@@ -106,6 +111,31 @@ public class FileStorageService {
         Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
         LOG.debug("Stored CNI {} image for people {} at {}", side, peopleId, target);
         return target.toAbsolutePath().toString();
+    }
+
+    /**
+     * Resolve and return the file at the given sub-path under the storage base dir.
+     * Returns null if the file does not exist.
+     *
+     * @param subPath e.g. "people/people_42.jpg"
+     * @return the resolved Path, or null if the file does not exist
+     */
+    public Path resolveFile(String subPath) {
+        Path baseDir = Path.of(applicationProperties.getStorage().getBaseDir()).toAbsolutePath().normalize();
+        Path file = baseDir.resolve(subPath).normalize();
+
+        // Prevent path traversal
+        if (!file.startsWith(baseDir)) {
+            LOG.warn("[FileStorageService] Path traversal attempt blocked: {}", subPath);
+            return null;
+        }
+
+        if (Files.exists(file) && Files.isRegularFile(file)) {
+            return file;
+        }
+
+        LOG.warn("[FileStorageService] File not found: {}", file);
+        return null;
     }
 
     /**
