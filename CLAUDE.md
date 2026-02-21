@@ -122,12 +122,14 @@ Core entities and their relationships:
 
 - **People**: User profiles (linked to User), can be driver (conducteur) or passenger (passager)
 - **Vehicle**: Belongs to People (proprietaire), used for rides
-- **Ride**: Trip from departure to arrival city with steps, linked to Vehicle
+- **Ride**: Trip from departure to arrival city with steps, linked to Vehicle. Statuses: `RideStatusEnum`
 - **Step**: Intermediate stops in a ride
 - **Booking**: Passenger booking for a ride, has Payment. Statuses: `EN_ATTENTE`, `CONFIRME`, `REFUSE`, `ANNULE`, `EFFECTUE`
-- **Payment**: Payment record with status and method
+- **Payment**: Payment record with status (`PaymentStatusEnum`) and method (`PaymentMethodEnum`)
+- **SavedPaymentMethod**: Saved payment methods for users
 - **Rating**: Reviews between passengers and drivers
-- **Message**: Communication between People
+- **Message**: Communication between People, statuses via `MessageStatusEnum`
+- **InvalidatedToken**: Tracks invalidated JWT tokens
 - **Group/GroupMember/GroupAuthority**: Group-based permissions system
 
 ### API-First Development
@@ -232,7 +234,7 @@ Provides per-user analytics:
 - **Top routes**: top 5 most frequent routes (as driver + passenger combined)
 - **Global summary**: total earnings, spendings, net balance, member since date
 
-### File Storage (FileStorageService)
+### File Storage (FileStorageService) & Image Serving (ImageResource)
 
 Stores uploaded files to filesystem with 3 subdirectories:
 
@@ -240,12 +242,19 @@ Stores uploaded files to filesystem with 3 subdirectories:
 - `vehicles/` — vehicle photos (`/api/images/vehicles/vehicle_{id}.jpg`)
 - `cni/` — identity document images (absolute paths for OCR, not served via URL)
 
-Base directory: `${UPLOAD_DIR:/var/data/images}`
+Base directory: `${UPLOAD_DIR:/var/data/images}` (configured via `application.storage.base-dir`)
+
+**Image serving**: Images are served via `ImageResource` REST controller (not static resource handlers):
+
+- `GET /api/images/{category}/{filename}` — current URL pattern
+- `GET /content/images/{category}/{filename}` — legacy backward-compatible pattern
+
+The controller delegates to `FileStorageService.resolveFile()` which includes path traversal protection. `FileStorageService` also verifies storage directories at startup (`@PostConstruct`) and logs directory status.
 
 ### CAPTCHA (CaptchaService)
 
 Cloudflare Turnstile verification for registration/login protection.
-Secret key via `${turnstile.secret-key}` (optional — skips verification if not configured).
+Secret key via `${turnstile.secret-key}` (optional — skips verification if not configured or if token is empty/null).
 
 ### Elasticsearch (Optional)
 
@@ -294,7 +303,7 @@ JVM settings: `-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m` (for 512MB container
 
 - **No Liquibase**: Database migrations have been removed; Hibernate `ddl-auto: update` in prod
 - **No caching**: Hibernate cache is disabled
-- **WebSocket support**: Spring WebSocket for real-time features (tracker)
+- **WebSocket support**: Spring WebSocket for real-time notifications (`WebSocketNotificationService` broadcasts data change events to `/topic/data-updates`)
 - **i18n**: French (fr) as native language, English (en) supported
 - **MapStruct**: Used for entity-DTO mapping
 - **Testcontainers**: Used for PostgreSQL and Elasticsearch in tests

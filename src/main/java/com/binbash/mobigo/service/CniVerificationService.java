@@ -5,7 +5,6 @@ import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.repository.PeopleRepository;
 import com.binbash.mobigo.service.dto.CniVerificationDTO;
 import com.binbash.mobigo.service.dto.MrzData;
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
@@ -191,6 +190,9 @@ public class CniVerificationService {
         }
     }
 
+    /** Maximum width for OCR processing — larger images are downscaled to save memory. */
+    private static final int MAX_OCR_WIDTH = 2000;
+
     /**
      * Run OCR with multiple strategies and parse MRZ, returning the first valid result.
      * Each strategy's OCR output is immediately parsed — only a valid MRZ (with parseable dates)
@@ -201,21 +203,29 @@ public class CniVerificationService {
      * for the text extraction fallback in the caller.
      */
     private MrzData ocrAndParse(String imagePath) {
+        BufferedImage originalImage = null;
         try {
             Tesseract tesseract = new Tesseract();
             tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
             tesseract.setLanguage(applicationProperties.getTesseract().getLanguage());
 
-            BufferedImage originalImage;
+            BufferedImage rawImage;
             if (imagePath.toLowerCase().endsWith(".pdf")) {
-                originalImage = convertPdfToImage(imagePath);
+                rawImage = convertPdfToImage(imagePath);
             } else {
-                originalImage = ImageIO.read(Path.of(imagePath).toFile());
+                rawImage = ImageIO.read(Path.of(imagePath).toFile());
             }
-            if (originalImage == null) {
+            if (rawImage == null) {
                 LOG.error("Could not read image at: {}", imagePath);
                 return invalidMrzData();
             }
+
+            // Downscale large images to limit memory usage (300MB heap)
+            originalImage = limitSize(rawImage, MAX_OCR_WIDTH);
+            if (originalImage != rawImage) {
+                rawImage.flush(); // release the large original
+            }
+            LOG.info("OCR image size after limit: {}x{}", originalImage.getWidth(), originalImage.getHeight());
 
             double[] cropRatios = { 0.35, 0.25, 0.20, 0.15 };
             MrzData bestPartial = null;
@@ -249,7 +259,7 @@ public class CniVerificationService {
             }
 
             // --- Phase 3: Raw bottom crops (no preprocessing), restricted charset ---
-            for (double ratio : cropRatios) {
+            for (double ratio : new double[] { 0.35, 0.25 }) {
                 MrzData result = tryOcrStrategy(
                     tesseract,
                     originalImage,
@@ -262,17 +272,20 @@ public class CniVerificationService {
                 if (bestPartial == null && result.getNom() != null) bestPartial = result;
             }
 
-            // --- Phase 4: Sharpened bottom crops, preprocessed, restricted charset ---
-            BufferedImage sharpenedImage = sharpen(originalImage);
+            // --- Phase 4: Sharpened bottom crops (sharpen the crop, not the full image) ---
             for (double ratio : new double[] { 0.35, 0.25 }) {
+                BufferedImage crop = cropBottom(originalImage, ratio);
+                BufferedImage sharpenedCrop = sharpen(crop);
+                crop.flush();
                 MrzData result = tryOcrStrategy(
                     tesseract,
-                    sharpenedImage,
-                    ratio,
+                    sharpenedCrop,
+                    0,
                     true,
                     true,
                     String.format("bottom %d%% sharpened crop, restricted charset", (int) (ratio * 100))
                 );
+                sharpenedCrop.flush();
                 if (result.isValid()) return result;
                 if (bestPartial == null && result.getNom() != null) bestPartial = result;
             }
@@ -293,7 +306,6 @@ public class CniVerificationService {
 
             LOG.warn("No valid MRZ found after all strategies for: {}", imagePath);
 
-            // Return best partial result (has names/doc but dates failed) for text extraction fallback
             if (bestPartial != null) {
                 LOG.info(
                     "Returning partial MRZ (nom={}, doc={}, dates failed) for text extraction",
@@ -307,6 +319,10 @@ public class CniVerificationService {
         } catch (TesseractException | IOException e) {
             LOG.error("OCR failed for image {}: {}", imagePath, e.getMessage());
             return invalidMrzData();
+        } finally {
+            if (originalImage != null) {
+                originalImage.flush();
+            }
         }
     }
 
@@ -325,40 +341,54 @@ public class CniVerificationService {
         boolean restricted,
         String strategyName
     ) throws TesseractException {
-        BufferedImage image;
-        if (cropRatio > 0) {
-            image = cropBottom(originalImage, cropRatio);
-        } else {
-            image = originalImage;
+        // Track intermediate images to flush after OCR
+        BufferedImage cropped = null;
+        BufferedImage preprocessed = null;
+        BufferedImage scaled = null;
+
+        try {
+            BufferedImage image;
+            if (cropRatio > 0) {
+                cropped = cropBottom(originalImage, cropRatio);
+                image = cropped;
+            } else {
+                image = originalImage;
+            }
+
+            if (preprocess) {
+                preprocessed = preprocessForMrz(image);
+                image = preprocessed;
+            }
+
+            if (image.getHeight() < 300) {
+                scaled = scaleUp(image, 300.0 / image.getHeight());
+                image = scaled;
+            }
+
+            String ocrText = ocrWithCharset(tesseract, image, restricted);
+            MrzData mrzData = mrzParserService.parseMrz(ocrText);
+
+            if (mrzData.isValid()) {
+                LOG.info(
+                    "SUCCESS via strategy [{}] — doc={}, nom={}, dob={}",
+                    strategyName,
+                    mrzData.getDocumentNumber(),
+                    mrzData.getNom(),
+                    mrzData.getDateNaissance()
+                );
+            } else {
+                String preview = ocrText == null ? "null" : ocrText.replace("\n", " | ").trim();
+                if (preview.length() > 120) preview = preview.substring(0, 120) + "...";
+                LOG.info("FAIL via strategy [{}] — OCR: {}", strategyName, preview);
+            }
+
+            return mrzData;
+        } finally {
+            // Flush intermediate images to release native memory immediately
+            if (scaled != null) scaled.flush();
+            if (preprocessed != null) preprocessed.flush();
+            if (cropped != null) cropped.flush();
         }
-
-        if (preprocess) {
-            image = preprocessForMrz(image);
-        }
-
-        if (image.getHeight() < 300) {
-            image = scaleUp(image, 300.0 / image.getHeight());
-        }
-
-        String ocrText = ocrWithCharset(tesseract, image, restricted);
-        MrzData mrzData = mrzParserService.parseMrz(ocrText);
-
-        if (mrzData.isValid()) {
-            LOG.info(
-                "SUCCESS via strategy [{}] — doc={}, nom={}, dob={}",
-                strategyName,
-                mrzData.getDocumentNumber(),
-                mrzData.getNom(),
-                mrzData.getDateNaissance()
-            );
-        } else {
-            // Log first 120 chars of OCR output for debugging
-            String preview = ocrText == null ? "null" : ocrText.replace("\n", " | ").trim();
-            if (preview.length() > 120) preview = preview.substring(0, 120) + "...";
-            LOG.info("FAIL via strategy [{}] — OCR: {}", strategyName, preview);
-        }
-
-        return mrzData;
     }
 
     private MrzData invalidMrzData() {
@@ -400,11 +430,17 @@ public class CniVerificationService {
 
     /**
      * Crop the bottom portion of an image (where MRZ is located).
+     * Returns an independent copy (not a subimage view) so the parent can be GC'd separately.
      */
     private BufferedImage cropBottom(BufferedImage image, double ratio) {
         int cropHeight = (int) (image.getHeight() * ratio);
         int y = image.getHeight() - cropHeight;
-        return image.getSubimage(0, y, image.getWidth(), cropHeight);
+        int w = image.getWidth();
+        // Copy pixel data to independent BufferedImage (getSubimage shares parent's data array)
+        int[] pixels = image.getRGB(0, y, w, cropHeight, null, 0, w);
+        BufferedImage crop = new BufferedImage(w, cropHeight, BufferedImage.TYPE_INT_RGB);
+        crop.setRGB(0, 0, w, cropHeight, pixels, 0, w);
+        return crop;
     }
 
     /**
@@ -413,10 +449,28 @@ public class CniVerificationService {
     private BufferedImage scaleUp(BufferedImage image, double factor) {
         int newWidth = (int) (image.getWidth() * factor);
         int newHeight = (int) (image.getHeight() * factor);
-        BufferedImage scaled = new BufferedImage(newWidth, newHeight, image.getType());
+        BufferedImage scaled = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
         java.awt.Graphics2D g = scaled.createGraphics();
         g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.drawImage(image, 0, 0, newWidth, newHeight, null);
+        g.dispose();
+        return scaled;
+    }
+
+    /**
+     * Downscale an image if its width exceeds maxWidth, preserving aspect ratio.
+     * Returns the original image unchanged if already within limits.
+     */
+    private BufferedImage limitSize(BufferedImage image, int maxWidth) {
+        if (image.getWidth() <= maxWidth) {
+            return image;
+        }
+        double factor = (double) maxWidth / image.getWidth();
+        int newHeight = (int) (image.getHeight() * factor);
+        BufferedImage scaled = new BufferedImage(maxWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = scaled.createGraphics();
+        g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.drawImage(image, 0, 0, maxWidth, newHeight, null);
         g.dispose();
         return scaled;
     }
@@ -428,11 +482,15 @@ public class CniVerificationService {
     private BufferedImage sharpen(BufferedImage image) {
         // Ensure compatible image type for ConvolveOp
         BufferedImage compatible = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
-        compatible.getGraphics().drawImage(image, 0, 0, null);
+        java.awt.Graphics g = compatible.getGraphics();
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
 
         float[] kernel = { 0, -1, 0, -1, 5, -1, 0, -1, 0 };
         ConvolveOp op = new ConvolveOp(new Kernel(3, 3, kernel), ConvolveOp.EDGE_NO_OP, null);
-        return op.filter(compatible, null);
+        BufferedImage result = op.filter(compatible, null);
+        compatible.flush(); // release intermediate copy
+        return result;
     }
 
     /**
@@ -467,10 +525,13 @@ public class CniVerificationService {
                 }
                 if (img == null) continue;
 
-                // Try multiple image variants to maximize date extraction
-                // Raw image may miss dates on colored backgrounds; preprocessed/sharpened can help
-                BufferedImage[] variants = { img, preprocessForMrz(img), sharpen(img) };
-                String[] variantNames = { "raw", "preprocessed", "sharpened" };
+                // Downscale to limit memory usage
+                img = limitSize(img, MAX_OCR_WIDTH);
+
+                // Try raw + preprocessed variants (skip sharpened to save memory)
+                BufferedImage preprocessed = preprocessForMrz(img);
+                BufferedImage[] variants = { img, preprocessed };
+                String[] variantNames = { "raw", "preprocessed" };
 
                 for (int v = 0; v < variants.length; v++) {
                     String text = tesseract.doOCR(variants[v]);
@@ -493,6 +554,9 @@ public class CniVerificationService {
                         }
                     }
                 }
+                // Flush images to release native memory before processing next
+                preprocessed.flush();
+                img.flush();
             }
 
             LOG.info("Total dates found across all images: {}", allDates.size());
@@ -544,22 +608,28 @@ public class CniVerificationService {
      * Pre-process image for better OCR results using contrast stretching + Otsu's binarization.
      * Converts to grayscale, enhances contrast, then applies Otsu's automatic thresholding
      * to produce a clean black-and-white image optimal for MRZ reading.
+     *
+     * Uses bit manipulation instead of new Color() per pixel to reduce GC pressure.
      */
     private BufferedImage preprocessForMrz(BufferedImage original) {
         int width = original.getWidth();
         int height = original.getHeight();
 
-        // Step 1: Convert to grayscale values
-        int[] grayValues = new int[width * height];
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Color color = new Color(original.getRGB(x, y));
-                grayValues[y * width + x] = (int) (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue());
-            }
+        // Read all pixels in one batch (much faster than per-pixel getRGB)
+        int[] pixels = original.getRGB(0, 0, width, height, null, 0, width);
+
+        // Step 1: Convert to grayscale values using bit shifts (no Color objects)
+        int[] grayValues = new int[pixels.length];
+        for (int i = 0; i < pixels.length; i++) {
+            int rgb = pixels[i];
+            int r = (rgb >> 16) & 0xFF;
+            int g = (rgb >> 8) & 0xFF;
+            int b = rgb & 0xFF;
+            grayValues[i] = (int) (0.299 * r + 0.587 * g + 0.114 * b);
         }
+        pixels = null; // release source pixels
 
         // Step 1.5: Contrast stretching — normalize gray range to full 0-255
-        // Helps with colored card backgrounds (e.g. green new Cameroon CNI)
         int minGray = 255, maxGray = 0;
         for (int v : grayValues) {
             if (v < minGray) minGray = v;
@@ -576,14 +646,17 @@ public class CniVerificationService {
         int threshold = computeOtsuThreshold(grayValues);
 
         // Step 3: Apply threshold to create binary image
-        BufferedImage binary = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int bw = grayValues[y * width + x] > threshold ? 255 : 0;
-                int rgb = new Color(bw, bw, bw).getRGB();
-                binary.setRGB(x, y, rgb);
-            }
+        // Pre-compute black/white RGB values (avoids new Color() per pixel)
+        int blackRgb = 0xFF000000; // opaque black
+        int whiteRgb = 0xFFFFFFFF; // opaque white
+        int[] binaryPixels = new int[grayValues.length];
+        for (int i = 0; i < grayValues.length; i++) {
+            binaryPixels[i] = grayValues[i] > threshold ? whiteRgb : blackRgb;
         }
+        grayValues = null; // release
+
+        BufferedImage binary = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        binary.setRGB(0, 0, width, height, binaryPixels, 0, width);
 
         return binary;
     }
