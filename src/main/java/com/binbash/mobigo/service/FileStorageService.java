@@ -1,6 +1,7 @@
 package com.binbash.mobigo.service;
 
 import com.binbash.mobigo.config.ApplicationProperties;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +25,32 @@ public class FileStorageService {
 
     public FileStorageService(ApplicationProperties applicationProperties) {
         this.applicationProperties = applicationProperties;
+    }
+
+    @PostConstruct
+    void verifyStorageDirectories() {
+        Path baseDir = Path.of(applicationProperties.getStorage().getBaseDir()).toAbsolutePath();
+        LOG.info("[FileStorageService] Storage base directory: {}", baseDir);
+
+        String[] subDirs = {
+            applicationProperties.getStorage().getPeopleDir(),
+            applicationProperties.getStorage().getVehiclesDir(),
+            applicationProperties.getStorage().getCniDir(),
+        };
+
+        for (String sub : subDirs) {
+            Path dir = baseDir.resolve(sub);
+            try {
+                Files.createDirectories(dir);
+                if (Files.isWritable(dir)) {
+                    LOG.info("[FileStorageService] Directory OK (writable): {}", dir);
+                } else {
+                    LOG.warn("[FileStorageService] Directory NOT writable: {}", dir);
+                }
+            } catch (IOException e) {
+                LOG.warn("[FileStorageService] Could not create directory {}: {}", dir, e.getMessage());
+            }
+        }
     }
 
     /**

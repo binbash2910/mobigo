@@ -13,7 +13,6 @@ public class ApplicationProperties {
 
     private String frontendUrl = "http://localhost:4200";
     private final Tesseract tesseract = new Tesseract();
-    private final Cni cni = new Cni();
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Storage storage = new Storage();
 
@@ -27,10 +26,6 @@ public class ApplicationProperties {
 
     public Tesseract getTesseract() {
         return tesseract;
-    }
-
-    public Cni getCni() {
-        return cni;
     }
 
     public Elasticsearch getElasticsearch() {
@@ -60,19 +55,6 @@ public class ApplicationProperties {
 
         public void setLanguage(String language) {
             this.language = language;
-        }
-    }
-
-    public static class Cni {
-
-        private String imagesDir = "content/images/cni";
-
-        public String getImagesDir() {
-            return imagesDir;
-        }
-
-        public void setImagesDir(String imagesDir) {
-            this.imagesDir = imagesDir;
         }
     }
 

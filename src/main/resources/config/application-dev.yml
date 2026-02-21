@@ -115,5 +115,3 @@ application:
   tesseract:
     data-path: ${user.dir}/tessdata
     language: fra+eng
-  cni:
-    images-dir: content/images/cni
