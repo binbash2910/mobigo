@@ -25,7 +25,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra && \
     rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /app/logs
+RUN mkdir -p /app/logs /app/data/images/people /app/data/images/vehicles /app/data/images/cni
 
 ENV JAVA_OPTS="-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m"
 COPY --from=build /app/target/mobigo-0.0.1-SNAPSHOT.jar app.jar
