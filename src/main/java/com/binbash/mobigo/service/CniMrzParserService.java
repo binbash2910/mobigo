@@ -212,8 +212,8 @@ public class CniMrzParserService {
 
         try {
             String line1 = lines.get(0);
-            String line2 = lines.get(1);
-            String line3 = lines.get(2);
+            String line2 = sanitizeTd1DataLine(lines.get(1));
+            String line3 = sanitizeNameOnlyLine(lines.get(2));
             data.setRawMrz(line1 + "\n" + line2 + "\n" + line3);
 
             // Extract document type code and issuing country from positions 0-1 and 2-4
@@ -268,8 +268,8 @@ public class CniMrzParserService {
         data.setFormat("TD2");
 
         try {
-            String line1 = lines.get(0);
-            String line2 = lines.get(1);
+            String line1 = sanitizeTd2NameLine(lines.get(0));
+            String line2 = sanitizeTd2DataLine(lines.get(1));
             data.setRawMrz(line1 + "\n" + line2);
 
             // Extract document type code and issuing country from positions 0-1 and 2-4
@@ -316,9 +316,10 @@ public class CniMrzParserService {
         data.setDocumentType("PASSPORT");
 
         try {
-            String line1 = lines.get(0);
-            String line2 = lines.get(1);
+            String line1 = sanitizeTd3NameLine(lines.get(0));
+            String line2 = sanitizeTd3DataLine(lines.get(1));
             data.setRawMrz(line1 + "\n" + line2);
+            LOG.debug("TD3 after sanitization — L1: [{}]  L2: [{}]", line1, line2);
 
             // Line 1: issuing country at positions 2-4, names from position 5
             String issuingCountry = line1.substring(2, 5).replace("<", "");
@@ -347,6 +348,139 @@ public class CniMrzParserService {
         }
 
         return data;
+    }
+
+    // ---- MRZ field-type sanitization (ICAO 9303 spec) ----
+    // Each MRZ position has a known type: letter-only, digit-only, or mixed.
+    // OCR commonly confuses visually similar characters across types.
+    // These methods fix such confusions using the known field types.
+
+    /**
+     * TD3 line 1: positions 0-4 = type+country (letters), positions 5-43 = names (letters + '<' only).
+     * Any digit in the name field is an OCR error.
+     */
+    private String sanitizeTd3NameLine(String line) {
+        if (line.length() <= 5) return line;
+        StringBuilder sb = new StringBuilder(line.substring(0, 5));
+        for (int i = 5; i < line.length(); i++) {
+            sb.append(ensureLetter(line.charAt(i)));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * TD3 line 2: fix digit/letter confusions in type-specific fields.
+     * Positions: 0-8 passport# (mixed), 9 check (digit), 10-12 nationality (letter),
+     * 13-18 DOB (digit), 19 check (digit), 20 sex (letter), 21-26 expiry (digit),
+     * 27 check (digit), 28-41 personal# (mixed), 42 check (digit), 43 overall check (digit).
+     */
+    private String sanitizeTd3DataLine(String line) {
+        if (line.length() < 42) return line;
+        char[] c = line.toCharArray();
+        c[9] = ensureDigit(c[9]);
+        for (int i = 10; i <= 12; i++) c[i] = ensureLetter(c[i]);
+        for (int i = 13; i <= 18; i++) c[i] = ensureDigit(c[i]);
+        c[19] = ensureDigit(c[19]);
+        c[20] = ensureLetter(c[20]);
+        for (int i = 21; i <= 26; i++) c[i] = ensureDigit(c[i]);
+        if (c.length > 27) c[27] = ensureDigit(c[27]);
+        if (c.length > 42) c[42] = ensureDigit(c[42]);
+        if (c.length > 43) c[43] = ensureDigit(c[43]);
+        return new String(c);
+    }
+
+    /**
+     * TD1 line 2: DOB(6) + check(1) + sex(1) + expiry(6) + check(1) + nationality(3) + optional(11) + check(1).
+     */
+    private String sanitizeTd1DataLine(String line) {
+        if (line.length() < 28) return line;
+        char[] c = line.toCharArray();
+        for (int i = 0; i <= 5; i++) c[i] = ensureDigit(c[i]);
+        c[6] = ensureDigit(c[6]);
+        c[7] = ensureLetter(c[7]); // sex
+        for (int i = 8; i <= 13; i++) c[i] = ensureDigit(c[i]);
+        c[14] = ensureDigit(c[14]);
+        for (int i = 15; i <= 17; i++) c[i] = ensureLetter(c[i]); // nationality
+        if (c.length > 29) c[29] = ensureDigit(c[29]);
+        return new String(c);
+    }
+
+    /**
+     * TD2 line 1: positions 0-4 = type+country (letters), positions 5+ = names (letters + '<').
+     */
+    private String sanitizeTd2NameLine(String line) {
+        if (line.length() <= 5) return line;
+        StringBuilder sb = new StringBuilder(line.substring(0, 5));
+        for (int i = 5; i < line.length(); i++) {
+            sb.append(ensureLetter(line.charAt(i)));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * TD2 line 2: doc#(12) + check(1) + nationality(3) + DOB(6) + check(1) + sex(1) + expiry(6) + check(1) + filler(5) + check(1).
+     */
+    private String sanitizeTd2DataLine(String line) {
+        if (line.length() < 30) return line;
+        char[] c = line.toCharArray();
+        c[12] = ensureDigit(c[12]);
+        for (int i = 13; i <= 15; i++) c[i] = ensureLetter(c[i]); // nationality
+        for (int i = 16; i <= 21; i++) c[i] = ensureDigit(c[i]); // DOB
+        c[22] = ensureDigit(c[22]);
+        c[23] = ensureLetter(c[23]); // sex
+        for (int i = 24; i <= 29; i++) c[i] = ensureDigit(c[i]); // expiry
+        if (c.length > 30) c[30] = ensureDigit(c[30]);
+        if (c.length > 35) c[35] = ensureDigit(c[35]);
+        return new String(c);
+    }
+
+    /**
+     * Sanitize a name-only line (e.g. TD1 line 3): should only contain letters and '<'.
+     */
+    private String sanitizeNameOnlyLine(String line) {
+        StringBuilder sb = new StringBuilder(line.length());
+        for (int i = 0; i < line.length(); i++) {
+            sb.append(ensureLetter(line.charAt(i)));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Ensure a character is a letter or '<'. If it's a digit, convert using common OCR confusions.
+     */
+    private char ensureLetter(char c) {
+        if (Character.isLetter(c) || c == '<') return c;
+        return switch (c) {
+            case '0' -> 'O';
+            case '1' -> 'I';
+            case '2' -> 'Z';
+            case '3' -> 'B'; // 3 resembles B in degraded MRZ
+            case '4' -> '<'; // '<' commonly misread as '4' in MRZ font
+            case '5' -> 'S';
+            case '6' -> 'G';
+            case '7' -> '<'; // filler in name context
+            case '8' -> 'B';
+            case '9' -> '<'; // filler in name context
+            default -> '<';
+        };
+    }
+
+    /**
+     * Ensure a character is a digit or '<'. If it's a letter, convert using common OCR confusions.
+     */
+    private char ensureDigit(char c) {
+        if (Character.isDigit(c) || c == '<') return c;
+        return switch (c) {
+            case 'O', 'Q', 'D' -> '0';
+            case 'I', 'L' -> '1';
+            case 'Z' -> '2';
+            case 'B' -> '8';
+            case 'S' -> '5';
+            case 'G' -> '6';
+            case 'A' -> '4';
+            case 'T' -> '7';
+            default -> '0';
+        };
     }
 
     /**

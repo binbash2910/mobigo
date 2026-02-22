@@ -140,6 +140,55 @@ class CniMrzParserServiceTest {
     }
 
     @Test
+    void shouldSanitizeTd3DigitsInNameLine() {
+        // OCR reads '<' as '4' in the name line — each line must be exactly 44 chars
+        // Positions 42-43 have '44' instead of '<<' (OCR artifact)
+        String mrz = "POCMRKAMENI<EPSE<MIMBE<<FRIDE<BLANCHE<<<44\n" + "AA223995<2CMR8110192F2705273<<<<<<<<<<<<<<<4";
+
+        MrzData result = parser.parseMrz(mrz);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getFormat()).isEqualTo("TD3");
+        assertThat(result.getDocumentType()).isEqualTo("PASSPORT");
+        assertThat(result.getNom()).isEqualTo("KAMENI EPSE MIMBE");
+        // The trailing '44' should be sanitized to '<<' (filler), not included in first name
+        assertThat(result.getPrenom()).isEqualTo("FRIDE BLANCHE");
+        assertThat(result.getDocumentNumber()).isEqualTo("AA223995");
+        assertThat(result.getDateNaissance()).isEqualTo(LocalDate.of(1981, 10, 19));
+        assertThat(result.getDateExpiration()).isEqualTo(LocalDate.of(2027, 5, 27));
+        assertThat(result.getSexe()).isEqualTo("F");
+    }
+
+    @Test
+    void shouldSanitizeTd3LettersInDateFields() {
+        // OCR reads 'O' for '0' in date fields, 'I' for '1', 'S' for '5'
+        // Each line must be exactly 44 chars
+        String mrz = "P<CMRDUPONT<<JEAN<CLAUDE<<<<<<<<<<<<<<<<<<<<\n" + "AB1234567OCMR9OOI19IF27OS27O<<<<<<<<<<<<<<<O";
+
+        MrzData result = parser.parseMrz(mrz);
+
+        assertThat(result.isValid()).isTrue();
+        // 'O' in DOB field (pos 13-18) should become '0', 'I' should become '1'
+        // "9OOI19" → "900119" → 1990-01-19
+        assertThat(result.getDateNaissance()).isEqualTo(LocalDate.of(1990, 1, 19));
+        // "27OS27" → "270527" → 2027-05-27
+        assertThat(result.getDateExpiration()).isEqualTo(LocalDate.of(2027, 5, 27));
+    }
+
+    @Test
+    void shouldSanitizeTd1NameLine() {
+        // TD1 line 3 (names) should not contain digits — '4' → '<' filler
+        String mrz = "IDCMR1234567891<<<<<<<<<<<<<<<\n" + "8610191M3504201CMR<<<<<<<<<<<<7\n" + "MIMBE<<LUCIEN4YANNICK<<<<<<4<<<";
+
+        MrzData result = parser.parseMrz(mrz);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getNom()).isEqualTo("MIMBE");
+        // '4' between names should become '<' (space separator)
+        assertThat(result.getPrenom()).isEqualTo("LUCIEN YANNICK");
+    }
+
+    @Test
     void shouldReturnInvalidForEmptyText() {
         MrzData result = parser.parseMrz("");
         assertThat(result.isValid()).isFalse();

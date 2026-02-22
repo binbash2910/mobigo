@@ -713,6 +713,7 @@ public class CniVerificationService {
 
     /**
      * Compare two name strings with normalization (remove accents, uppercase, trim).
+     * Uses fuzzy matching (Levenshtein distance) to tolerate minor OCR errors.
      */
     private boolean compareNames(String mrzName, String profileName) {
         if (mrzName == null || profileName == null) {
@@ -732,18 +733,41 @@ public class CniVerificationService {
             return true;
         }
 
-        // Check if any word in MRZ matches any word in profile
+        // Check if any word in MRZ matches any word in profile (exact or fuzzy)
         String[] mrzParts = normalizedMrz.split("\\s+");
         String[] profileParts = normalizedProfile.split("\\s+");
         for (String mp : mrzParts) {
             for (String pp : profileParts) {
-                if (!mp.isEmpty() && !pp.isEmpty() && mp.equals(pp)) {
+                if (mp.isEmpty() || pp.isEmpty()) continue;
+                if (mp.equals(pp)) return true;
+                // Fuzzy match: tolerate up to 2 OCR errors for words >= 4 chars
+                if (mp.length() >= 4 && pp.length() >= 4 && levenshtein(mp, pp) <= 2) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    /**
+     * Compute Levenshtein edit distance between two strings.
+     */
+    private int levenshtein(String a, String b) {
+        int[] prev = new int[b.length() + 1];
+        int[] curr = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) prev[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            curr[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            }
+            int[] tmp = prev;
+            prev = curr;
+            curr = tmp;
+        }
+        return prev[b.length()];
     }
 
     /**
