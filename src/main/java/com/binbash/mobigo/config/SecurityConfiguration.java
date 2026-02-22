@@ -73,6 +73,8 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/rides")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/rides/*")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/vehicles/*")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/people/*")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/ratings")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/images/**")).permitAll()
                     .requestMatchers(mvc.pattern("/api/**")).authenticated()
                     .requestMatchers(mvc.pattern("/websocket/**")).authenticated()

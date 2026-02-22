@@ -51,7 +51,8 @@
       "Bash(cmd //c \"taskkill /PID 20588 /F\")",
       "Bash(del \"C:\\\\Users\\\\lucie\\\\OneDrive\\\\Documents\\\\Developpements\\\\backend\\\\mobigo\\\\nul\")",
       "Bash(powershell:*)",
-      "mcp__plugin_playwright_playwright__browser_navigate"
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "WebFetch(domain:render.com)"
     ]
   }
 }
