@@ -257,7 +257,7 @@ public class SavedPaymentMethodResource {
         method.setIsDefault(true);
         method = savedPaymentMethodRepository.save(method);
         savedPaymentMethodSearchRepository.index(method);
-
+        //
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, method.getId().toString()))
             .body(method);
