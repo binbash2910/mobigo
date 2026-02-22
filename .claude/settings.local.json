@@ -52,7 +52,8 @@
       "Bash(del \"C:\\\\Users\\\\lucie\\\\OneDrive\\\\Documents\\\\Developpements\\\\backend\\\\mobigo\\\\nul\")",
       "Bash(powershell:*)",
       "mcp__plugin_playwright_playwright__browser_navigate",
-      "WebFetch(domain:render.com)"
+      "WebFetch(domain:render.com)",
+      "Bash(tail:*)"
     ]
   }
 }

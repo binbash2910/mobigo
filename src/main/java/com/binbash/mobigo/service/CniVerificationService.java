@@ -191,7 +191,7 @@ public class CniVerificationService {
     }
 
     /** Maximum width for OCR processing — larger images are downscaled to save memory. */
-    private static final int MAX_OCR_WIDTH = 2000;
+    private static final int MAX_OCR_WIDTH = 3500;
 
     /**
      * Run OCR with multiple strategies and parse MRZ, returning the first valid result.
@@ -459,6 +459,7 @@ public class CniVerificationService {
 
     /**
      * Downscale an image if its width exceeds maxWidth, preserving aspect ratio.
+     * Uses high-quality rendering hints to preserve MRZ text detail.
      * Returns the original image unchanged if already within limits.
      */
     private BufferedImage limitSize(BufferedImage image, int maxWidth) {
@@ -470,6 +471,8 @@ public class CniVerificationService {
         BufferedImage scaled = new BufferedImage(maxWidth, newHeight, BufferedImage.TYPE_INT_RGB);
         java.awt.Graphics2D g = scaled.createGraphics();
         g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
         g.drawImage(image, 0, 0, maxWidth, newHeight, null);
         g.dispose();
         return scaled;
@@ -525,13 +528,18 @@ public class CniVerificationService {
                 }
                 if (img == null) continue;
 
-                // Downscale to limit memory usage
-                img = limitSize(img, MAX_OCR_WIDTH);
+                // Downscale to limit memory usage, flush original if a new image was created
+                BufferedImage limited = limitSize(img, MAX_OCR_WIDTH);
+                if (limited != img) {
+                    img.flush();
+                    img = limited;
+                }
 
-                // Try raw + preprocessed variants (skip sharpened to save memory)
+                // Try raw + preprocessed + sharpened variants for maximum date extraction
                 BufferedImage preprocessed = preprocessForMrz(img);
-                BufferedImage[] variants = { img, preprocessed };
-                String[] variantNames = { "raw", "preprocessed" };
+                BufferedImage sharpened = sharpen(img);
+                BufferedImage[] variants = { img, preprocessed, sharpened };
+                String[] variantNames = { "raw", "preprocessed", "sharpened" };
 
                 for (int v = 0; v < variants.length; v++) {
                     String text = tesseract.doOCR(variants[v]);
@@ -554,7 +562,8 @@ public class CniVerificationService {
                         }
                     }
                 }
-                // Flush images to release native memory before processing next
+                // Flush all variant images to release native memory before processing next
+                sharpened.flush();
                 preprocessed.flush();
                 img.flush();
             }
