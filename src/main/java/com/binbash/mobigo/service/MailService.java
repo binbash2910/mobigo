@@ -193,11 +193,21 @@ public class MailService {
         context.setVariable("heureDepart", heureDepart);
         context.setVariable("nbPlaces", String.valueOf(booking.getNbPlacesReservees()));
         context.setVariable("montant", montant);
-        context.setVariable("actionUrl", baseUrl + (isDriver ? "/my-trips" : "/bookings"));
-        context.setVariable(
-            "actionLabel",
-            messageSource.getMessage(isDriver ? "email.booking.action.viewTrips" : "email.booking.action.viewBookings", null, locale)
-        );
+        // For COMPLETED action, passengers get a link to rate the driver on the trip page
+        String actionUrl;
+        String actionLabelKey;
+        if ("COMPLETED".equals(action) && !isDriver) {
+            actionUrl = baseUrl + "/trip/" + ride.getId();
+            actionLabelKey = "email.booking.action.rateDriver";
+        } else if (isDriver) {
+            actionUrl = baseUrl + "/my-trips";
+            actionLabelKey = "email.booking.action.viewTrips";
+        } else {
+            actionUrl = baseUrl + "/bookings";
+            actionLabelKey = "email.booking.action.viewBookings";
+        }
+        context.setVariable("actionUrl", actionUrl);
+        context.setVariable("actionLabel", messageSource.getMessage(actionLabelKey, null, locale));
 
         String content = templateEngine.process("mail/bookingNotificationEmail", context);
         sendEmailSync(recipientEmail, subject, content, false, true);
