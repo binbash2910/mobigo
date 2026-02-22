@@ -33,6 +33,9 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
     @Column(name = "montant_total", nullable = false)
     private Float montantTotal;
 
+    @Column(name = "commission")
+    private Float commission;
+
     @NotNull
     @Column(name = "date_reservation", nullable = false)
     private LocalDate dateReservation;
@@ -112,6 +115,19 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
 
     public void setMontantTotal(Float montantTotal) {
         this.montantTotal = montantTotal;
+    }
+
+    public Float getCommission() {
+        return this.commission;
+    }
+
+    public Booking commission(Float commission) {
+        this.setCommission(commission);
+        return this;
+    }
+
+    public void setCommission(Float commission) {
+        this.commission = commission;
     }
 
     public LocalDate getDateReservation() {
@@ -224,6 +240,7 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
             "id=" + getId() +
             ", nbPlacesReservees=" + getNbPlacesReservees() +
             ", montantTotal=" + getMontantTotal() +
+            ", commission=" + getCommission() +
             ", dateReservation='" + getDateReservation() + "'" +
             ", statut='" + getStatut() + "'" +
             ", methodePayment='" + getMethodePayment() + "'" +

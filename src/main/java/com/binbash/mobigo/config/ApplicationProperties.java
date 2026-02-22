@@ -15,6 +15,7 @@ public class ApplicationProperties {
     private final Tesseract tesseract = new Tesseract();
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Storage storage = new Storage();
+    private final Pricing pricing = new Pricing();
 
     public String getFrontendUrl() {
         return frontendUrl;
@@ -34,6 +35,10 @@ public class ApplicationProperties {
 
     public Storage getStorage() {
         return storage;
+    }
+
+    public Pricing getPricing() {
+        return pricing;
     }
 
     public static class Tesseract {
@@ -108,6 +113,19 @@ public class ApplicationProperties {
 
         public void setCniDir(String cniDir) {
             this.cniDir = cniDir;
+        }
+    }
+
+    public static class Pricing {
+
+        private double commissionRate = 0.10;
+
+        public double getCommissionRate() {
+            return commissionRate;
+        }
+
+        public void setCommissionRate(double commissionRate) {
+            this.commissionRate = commissionRate;
         }
     }
 }

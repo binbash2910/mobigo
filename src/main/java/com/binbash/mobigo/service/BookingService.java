@@ -1,5 +1,6 @@
 package com.binbash.mobigo.service;
 
+import com.binbash.mobigo.config.ApplicationProperties;
 import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.Payment;
 import com.binbash.mobigo.domain.People;
@@ -33,6 +34,7 @@ public class BookingService {
     private final PaymentService paymentService;
     private final MailService mailService;
     private final EntityManager entityManager;
+    private final ApplicationProperties applicationProperties;
 
     public BookingService(
         BookingRepository bookingRepository,
@@ -40,7 +42,8 @@ public class BookingService {
         BookingSearchRepository bookingSearchRepository,
         PaymentService paymentService,
         MailService mailService,
-        EntityManager entityManager
+        EntityManager entityManager,
+        ApplicationProperties applicationProperties
     ) {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
@@ -48,6 +51,7 @@ public class BookingService {
         this.paymentService = paymentService;
         this.mailService = mailService;
         this.entityManager = entityManager;
+        this.applicationProperties = applicationProperties;
     }
 
     /**
@@ -77,6 +81,15 @@ public class BookingService {
         // Force status and date
         booking.setStatut(BookingStatusEnum.EN_ATTENTE);
         booking.setDateReservation(LocalDate.now());
+
+        // Compute commission and total amount from backend config
+        double commissionRate = applicationProperties.getPricing().getCommissionRate();
+        float prixParPlace = ride.getPrixParPlace();
+        long nbPlaces = booking.getNbPlacesReservees();
+        float commission = Math.round((float) (prixParPlace * commissionRate * nbPlaces));
+        float montantTotal = Math.round((float) (prixParPlace * (1 + commissionRate) * nbPlaces));
+        booking.setCommission(commission);
+        booking.setMontantTotal(montantTotal);
 
         booking = bookingRepository.save(booking);
         bookingSearchRepository.index(booking);

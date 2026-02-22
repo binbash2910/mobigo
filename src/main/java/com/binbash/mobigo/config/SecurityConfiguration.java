@@ -76,6 +76,7 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/people/*")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/ratings")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/images/**")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/config")).permitAll()
                     .requestMatchers(mvc.pattern("/api/**")).authenticated()
                     .requestMatchers(mvc.pattern("/websocket/**")).authenticated()
                     .requestMatchers(mvc.pattern("/v3/api-docs/**")).permitAll()
