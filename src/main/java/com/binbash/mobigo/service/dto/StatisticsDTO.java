@@ -21,6 +21,7 @@ public class StatisticsDTO {
         private long totalTrips;
         private Map<String, Long> tripsByStatus;
         private double totalRevenue;
+        private double totalCommission;
         private long totalPassengers;
         private double averageRating;
         private long totalRatings;
@@ -48,6 +49,14 @@ public class StatisticsDTO {
 
         public void setTotalRevenue(double totalRevenue) {
             this.totalRevenue = totalRevenue;
+        }
+
+        public double getTotalCommission() {
+            return totalCommission;
+        }
+
+        public void setTotalCommission(double totalCommission) {
+            this.totalCommission = totalCommission;
         }
 
         public long getTotalPassengers() {
@@ -261,6 +270,7 @@ public class StatisticsDTO {
 
         private double totalEarnings;
         private double totalSpendings;
+        private double totalCommission;
         private double netBalance;
         private long totalTripsAsDriver;
         private long totalTripsAsPassenger;
@@ -280,6 +290,14 @@ public class StatisticsDTO {
 
         public void setTotalSpendings(double totalSpendings) {
             this.totalSpendings = totalSpendings;
+        }
+
+        public double getTotalCommission() {
+            return totalCommission;
+        }
+
+        public void setTotalCommission(double totalCommission) {
+            this.totalCommission = totalCommission;
         }
 
         public double getNetBalance() {

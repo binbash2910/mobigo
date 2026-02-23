@@ -87,13 +87,25 @@ public class StatisticsService {
         }
         stats.setTripsByStatus(tripsByStatus);
 
-        // Revenue from active bookings on my rides
+        // Revenue from active bookings on my rides (montantTotal minus commission = driver's share)
         double totalRevenue = driverBookings
             .stream()
             .filter(b -> ACTIVE_BOOKING_STATUSES.contains(b.getStatut()))
-            .mapToDouble(b -> b.getMontantTotal() != null ? b.getMontantTotal() : 0)
+            .mapToDouble(b -> {
+                double montant = b.getMontantTotal() != null ? b.getMontantTotal() : 0;
+                double commission = b.getCommission() != null ? b.getCommission() : 0;
+                return montant - commission;
+            })
             .sum();
         stats.setTotalRevenue(totalRevenue);
+
+        // Total commission deducted by platform
+        double totalCommission = driverBookings
+            .stream()
+            .filter(b -> ACTIVE_BOOKING_STATUSES.contains(b.getStatut()))
+            .mapToDouble(b -> b.getCommission() != null ? b.getCommission() : 0)
+            .sum();
+        stats.setTotalCommission(totalCommission);
 
         // Total passengers transported
         long totalPassengers = driverBookings
@@ -182,14 +194,18 @@ public class StatisticsService {
             .filter(r -> r.getDateDepart() != null)
             .collect(Collectors.groupingBy(r -> YearMonth.from(r.getDateDepart()), Collectors.counting()));
 
-        // Index driver bookings revenue by month (based on ride departure date)
+        // Index driver bookings revenue by month (montantTotal - commission = driver's share)
         Map<YearMonth, Double> revenueByMonth = driverBookings
             .stream()
             .filter(b -> ACTIVE_BOOKING_STATUSES.contains(b.getStatut()) && b.getTrajet() != null && b.getTrajet().getDateDepart() != null)
             .collect(
                 Collectors.groupingBy(
                     b -> YearMonth.from(b.getTrajet().getDateDepart()),
-                    Collectors.summingDouble(b -> b.getMontantTotal() != null ? b.getMontantTotal() : 0)
+                    Collectors.summingDouble(b -> {
+                        double montant = b.getMontantTotal() != null ? b.getMontantTotal() : 0;
+                        double commission = b.getCommission() != null ? b.getCommission() : 0;
+                        return montant - commission;
+                    })
                 )
             );
 
@@ -286,6 +302,7 @@ public class StatisticsService {
         StatisticsDTO.GlobalSummary summary = new StatisticsDTO.GlobalSummary();
         summary.setTotalEarnings(driverStats.getTotalRevenue());
         summary.setTotalSpendings(passengerStats.getTotalSpent());
+        summary.setTotalCommission(driverStats.getTotalCommission());
         summary.setNetBalance(driverStats.getTotalRevenue() - passengerStats.getTotalSpent());
         summary.setTotalTripsAsDriver(driverStats.getTotalTrips());
         summary.setTotalTripsAsPassenger(passengerStats.getTripsCompleted());
