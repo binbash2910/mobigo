@@ -13,6 +13,7 @@ public class ApplicationProperties {
 
     private String frontendUrl = "http://localhost:4200";
     private final Tesseract tesseract = new Tesseract();
+    private final Anthropic anthropic = new Anthropic();
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Storage storage = new Storage();
     private final Pricing pricing = new Pricing();
@@ -27,6 +28,10 @@ public class ApplicationProperties {
 
     public Tesseract getTesseract() {
         return tesseract;
+    }
+
+    public Anthropic getAnthropic() {
+        return anthropic;
     }
 
     public Elasticsearch getElasticsearch() {
@@ -60,6 +65,37 @@ public class ApplicationProperties {
 
         public void setLanguage(String language) {
             this.language = language;
+        }
+    }
+
+    public static class Anthropic {
+
+        private String apiKey;
+        private String model = "claude-haiku-4-5-20251001";
+        private boolean enabled = false;
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 

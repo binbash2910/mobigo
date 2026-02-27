@@ -1,19 +1,26 @@
 package com.binbash.mobigo.service;
 
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.models.messages.*;
 import com.binbash.mobigo.config.ApplicationProperties;
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.repository.PeopleRepository;
 import com.binbash.mobigo.service.dto.CniVerificationDTO;
 import com.binbash.mobigo.service.dto.MrzData;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -115,6 +122,29 @@ public class CniVerificationService {
             } else if (fallbackMrz.getNom() != null) {
                 supplementWithVisualText(fallbackMrz, fallbackPath, primaryPath);
                 if (fallbackMrz.isValid()) mrzData = fallbackMrz;
+            }
+        }
+
+        // 4b. If MRZ failed entirely, try visual text extraction (for old-format CNI without MRZ)
+        if (!mrzData.isValid()) {
+            LOG.info("MRZ extraction failed — attempting visual text extraction for people {}", peopleId);
+            MrzData visualData = extractFromVisualText(rectoPath, versoPath);
+            if (visualData.isValid()) {
+                mrzData = visualData;
+            }
+        }
+
+        // 4c. AI Vision fallback — if Tesseract visual extraction failed or incomplete
+        if (!mrzData.isValid() || isIncomplete(mrzData)) {
+            LOG.info("Attempting AI vision extraction for people {}", peopleId);
+            MrzData visionData = extractFromVision(rectoPath, versoPath);
+            if (visionData.isValid()) {
+                if (mrzData.isValid()) {
+                    // Tesseract got some fields — AI fills the gaps
+                    mergeVisualData(mrzData, visionData);
+                } else {
+                    mrzData = visionData;
+                }
             }
         }
 
@@ -503,12 +533,6 @@ public class CniVerificationService {
      */
     private void supplementWithVisualText(MrzData partial, String... imagePaths) {
         try {
-            Tesseract tesseract = new Tesseract();
-            tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
-            tesseract.setLanguage(applicationProperties.getTesseract().getLanguage());
-            tesseract.setPageSegMode(3); // Fully automatic segmentation
-            tesseract.setVariable("tessedit_char_whitelist", ""); // Full charset
-
             // Flexible date patterns: DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY
             // Also handle OCR artifacts like extra spaces around separators
             Pattern datePattern = Pattern.compile("(\\d{2})\\s*[./\\-,;:\\s]\\s*(\\d{2})\\s*[./\\-,;:\\s]\\s*(\\d{4})");
@@ -520,52 +544,23 @@ public class CniVerificationService {
 
             for (String path : imagePaths) {
                 if (path == null) continue;
-                BufferedImage img;
-                if (path.toLowerCase().endsWith(".pdf")) {
-                    img = convertPdfToImage(path);
-                } else {
-                    img = ImageIO.read(Path.of(path).toFile());
-                }
-                if (img == null) continue;
+                String text = ocrAllVariants(path);
+                combinedText += " " + text;
 
-                // Downscale to limit memory usage, flush original if a new image was created
-                BufferedImage limited = limitSize(img, MAX_OCR_WIDTH);
-                if (limited != img) {
-                    img.flush();
-                    img = limited;
-                }
-
-                // Try raw + preprocessed + sharpened variants for maximum date extraction
-                BufferedImage preprocessed = preprocessForMrz(img);
-                BufferedImage sharpened = sharpen(img);
-                BufferedImage[] variants = { img, preprocessed, sharpened };
-                String[] variantNames = { "raw", "preprocessed", "sharpened" };
-
-                for (int v = 0; v < variants.length; v++) {
-                    String text = tesseract.doOCR(variants[v]);
-                    String preview = text.length() > 500 ? text.substring(0, 500) + "..." : text;
-                    LOG.info("Visual text [{}] from {} ({} chars):\n{}", variantNames[v], path, text.length(), preview);
-                    combinedText += " " + text;
-
-                    Matcher matcher = datePattern.matcher(text);
-                    while (matcher.find()) {
-                        try {
-                            int dd = Integer.parseInt(matcher.group(1));
-                            int mm = Integer.parseInt(matcher.group(2));
-                            int yyyy = Integer.parseInt(matcher.group(3));
-                            if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900 || yyyy > 2100) continue;
-                            LocalDate d = LocalDate.of(yyyy, mm, dd);
-                            allDates.add(d);
-                            LOG.info("Found date in visual text [{}]: {} (raw: '{}')", variantNames[v], d, matcher.group());
-                        } catch (Exception e) {
-                            // skip invalid date
-                        }
+                Matcher matcher = datePattern.matcher(text);
+                while (matcher.find()) {
+                    try {
+                        int dd = Integer.parseInt(matcher.group(1));
+                        int mm = Integer.parseInt(matcher.group(2));
+                        int yyyy = Integer.parseInt(matcher.group(3));
+                        if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900 || yyyy > 2100) continue;
+                        LocalDate d = LocalDate.of(yyyy, mm, dd);
+                        allDates.add(d);
+                        LOG.info("Found date in visual text: {} (raw: '{}')", d, matcher.group());
+                    } catch (Exception e) {
+                        // skip invalid date
                     }
                 }
-                // Flush all variant images to release native memory before processing next
-                sharpened.flush();
-                preprocessed.flush();
-                img.flush();
             }
 
             LOG.info("Total dates found across all images: {}", allDates.size());
@@ -610,6 +605,497 @@ public class CniVerificationService {
             }
         } catch (TesseractException | IOException e) {
             LOG.error("Visual text extraction failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Run full-page OCR on an image using multiple variants (raw, preprocessed, sharpened)
+     * and return the concatenated text from all variants.
+     * Shared logic between supplementWithVisualText() and extractFromVisualText().
+     */
+    private String ocrAllVariants(String imagePath) throws IOException, TesseractException {
+        Tesseract tesseract = new Tesseract();
+        tesseract.setDatapath(applicationProperties.getTesseract().getDataPath());
+        tesseract.setLanguage(applicationProperties.getTesseract().getLanguage());
+        tesseract.setPageSegMode(3); // Fully automatic segmentation
+        tesseract.setVariable("tessedit_char_whitelist", ""); // Full charset
+
+        BufferedImage img;
+        if (imagePath.toLowerCase().endsWith(".pdf")) {
+            img = convertPdfToImage(imagePath);
+        } else {
+            img = ImageIO.read(Path.of(imagePath).toFile());
+        }
+        if (img == null) {
+            LOG.error("Could not read image at: {}", imagePath);
+            return "";
+        }
+
+        // Downscale to limit memory usage, flush original if a new image was created
+        BufferedImage limited = limitSize(img, MAX_OCR_WIDTH);
+        if (limited != img) {
+            img.flush();
+            img = limited;
+        }
+
+        StringBuilder combined = new StringBuilder();
+
+        // Try raw + preprocessed + sharpened variants for maximum text extraction
+        BufferedImage preprocessed = preprocessForMrz(img);
+        BufferedImage sharpened = sharpen(img);
+        BufferedImage[] variants = { img, preprocessed, sharpened };
+        String[] variantNames = { "raw", "preprocessed", "sharpened" };
+
+        for (int v = 0; v < variants.length; v++) {
+            String text = tesseract.doOCR(variants[v]);
+            String preview = text.length() > 500 ? text.substring(0, 500) + "..." : text;
+            LOG.info("Visual text [{}] from {} ({} chars):\n{}", variantNames[v], imagePath, text.length(), preview);
+            combined.append(" ").append(text);
+        }
+
+        // Flush all variant images to release native memory
+        sharpened.flush();
+        preprocessed.flush();
+        img.flush();
+
+        return combined.toString();
+    }
+
+    /**
+     * Extract identity data from visual text on card photos when MRZ is absent (old-format CNI).
+     * Runs full-page OCR on both sides and uses label-based regex patterns to extract fields.
+     *
+     * @param rectoPath path to front image
+     * @param versoPath path to back image (may be null)
+     * @return MrzData with format="VISUAL", valid if at least nom + dateNaissance extracted
+     */
+    private MrzData extractFromVisualText(String rectoPath, String versoPath) {
+        try {
+            String rectoText = ocrAllVariants(rectoPath);
+            String versoText = versoPath != null ? ocrAllVariants(versoPath) : "";
+            return parseVisualText(rectoText, versoText);
+        } catch (TesseractException | IOException e) {
+            LOG.error("Visual text extraction failed: {}", e.getMessage());
+            return invalidMrzData();
+        }
+    }
+
+    /**
+     * Parse identity fields from OCR text using multiple extraction strategies.
+     *
+     * Strategy 1: Label-based inline regex (e.g. "NOM / SURNAME: MIMBE")
+     * Strategy 2: Line-by-line keyword search (label on one line, value on next — common on old-format CNI)
+     * Strategy 3: Label-independent date extraction (find all DD.MM.YYYY, assign by heuristic)
+     *
+     * Package-private for unit testing.
+     *
+     * @param rectoText OCR text from the front of the card
+     * @param versoText OCR text from the back of the card
+     * @return MrzData with format="VISUAL", valid if at least nom + dateNaissance extracted
+     */
+    MrzData parseVisualText(String rectoText, String versoText) {
+        MrzData data = new MrzData();
+        data.setFormat("VISUAL");
+        data.setDocumentType("CNI");
+        data.setIssuingCountry("CMR");
+
+        String bothText = rectoText + "\n" + versoText;
+
+        // ========== PASS 1: Label-based inline regex (label + value on SAME LINE) ==========
+        // Use [ \t]* (not \s*) between label and value to prevent cross-line matching.
+        // Use literal space (not \s) in value group to avoid matching across newlines.
+        // Negative lookbehind prevents "NOM" matching inside "PRÉNOMS".
+
+        // --- NOM / SURNAME ---
+        Pattern nomPattern = Pattern.compile(
+            "(?<![A-Za-zÀ-Üà-ü])(?:NOM[ \t]*(?:[/|I][ \t]*SURNAME)?|SURNAME)[ \t]*:?[ \t]+([A-ZÀ-Ü][A-ZÀ-Ü \\-]{1,})",
+            Pattern.CASE_INSENSITIVE
+        );
+        String nom = findFirst(nomPattern, rectoText);
+        if (nom == null) nom = findFirst(nomPattern, bothText);
+        nom = isPlausibleName(nom) ? cleanNameValue(nom) : null;
+        if (nom != null) data.setNom(nom);
+
+        // --- PRENOMS / GIVEN NAMES ---
+        Pattern prenomPattern = Pattern.compile(
+            "(?:PR[EÉ]NOMS?[ \t]*(?:[/|I][ \t]*GIVEN[ \t]*NAMES?)?|GIVEN[ \t]*NAMES?)[ \t]*:?[ \t]+([A-ZÀ-Ü][A-ZÀ-Ü \\-]{1,})",
+            Pattern.CASE_INSENSITIVE
+        );
+        String prenom = findFirst(prenomPattern, rectoText);
+        if (prenom == null) prenom = findFirst(prenomPattern, bothText);
+        prenom = isPlausibleName(prenom) ? cleanNameValue(prenom) : null;
+        if (prenom != null) data.setPrenom(prenom);
+
+        // --- DATE DE NAISSANCE / DATE OF BIRTH (inline, same line) ---
+        Pattern dobPattern = Pattern.compile(
+            "(?:DATE[ \t]*DE[ \t]*NAISSANCE|DATE[ \t]*OF[ \t]*BIRTH|N[EÉ][E(]?[)]?[ \t]*LE)[ \t]*[:/]?[ \t]*(\\d{2}\\s*[./\\-\\s]\\s*\\d{2}\\s*[./\\-\\s]\\s*\\d{4})",
+            Pattern.CASE_INSENSITIVE
+        );
+        String dobStr = findFirst(dobPattern, rectoText);
+        if (dobStr == null) dobStr = findFirst(dobPattern, bothText);
+        if (dobStr != null) {
+            LocalDate dob = parseDateDMY(dobStr);
+            if (dob != null) data.setDateNaissance(dob);
+        }
+
+        // --- SEXE / SEX ---
+        Pattern sexPattern = Pattern.compile("(?:SEXE?)[ \t]*[:/]?[ \t]*([MF])\\b", Pattern.CASE_INSENSITIVE);
+        String sexe = findFirst(sexPattern, rectoText);
+        if (sexe == null) sexe = findFirst(sexPattern, bothText);
+        if (sexe != null) data.setSexe(sexe.toUpperCase());
+
+        // --- DATE D'EXPIRATION / DATE OF EXPIRY (inline, same line) ---
+        Pattern expiryPattern = Pattern.compile(
+            "(?:DATE[ \t]*D[''']?EXPIRATION|DATE[ \t]*OF[ \t]*EXPIRY|EXPIRE[ \t]*LE)[ \t]*[:/]?[ \t]*(\\d{2}\\s*[./\\-\\s]\\s*\\d{2}\\s*[./\\-\\s]\\s*\\d{4})",
+            Pattern.CASE_INSENSITIVE
+        );
+        String expiryStr = findFirst(expiryPattern, versoText);
+        if (expiryStr == null) expiryStr = findFirst(expiryPattern, bothText);
+        if (expiryStr != null) {
+            LocalDate expiry = parseDateDMY(expiryStr);
+            if (expiry != null) data.setDateExpiration(expiry);
+        }
+
+        // --- IDENTIFIANT UNIQUE / NIC ---
+        Pattern nicPattern = Pattern.compile(
+            "(?:IDENTIFIANT[ \t]*UNIQUE|UNIQUE[ \t]*IDENTIFIER|N[°o]?[ \t]*CNI)[ \t]*[:/]?[ \t]*([A-Z0-9]{5,})",
+            Pattern.CASE_INSENSITIVE
+        );
+        String nic = findFirst(nicPattern, versoText);
+        if (nic == null) nic = findFirst(nicPattern, bothText);
+        if (nic != null) data.setDocumentNumber(nic.toUpperCase());
+
+        // ========== PASS 2: Line-by-line keyword search ==========
+        // On old-format CNI, labels and values are on separate lines.
+        // The OCR may garble labels but keywords like NOM, PRENOM, NAISSANCE partially survive.
+
+        if (data.getNom() == null) {
+            String lineNom = extractValueAfterKeywordLine(bothText, "NOM", "SURNAM");
+            lineNom = cleanNameValue(lineNom);
+            if (lineNom != null) data.setNom(lineNom);
+        }
+
+        if (data.getPrenom() == null) {
+            String linePrenom = extractValueAfterKeywordLine(bothText, "PRENOM", "GIVEN");
+            linePrenom = cleanNameValue(linePrenom);
+            if (linePrenom != null) data.setPrenom(linePrenom);
+        }
+
+        if (data.getDateNaissance() == null) {
+            String lineDob = extractDateAfterKeywordLine(bothText, "NAISSANCE", "AISSANCE", "BIRTH");
+            if (lineDob != null) {
+                LocalDate dob = parseDateDMY(lineDob);
+                if (dob != null) data.setDateNaissance(dob);
+            }
+        }
+
+        if (data.getDateExpiration() == null) {
+            String lineExpiry = extractDateAfterKeywordLine(bothText, "EXPIR", "EXPI");
+            if (lineExpiry != null) {
+                LocalDate expiry = parseDateDMY(lineExpiry);
+                if (expiry != null) data.setDateExpiration(expiry);
+            }
+        }
+
+        // ========== PASS 3: Label-independent date extraction ==========
+        // Find ALL DD.MM.YYYY patterns and assign by heuristic:
+        // DOB = oldest date (before now - 5 years), Expiry = newest date (after now)
+        if (data.getDateNaissance() == null || data.getDateExpiration() == null) {
+            extractDatesByHeuristic(data, bothText);
+        }
+
+        // ========== PASS 4: Positional prenom extraction ==========
+        // On old-format CNI, the layout is always: NOM → PRÉNOMS → DATE DE NAISSANCE.
+        // If NOM and a date are found but PRENOM is missing, look for a name-like value
+        // between the NOM value and the first date in the text.
+        if (data.getPrenom() == null && data.getNom() != null) {
+            String positionalPrenom = extractPrenomByPosition(bothText, data.getNom());
+            positionalPrenom = cleanNameValue(positionalPrenom);
+            if (positionalPrenom != null) data.setPrenom(positionalPrenom);
+        }
+
+        // Valid if at least nom + dateNaissance are extracted
+        data.setValid(data.getNom() != null && data.getDateNaissance() != null);
+
+        LOG.info(
+            "parseVisualText result — valid={}, nom={}, prenom={}, dob={}, expiry={}, sex={}, nic={}",
+            data.isValid(),
+            data.getNom(),
+            data.getPrenom(),
+            data.getDateNaissance(),
+            data.getDateExpiration(),
+            data.getSexe(),
+            data.getDocumentNumber()
+        );
+
+        return data;
+    }
+
+    /**
+     * Check if a captured text looks like a real name value (not a label fragment).
+     * Rejects values containing common label keywords that indicate OCR captured
+     * part of the bilingual label instead of the actual value.
+     */
+    private boolean isPlausibleName(String text) {
+        if (text == null) return false;
+        String upper = text.toUpperCase().trim();
+        if (upper.length() < 2) return false;
+        String[] labelWords = {
+            "SURNAME",
+            "GIVEN",
+            "NAMES",
+            "BIRTH",
+            "NAISSANCE",
+            "DATE",
+            "EXPIR",
+            "IDENTITY",
+            "CAMEROUN",
+            "CAMEROON",
+            "NATIONAL",
+            "REPUBLIC",
+        };
+        for (String lw : labelWords) {
+            if (upper.contains(lw)) return false;
+        }
+        return true;
+    }
+
+    /** Common French/African name particles (2 chars) that are NOT OCR noise. */
+    private static final java.util.Set<String> NAME_PARTICLES = java.util.Set.of("DE", "DI", "DU", "DA", "EL", "AL", "LE", "LA", "EP");
+
+    /**
+     * Clean an extracted name value by removing trailing OCR noise fragments.
+     * Keeps real name words (>= 3 chars) and known particles (DE, DI, etc.).
+     * Stops when hitting short fragments (1-2 chars) after a real name word,
+     * as these are typically OCR artifacts from card design elements.
+     *
+     * Examples: "ETONGO SR LEE" → "ETONGO", "LUCIEN YANNICK" → "LUCIEN YANNICK",
+     *           "KAMENI EPSE MIMBE" → "KAMENI EPSE MIMBE", "DE LA FONTAINE" → "DE LA FONTAINE"
+     */
+    private String cleanNameValue(String raw) {
+        if (raw == null || raw.isEmpty()) return null;
+        String[] words = raw.toUpperCase().trim().split("\\s+");
+
+        List<String> result = new ArrayList<>();
+        boolean hadRealWord = false;
+
+        for (String word : words) {
+            boolean isReal = word.length() >= 3;
+            boolean isParticle = NAME_PARTICLES.contains(word);
+
+            if (isReal || isParticle) {
+                result.add(word);
+                if (isReal) hadRealWord = true;
+            } else if (hadRealWord) {
+                // Short non-particle word after a real name → likely OCR noise, stop
+                break;
+            }
+            // Skip leading single-char noise (rare, but possible from OCR)
+        }
+
+        return result.isEmpty() ? null : String.join(" ", result);
+    }
+
+    /**
+     * Check if a text line contains a keyword, with accent normalization and word-boundary
+     * checking for short keywords (≤4 chars like "NOM") to avoid false matches
+     * inside longer words (e.g. "NOM" inside "PRÉNOMS").
+     */
+    private boolean lineContainsKeyword(String line, String keyword) {
+        String normalized = Normalizer.normalize(line, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toUpperCase();
+        String kw = keyword.toUpperCase();
+        int idx = normalized.indexOf(kw);
+        while (idx >= 0) {
+            // For short keywords (≤4 chars), require that preceding char is not a letter
+            if (kw.length() > 4 || idx == 0 || !Character.isLetter(normalized.charAt(idx - 1))) {
+                return true;
+            }
+            idx = normalized.indexOf(kw, idx + 1);
+        }
+        return false;
+    }
+
+    /**
+     * Find a line containing any of the given keywords, then return the next non-empty line
+     * as a cleaned name value (uppercase letters, spaces, hyphens only).
+     * Handles old-format CNI where labels and values are on separate lines.
+     */
+    private String extractValueAfterKeywordLine(String text, String... keywords) {
+        String[] lines = text.split("\\n");
+        for (int i = 0; i < lines.length - 1; i++) {
+            for (String keyword : keywords) {
+                if (lineContainsKeyword(lines[i], keyword)) {
+                    // Found a label line — look for the next non-empty line with name-like content
+                    for (int j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+                        String valueLine = lines[j].trim();
+                        if (valueLine.isEmpty()) continue;
+                        // Clean: keep only uppercase letters, accented chars, spaces, hyphens
+                        String cleaned = valueLine.replaceAll("[^A-ZÀ-Üa-zà-ü \\-]", "").trim().toUpperCase();
+                        // Must be a plausible name (2+ chars, not a label keyword itself)
+                        if (cleaned.length() >= 2 && isPlausibleName(cleaned) && !looksLikeLabel(cleaned)) {
+                            return cleaned;
+                        }
+                    }
+                    break; // Found the keyword line but no valid value — don't keep searching
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if a text line looks like a label rather than a value.
+     * Labels typically contain multiple keywords from the bilingual format.
+     */
+    private boolean looksLikeLabel(String text) {
+        int labelWords = 0;
+        String[] labelKeywords = {
+            "NOM",
+            "SURNAME",
+            "PRENOM",
+            "GIVEN",
+            "NAME",
+            "DATE",
+            "NAISSANCE",
+            "BIRTH",
+            "SEXE",
+            "SEX",
+            "TAILLE",
+            "HEIGHT",
+            "LIEU",
+            "PLACE",
+            "PROFESSION",
+            "OCCUPATION",
+        };
+        for (String kw : labelKeywords) {
+            if (text.contains(kw)) labelWords++;
+        }
+        return labelWords >= 2;
+    }
+
+    /**
+     * Find a line containing any of the given keywords, then extract a DD.MM.YYYY date
+     * from the same line or next lines.
+     */
+    private String extractDateAfterKeywordLine(String text, String... keywords) {
+        Pattern datePattern = Pattern.compile("(\\d{2}\\s*[./\\-]\\s*\\d{2}\\s*[./\\-]\\s*\\d{4})");
+        String[] lines = text.split("\\n");
+        for (int i = 0; i < lines.length; i++) {
+            for (String keyword : keywords) {
+                if (lineContainsKeyword(lines[i], keyword)) {
+                    // Look for date on this line or the next few lines
+                    for (int j = i; j < Math.min(i + 3, lines.length); j++) {
+                        Matcher m = datePattern.matcher(lines[j]);
+                        if (m.find()) return m.group(1);
+                    }
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract all DD.MM.YYYY dates from text and assign DOB/expiry by heuristic:
+     * DOB = oldest date before (now - 5 years), Expiry = newest date after now.
+     */
+    private void extractDatesByHeuristic(MrzData data, String text) {
+        Pattern datePattern = Pattern.compile("(\\d{2})\\s*[./\\-,;:\\s]\\s*(\\d{2})\\s*[./\\-,;:\\s]\\s*(\\d{4})");
+        LocalDate now = LocalDate.now();
+        List<LocalDate> allDates = new ArrayList<>();
+
+        Matcher matcher = datePattern.matcher(text);
+        while (matcher.find()) {
+            try {
+                int dd = Integer.parseInt(matcher.group(1));
+                int mm = Integer.parseInt(matcher.group(2));
+                int yyyy = Integer.parseInt(matcher.group(3));
+                if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900 || yyyy > 2100) continue;
+                allDates.add(LocalDate.of(yyyy, mm, dd));
+            } catch (Exception e) {
+                // skip invalid date
+            }
+        }
+
+        for (LocalDate d : allDates) {
+            if (data.getDateNaissance() == null && d.isBefore(now.minusYears(5))) {
+                data.setDateNaissance(d);
+            } else if (data.getDateExpiration() == null && d.isAfter(now)) {
+                data.setDateExpiration(d);
+            }
+        }
+    }
+
+    /**
+     * Positional prenom extraction: on old-format CNI, the layout is NOM → PRÉNOMS → DOB.
+     * Find the line containing the NOM value, then look for name-like lines after it
+     * (before the first date). The first plausible name that differs from NOM is the prenom.
+     */
+    private String extractPrenomByPosition(String text, String nomValue) {
+        Pattern datePattern = Pattern.compile("\\d{2}\\s*[./\\-]\\s*\\d{2}\\s*[./\\-]\\s*\\d{4}");
+        String[] lines = text.split("\\n");
+        boolean foundNom = false;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+
+            // Stop at the first date line after NOM
+            if (foundNom && datePattern.matcher(trimmed).find()) {
+                break;
+            }
+
+            // Look for the NOM value line
+            if (!foundNom && trimmed.toUpperCase().contains(nomValue.toUpperCase())) {
+                foundNom = true;
+                continue;
+            }
+
+            // After NOM, look for a name-like line
+            if (foundNom) {
+                String cleaned = trimmed.replaceAll("[^A-ZÀ-Üa-zà-ü \\-]", "").trim().toUpperCase();
+                if (
+                    cleaned.length() >= 2 && isPlausibleName(cleaned) && !looksLikeLabel(cleaned) && !cleaned.equals(nomValue.toUpperCase())
+                ) {
+                    // Apply cleanNameValue to filter OCR noise; skip if nothing survives
+                    String cleanedName = cleanNameValue(cleaned);
+                    if (cleanedName != null) {
+                        return cleanedName;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find the first match of a pattern's group(1) in the given text.
+     */
+    private String findFirst(Pattern pattern, String text) {
+        if (text == null || text.isEmpty()) return null;
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+        return null;
+    }
+
+    /**
+     * Parse a DD.MM.YYYY or DD/MM/YYYY date string (with possible spaces around separators).
+     */
+    private LocalDate parseDateDMY(String dateStr) {
+        // Normalize: replace any separator (dot, slash, dash, space) with dot, then split
+        String normalized = dateStr.trim().replaceAll("[./\\-\\s]+", ".");
+        String[] parts = normalized.split("\\.");
+        if (parts.length != 3) return null;
+        try {
+            int dd = Integer.parseInt(parts[0]);
+            int mm = Integer.parseInt(parts[1]);
+            int yyyy = Integer.parseInt(parts[2]);
+            if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900 || yyyy > 2100) return null;
+            return LocalDate.of(yyyy, mm, dd);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -825,5 +1311,179 @@ public class CniVerificationService {
         }
 
         peopleRepository.save(people);
+    }
+
+    /**
+     * Check if extracted data is incomplete: valid but missing key fields
+     * (prenom, dateExpiration, or documentNumber).
+     * Package-private for unit testing.
+     */
+    boolean isIncomplete(MrzData data) {
+        if (!data.isValid()) return false;
+        return data.getPrenom() == null || data.getDateExpiration() == null || data.getDocumentNumber() == null;
+    }
+
+    /**
+     * Merge AI vision data into existing partial data: copy non-null fields from source
+     * to target only when target has a null field.
+     * Package-private for unit testing.
+     */
+    void mergeVisualData(MrzData target, MrzData source) {
+        if (target.getNom() == null && source.getNom() != null) target.setNom(source.getNom());
+        if (target.getPrenom() == null && source.getPrenom() != null) target.setPrenom(source.getPrenom());
+        if (target.getDateNaissance() == null && source.getDateNaissance() != null) target.setDateNaissance(source.getDateNaissance());
+        if (target.getDateExpiration() == null && source.getDateExpiration() != null) target.setDateExpiration(source.getDateExpiration());
+        if (target.getDocumentNumber() == null && source.getDocumentNumber() != null) target.setDocumentNumber(source.getDocumentNumber());
+        if (target.getSexe() == null && source.getSexe() != null) target.setSexe(source.getSexe());
+    }
+
+    private static final String VISION_PROMPT =
+        "Lis cette carte d'identité. Retourne UNIQUEMENT un JSON avec les champs :\n" +
+        "{\"nom\":\"...\",\"prenom\":\"...\",\"dateNaissance\":\"DD.MM.YYYY\",\"sexe\":\"M/F\"," +
+        "\"dateExpiration\":\"DD.MM.YYYY\",\"documentNumber\":\"...\"}\n" +
+        "Mets null pour les champs non lisibles. Ne retourne rien d'autre que le JSON.";
+
+    /**
+     * Extract identity fields from card images using Claude Vision API.
+     * Only called when Tesseract-based extraction failed or produced incomplete results.
+     */
+    private MrzData extractFromVision(String rectoPath, String versoPath) {
+        ApplicationProperties.Anthropic config = applicationProperties.getAnthropic();
+        if (!config.isEnabled() || config.getApiKey() == null || config.getApiKey().isBlank()) {
+            LOG.info("AI vision extraction skipped — Anthropic API not configured");
+            return invalidMrzData();
+        }
+
+        try {
+            List<ContentBlockParam> contentBlocks = new ArrayList<>();
+
+            // Add recto image
+            ContentBlockParam rectoBlock = buildImageBlock(rectoPath);
+            if (rectoBlock == null) return invalidMrzData();
+            contentBlocks.add(rectoBlock);
+
+            // Add verso image if available
+            if (versoPath != null) {
+                ContentBlockParam versoBlock = buildImageBlock(versoPath);
+                if (versoBlock != null) {
+                    contentBlocks.add(versoBlock);
+                }
+            }
+
+            // Add text prompt
+            contentBlocks.add(ContentBlockParam.ofText(TextBlockParam.builder().text(VISION_PROMPT).build()));
+
+            AnthropicClient client = AnthropicOkHttpClient.builder().apiKey(config.getApiKey()).build();
+
+            MessageCreateParams params = MessageCreateParams.builder()
+                .model(config.getModel())
+                .maxTokens(512L)
+                .addUserMessageOfBlockParams(contentBlocks)
+                .build();
+
+            Message message = client.messages().create(params);
+
+            // Extract text from response
+            StringBuilder responseText = new StringBuilder();
+            message.content().stream().flatMap(block -> block.text().stream()).forEach(textBlock -> responseText.append(textBlock.text()));
+
+            String jsonResponse = responseText.toString().trim();
+            LOG.info("AI vision response: {}", jsonResponse);
+
+            return parseVisionJson(jsonResponse);
+        } catch (Exception e) {
+            LOG.error("AI vision extraction failed: {}", e.getMessage());
+            return invalidMrzData();
+        }
+    }
+
+    /**
+     * Build a base64 image content block for the Claude API from a file path.
+     */
+    private ContentBlockParam buildImageBlock(String imagePath) {
+        try {
+            byte[] imageBytes = Files.readAllBytes(Path.of(imagePath));
+            String base64 = Base64.getEncoder().encodeToString(imageBytes);
+
+            Base64ImageSource.MediaType mediaType;
+            String lower = imagePath.toLowerCase();
+            if (lower.endsWith(".png")) {
+                mediaType = Base64ImageSource.MediaType.IMAGE_PNG;
+            } else if (lower.endsWith(".gif")) {
+                mediaType = Base64ImageSource.MediaType.IMAGE_GIF;
+            } else if (lower.endsWith(".webp")) {
+                mediaType = Base64ImageSource.MediaType.IMAGE_WEBP;
+            } else {
+                mediaType = Base64ImageSource.MediaType.IMAGE_JPEG;
+            }
+
+            return ContentBlockParam.ofImage(
+                ImageBlockParam.builder().source(Base64ImageSource.builder().mediaType(mediaType).data(base64).build()).build()
+            );
+        } catch (IOException e) {
+            LOG.error("Failed to read image for vision: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Parse the JSON response from Claude Vision into MrzData.
+     * Package-private for unit testing.
+     */
+    MrzData parseVisionJson(String json) {
+        MrzData data = new MrzData();
+        data.setFormat("AI_VISION");
+        data.setDocumentType("CNI");
+        data.setIssuingCountry("CMR");
+
+        try {
+            // Strip markdown code fences if present
+            String cleaned = json.trim();
+            if (cleaned.startsWith("```")) {
+                cleaned = cleaned.replaceAll("^```[a-z]*\\s*", "").replaceAll("\\s*```$", "").trim();
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(cleaned);
+
+            if (node.has("nom") && !node.get("nom").isNull()) {
+                data.setNom(node.get("nom").asText().toUpperCase().trim());
+            }
+            if (node.has("prenom") && !node.get("prenom").isNull()) {
+                data.setPrenom(node.get("prenom").asText().toUpperCase().trim());
+            }
+            if (node.has("dateNaissance") && !node.get("dateNaissance").isNull()) {
+                LocalDate dob = parseDateDMY(node.get("dateNaissance").asText());
+                if (dob != null) data.setDateNaissance(dob);
+            }
+            if (node.has("sexe") && !node.get("sexe").isNull()) {
+                data.setSexe(node.get("sexe").asText().toUpperCase().trim());
+            }
+            if (node.has("dateExpiration") && !node.get("dateExpiration").isNull()) {
+                LocalDate expiry = parseDateDMY(node.get("dateExpiration").asText());
+                if (expiry != null) data.setDateExpiration(expiry);
+            }
+            if (node.has("documentNumber") && !node.get("documentNumber").isNull()) {
+                data.setDocumentNumber(node.get("documentNumber").asText().toUpperCase().trim());
+            }
+
+            data.setValid(data.getNom() != null && data.getDateNaissance() != null);
+
+            LOG.info(
+                "parseVisionJson result — valid={}, nom={}, prenom={}, dob={}, expiry={}, sex={}, doc={}",
+                data.isValid(),
+                data.getNom(),
+                data.getPrenom(),
+                data.getDateNaissance(),
+                data.getDateExpiration(),
+                data.getSexe(),
+                data.getDocumentNumber()
+            );
+        } catch (Exception e) {
+            LOG.error("Failed to parse AI vision JSON response: {}", e.getMessage());
+            data.setValid(false);
+        }
+
+        return data;
     }
 }
