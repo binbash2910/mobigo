@@ -365,7 +365,7 @@ public class CniMrzParserService {
         for (int i = 5; i < line.length(); i++) {
             sb.append(ensureLetter(line.charAt(i)));
         }
-        return sb.toString();
+        return restoreTrailingFillers(sb.toString(), 5);
     }
 
     /**
@@ -414,7 +414,7 @@ public class CniMrzParserService {
         for (int i = 5; i < line.length(); i++) {
             sb.append(ensureLetter(line.charAt(i)));
         }
-        return sb.toString();
+        return restoreTrailingFillers(sb.toString(), 5);
     }
 
     /**
@@ -442,7 +442,7 @@ public class CniMrzParserService {
         for (int i = 0; i < line.length(); i++) {
             sb.append(ensureLetter(line.charAt(i)));
         }
-        return sb.toString();
+        return restoreTrailingFillers(sb.toString(), 0);
     }
 
     /**
@@ -481,6 +481,64 @@ public class CniMrzParserService {
             case 'T' -> '7';
             default -> '0';
         };
+    }
+
+    /**
+     * Restore trailing '<' fillers in MRZ name fields that were misread as letters by OCR.
+     *
+     * In MRZ name fields, '<' is used as filler to pad names to the required field length.
+     * OCR commonly misreads '<' as L, C, S, or K due to visual similarity in the MRZ font.
+     * This method detects trailing runs of such confusion characters and converts them back to '<'.
+     *
+     * Safety: only applies when the trailing run has >= 5 misread letters AND L makes up
+     * the majority, which is virtually impossible in real names but common in misread fillers.
+     */
+    private String restoreTrailingFillers(String line, int nameStart) {
+        if (line == null || line.length() <= nameStart) return line;
+
+        char[] chars = line.toCharArray();
+
+        // Scan from right: find where the trailing confusion-character run starts
+        int runStart = chars.length;
+        for (int i = chars.length - 1; i >= nameStart; i--) {
+            char c = chars[i];
+            if (c == '<' || c == 'L' || c == 'S' || c == 'C' || c == 'K') {
+                runStart = i;
+            } else {
+                break;
+            }
+        }
+
+        int runLength = chars.length - runStart;
+        if (runLength < 5) return line;
+
+        // Count misread letters (not already '<') and L occurrences in the run
+        int letterCount = 0;
+        int lCount = 0;
+        for (int i = runStart; i < chars.length; i++) {
+            if (chars[i] != '<') {
+                letterCount++;
+                if (chars[i] == 'L') lCount++;
+            }
+        }
+
+        // Only restore if enough misread letters AND L dominates (most common '<' misread)
+        if (letterCount >= 5 && lCount * 2 >= letterCount) {
+            LOG.debug(
+                "Restoring {} trailing fillers ({}L of {} letters, run={}) in: {}",
+                letterCount,
+                lCount,
+                letterCount,
+                runLength,
+                line.substring(nameStart)
+            );
+            for (int i = runStart; i < chars.length; i++) {
+                chars[i] = '<';
+            }
+            return new String(chars);
+        }
+
+        return line;
     }
 
     /**

@@ -733,6 +733,14 @@ public class CniVerificationService {
             return true;
         }
 
+        // Compact comparison: remove spaces/dashes and compare full strings
+        // Handles concatenated names from misread '<' separators (e.g. "CYRILLESANICET" vs "CYRILLE ANICET")
+        String mrzCompact = normalizedMrz.replace(" ", "").replace("-", "");
+        String profileCompact = normalizedProfile.replace(" ", "").replace("-", "");
+        if (mrzCompact.length() >= 4 && profileCompact.length() >= 4 && levenshtein(mrzCompact, profileCompact) <= 2) {
+            return true;
+        }
+
         // Check if any word in MRZ matches any word in profile (exact or fuzzy)
         String[] mrzParts = normalizedMrz.split("\\s+");
         String[] profileParts = normalizedProfile.split("\\s+");

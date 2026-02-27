@@ -189,6 +189,54 @@ class CniMrzParserServiceTest {
     }
 
     @Test
+    void shouldRestoreTrailingFillersInPassportNameLine() {
+        // OCR reads '<' as L, S, C in the name portion — a common Tesseract misread
+        // Actual MRZ: POCMRMIGUIM<<CYRILLE<ANICET<<<<<<<<<<<<<<<<<
+        // OCR reads:  POCMRMIGUIM<<CYRILLESANICETSLLCLLLLLLLLLLLLS
+        String mrz = "POCMRMIGUIM<<CYRILLESANICETSLLCLLLLLLLLLLLLS\n" + "AA678324<8CMR8404143M2811224<<<<<<<<<<<<<<08";
+
+        MrzData result = parser.parseMrz(mrz);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getFormat()).isEqualTo("TD3");
+        assertThat(result.getDocumentType()).isEqualTo("PASSPORT");
+        assertThat(result.getIssuingCountry()).isEqualTo("CMR");
+        assertThat(result.getNom()).isEqualTo("MIGUIM");
+        // Trailing misread fillers (SLLCLLLLLLLLLLLLS) should be restored to '<' fillers
+        assertThat(result.getPrenom()).doesNotContain("LLLLL");
+        assertThat(result.getPrenom()).startsWith("CYRILLE");
+        assertThat(result.getDocumentNumber()).isEqualTo("AA678324");
+        assertThat(result.getDateNaissance()).isEqualTo(LocalDate.of(1984, 4, 14));
+        assertThat(result.getDateExpiration()).isEqualTo(LocalDate.of(2028, 11, 22));
+        assertThat(result.getSexe()).isEqualTo("M");
+    }
+
+    @Test
+    void shouldNotCorruptNamesWhenFillersAreCorrect() {
+        // When OCR correctly reads '<' fillers, restoreTrailingFillers should NOT alter names
+        String mrz = "P<CMRMIMBE<<LUCIEN<YANNICK<<<<<<<<<<<<<<<<<\n" + "AB12345671CMR8610191M3504201<<<<<<<<<<<<<<<0";
+
+        MrzData result = parser.parseMrz(mrz);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getNom()).isEqualTo("MIMBE");
+        assertThat(result.getPrenom()).isEqualTo("LUCIEN YANNICK");
+    }
+
+    @Test
+    void shouldHandleTd1WithMisreadTrailingFillers() {
+        // TD1 name line (line 3) with trailing fillers misread as L/S/C
+        String mrz = "IDCMR1234567891<<<<<<<<<<<<<<<\n" + "8610191M3504201CMR<<<<<<<<<<<<7\n" + "MIMBE<<LUCIEN<YANNICKSLLLLLLLL";
+
+        MrzData result = parser.parseMrz(mrz);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getNom()).isEqualTo("MIMBE");
+        assertThat(result.getPrenom()).doesNotContain("LLLLL");
+        assertThat(result.getPrenom()).startsWith("LUCIEN");
+    }
+
+    @Test
     void shouldReturnInvalidForEmptyText() {
         MrzData result = parser.parseMrz("");
         assertThat(result.isValid()).isFalse();
