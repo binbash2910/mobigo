@@ -55,7 +55,13 @@
       "WebFetch(domain:render.com)",
       "Bash(tail:*)",
       "Bash(grep:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(./mvnw dependency:tree:*)",
+      "Bash(jar tf:*)",
+      "Bash(javap:*)",
+      "Bash(jar xf:*)",
+      "Bash(./mvnw test:*)",
+      "Bash(xargs basename:*)"
     ]
   }
 }

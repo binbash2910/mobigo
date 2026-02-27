@@ -27,7 +27,7 @@ RUN apt-get update && \
 
 RUN mkdir -p /app/logs /app/data/images/people /app/data/images/vehicles /app/data/images/cni
 
-ENV JAVA_OPTS="-Xmx300m -Xms128m -XX:MaxMetaspaceSize=128m"
+ENV JAVA_OPTS="-Xmx1024m -Xms512m -XX:MaxMetaspaceSize=256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:MaxDirectMemorySize=128m"
 COPY --from=build /app/target/mobigo-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar app.jar"]

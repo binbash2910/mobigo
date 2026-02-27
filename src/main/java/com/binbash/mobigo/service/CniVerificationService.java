@@ -10,6 +10,7 @@ import com.binbash.mobigo.service.dto.CniVerificationDTO;
 import com.binbash.mobigo.service.dto.MrzData;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
@@ -56,6 +57,9 @@ public class CniVerificationService {
     private final CniMrzParserService mrzParserService;
     private final FileStorageService fileStorageService;
 
+    /** Singleton Anthropic client — lazy-initialized on first Vision call, reused across requests. */
+    private volatile AnthropicClient anthropicClient;
+
     public CniVerificationService(
         ApplicationProperties applicationProperties,
         PeopleRepository peopleRepository,
@@ -66,6 +70,29 @@ public class CniVerificationService {
         this.peopleRepository = peopleRepository;
         this.mrzParserService = mrzParserService;
         this.fileStorageService = fileStorageService;
+    }
+
+    @PreDestroy
+    void closeAnthropicClient() {
+        if (anthropicClient != null) {
+            try {
+                anthropicClient.close();
+            } catch (Exception e) {
+                LOG.debug("Error closing Anthropic client: {}", e.getMessage());
+            }
+        }
+    }
+
+    private AnthropicClient getOrCreateAnthropicClient(ApplicationProperties.Anthropic config) {
+        if (anthropicClient == null) {
+            synchronized (this) {
+                if (anthropicClient == null) {
+                    anthropicClient = AnthropicOkHttpClient.builder().apiKey(config.getApiKey()).build();
+                    LOG.info("Anthropic client initialized (singleton)");
+                }
+            }
+        }
+        return anthropicClient;
     }
 
     /**
@@ -1373,7 +1400,7 @@ public class CniVerificationService {
             // Add text prompt
             contentBlocks.add(ContentBlockParam.ofText(TextBlockParam.builder().text(VISION_PROMPT).build()));
 
-            AnthropicClient client = AnthropicOkHttpClient.builder().apiKey(config.getApiKey()).build();
+            AnthropicClient client = getOrCreateAnthropicClient(config);
 
             MessageCreateParams params = MessageCreateParams.builder()
                 .model(config.getModel())
