@@ -61,7 +61,10 @@
       "Bash(javap:*)",
       "Bash(jar xf:*)",
       "Bash(./mvnw test:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(ls:*)",
+      "Bash(wmic process:*)",
+      "Bash(tasklist:*)"
     ]
   }
 }

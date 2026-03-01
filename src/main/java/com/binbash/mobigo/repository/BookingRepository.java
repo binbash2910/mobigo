@@ -4,6 +4,8 @@ import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -46,4 +48,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b JOIN b.trajet r WHERE r.createdBy = :login")
     List<Booking> findByTrajetCreatedBy(@Param("login") String login);
+
+    @Query(
+        value = "SELECT b FROM Booking b " + "JOIN FETCH b.passager JOIN FETCH b.trajet " + "WHERE (:statut IS NULL OR b.statut = :statut)",
+        countQuery = "SELECT COUNT(b) FROM Booking b " + "WHERE (:statut IS NULL OR b.statut = :statut)"
+    )
+    Page<Booking> findAllForAdmin(@Param("statut") BookingStatusEnum statut, Pageable pageable);
 }
