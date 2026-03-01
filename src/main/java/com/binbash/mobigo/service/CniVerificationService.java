@@ -152,22 +152,13 @@ public class CniVerificationService {
             }
         }
 
-        // 4b. If MRZ failed entirely, try visual text extraction (for old-format CNI without MRZ)
-        if (!mrzData.isValid()) {
-            LOG.info("MRZ extraction failed — attempting visual text extraction for people {}", peopleId);
-            MrzData visualData = extractFromVisualText(rectoPath, versoPath);
-            if (visualData.isValid()) {
-                mrzData = visualData;
-            }
-        }
-
-        // 4c. AI Vision fallback — if Tesseract visual extraction failed or incomplete
+        // 4b. AI Vision — si MRZ a échoué ou est incomplet
         if (!mrzData.isValid() || isIncomplete(mrzData)) {
-            LOG.info("Attempting AI vision extraction for people {}", peopleId);
+            LOG.info("MRZ insufficient — attempting AI vision extraction for people {}", peopleId);
             MrzData visionData = extractFromVision(rectoPath, versoPath);
             if (visionData.isValid()) {
                 if (mrzData.isValid()) {
-                    // Tesseract got some fields — AI fills the gaps
+                    // MRZ a des champs partiels — Vision comble les lacunes
                     mergeVisualData(mrzData, visionData);
                 } else {
                     mrzData = visionData;
@@ -1365,10 +1356,23 @@ public class CniVerificationService {
     }
 
     private static final String VISION_PROMPT =
-        "Lis cette carte d'identité. Retourne UNIQUEMENT un JSON avec les champs :\n" +
+        "Tu reçois 2 images d'une carte d'identité nationale (CNI) : la première est le RECTO (face avant), la seconde est le VERSO (face arrière).\n\n" +
+        "FORMATS POSSIBLES :\n" +
+        "- CNI camerounaise ancienne (v1) : pas de zone MRZ, texte imprimé avec étiquettes comme NOM/NAME, PRENOM/SURNAME, DATE DE NAISSANCE/DATE OF BIRTH, SEXE/SEX.\n" +
+        "- CNI camerounaise récente (v2) : avec zone MRZ en bas du verso.\n" +
+        "- CNI française : format carte bancaire, MRZ au verso.\n\n" +
+        "OÙ TROUVER LES CHAMPS :\n" +
+        "- RECTO : nom de famille, prénom(s), date de naissance, sexe, parfois numéro de document.\n" +
+        "- VERSO : date d'expiration (ou date de validité), numéro de document (si pas au recto).\n\n" +
+        "INSTRUCTIONS :\n" +
+        "- Lis le TEXTE IMPRIMÉ visible sur les images. Ne devine pas, ne fabrique pas de données.\n" +
+        "- Pour le nom et prénom, lis la valeur APRÈS l'étiquette (ex: après \"NOM/NAME :\" ou \"SURNAME :\").\n" +
+        "- Les dates sont au format DD.MM.YYYY (ex: 16.04.1999).\n" +
+        "- Le sexe est M ou F.\n\n" +
+        "Retourne UNIQUEMENT un JSON (sans markdown, sans explication) :\n" +
         "{\"nom\":\"...\",\"prenom\":\"...\",\"dateNaissance\":\"DD.MM.YYYY\",\"sexe\":\"M/F\"," +
         "\"dateExpiration\":\"DD.MM.YYYY\",\"documentNumber\":\"...\"}\n" +
-        "Mets null pour les champs non lisibles. Ne retourne rien d'autre que le JSON.";
+        "Mets null pour les champs non lisibles.";
 
     /**
      * Extract identity fields from card images using Claude Vision API.
@@ -1384,13 +1388,15 @@ public class CniVerificationService {
         try {
             List<ContentBlockParam> contentBlocks = new ArrayList<>();
 
-            // Add recto image
+            // Add recto label + image
+            contentBlocks.add(ContentBlockParam.ofText(TextBlockParam.builder().text("RECTO (face avant de la carte) :").build()));
             ContentBlockParam rectoBlock = buildImageBlock(rectoPath);
             if (rectoBlock == null) return invalidMrzData();
             contentBlocks.add(rectoBlock);
 
-            // Add verso image if available
+            // Add verso label + image if available
             if (versoPath != null) {
+                contentBlocks.add(ContentBlockParam.ofText(TextBlockParam.builder().text("VERSO (face arrière de la carte) :").build()));
                 ContentBlockParam versoBlock = buildImageBlock(versoPath);
                 if (versoBlock != null) {
                     contentBlocks.add(versoBlock);
