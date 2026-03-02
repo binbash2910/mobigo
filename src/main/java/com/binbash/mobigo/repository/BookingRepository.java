@@ -50,8 +50,20 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByTrajetCreatedBy(@Param("login") String login);
 
     @Query(
-        value = "SELECT b FROM Booking b " + "JOIN FETCH b.passager JOIN FETCH b.trajet " + "WHERE (:statut IS NULL OR b.statut = :statut)",
-        countQuery = "SELECT COUNT(b) FROM Booking b " + "WHERE (:statut IS NULL OR b.statut = :statut)"
+        value = "SELECT b FROM Booking b " +
+        "JOIN FETCH b.passager p JOIN FETCH b.trajet r " +
+        "WHERE (:search IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(p.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(r.villeDepart) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(r.villeArrivee) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+        "AND (:statut IS NULL OR b.statut = :statut)",
+        countQuery = "SELECT COUNT(b) FROM Booking b " +
+        "JOIN b.passager p JOIN b.trajet r " +
+        "WHERE (:search IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(p.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(r.villeDepart) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(r.villeArrivee) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+        "AND (:statut IS NULL OR b.statut = :statut)"
     )
-    Page<Booking> findAllForAdmin(@Param("statut") BookingStatusEnum statut, Pageable pageable);
+    Page<Booking> findAllForAdmin(@Param("search") String search, @Param("statut") BookingStatusEnum statut, Pageable pageable);
 }

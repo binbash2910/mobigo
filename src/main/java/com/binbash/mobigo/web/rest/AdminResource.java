@@ -214,9 +214,14 @@ public class AdminResource {
      */
     @GetMapping("/bookings")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<List<Map<String, Object>>> getAllBookings(Pageable pageable, @RequestParam(required = false) String statut) {
-        LOG.debug("REST request to get admin bookings - statut: {}", statut);
+    public ResponseEntity<List<Map<String, Object>>> getAllBookings(
+        Pageable pageable,
+        @RequestParam(required = false) String search,
+        @RequestParam(required = false) String statut
+    ) {
+        LOG.debug("REST request to get admin bookings - search: {}, statut: {}", search, statut);
 
+        String searchParam = (search != null && !search.isBlank()) ? search : null;
         BookingStatusEnum statutEnum = null;
         if (statut != null && !statut.isBlank()) {
             try {
@@ -226,7 +231,7 @@ public class AdminResource {
             }
         }
 
-        Page<Booking> bookingPage = bookingRepository.findAllForAdmin(statutEnum, pageable);
+        Page<Booking> bookingPage = bookingRepository.findAllForAdmin(searchParam, statutEnum, pageable);
 
         List<Map<String, Object>> result = bookingPage
             .getContent()
@@ -271,17 +276,19 @@ public class AdminResource {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getAllVerifications(
         Pageable pageable,
+        @RequestParam(required = false) String search,
         @RequestParam(required = false) String cniStatut
     ) {
-        LOG.debug("REST request to get admin verifications - cniStatut: {}", cniStatut);
+        LOG.debug("REST request to get admin verifications - search: {}, cniStatut: {}", search, cniStatut);
 
+        String searchParam = (search != null && !search.isBlank()) ? search : null;
         String cniStatutParam = (cniStatut != null && !cniStatut.isBlank()) ? cniStatut : null;
 
         Page<People> peoplePage;
         if ("NOT_VERIFIED".equals(cniStatutParam)) {
-            peoplePage = peopleRepository.findAllNotVerified(pageable);
+            peoplePage = peopleRepository.findAllNotVerified(searchParam, pageable);
         } else {
-            peoplePage = peopleRepository.findAllWithCniSubmitted(cniStatutParam, pageable);
+            peoplePage = peopleRepository.findAllWithCniSubmitted(searchParam, cniStatutParam, pageable);
         }
 
         List<Map<String, Object>> result = peoplePage

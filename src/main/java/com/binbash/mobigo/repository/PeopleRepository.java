@@ -20,16 +20,26 @@ public interface PeopleRepository extends JpaRepository<People, Long> {
     @Query(
         value = "SELECT p FROM People p LEFT JOIN FETCH p.user " +
         "WHERE p.cniStatut IS NOT NULL " +
-        "AND (:cniStatut IS NULL OR p.cniStatut = CAST(:cniStatut AS string))",
+        "AND (:cniStatut IS NULL OR p.cniStatut = CAST(:cniStatut AS string))" +
+        "AND (:search IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(p.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))",
         countQuery = "SELECT COUNT(p) FROM People p " +
         "WHERE p.cniStatut IS NOT NULL " +
-        "AND (:cniStatut IS NULL OR p.cniStatut = CAST(:cniStatut AS string))"
+        "AND (:cniStatut IS NULL OR p.cniStatut = CAST(:cniStatut AS string))" +
+        "AND (:search IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(p.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))"
     )
-    Page<People> findAllWithCniSubmitted(@Param("cniStatut") String cniStatut, Pageable pageable);
+    Page<People> findAllWithCniSubmitted(@Param("search") String search, @Param("cniStatut") String cniStatut, Pageable pageable);
 
     @Query(
-        value = "SELECT p FROM People p LEFT JOIN FETCH p.user " + "WHERE p.cniStatut IS NOT NULL AND p.cniStatut <> 'VERIFIED'",
-        countQuery = "SELECT COUNT(p) FROM People p " + "WHERE p.cniStatut IS NOT NULL AND p.cniStatut <> 'VERIFIED'"
+        value = "SELECT p FROM People p LEFT JOIN FETCH p.user " +
+        "WHERE p.cniStatut IS NOT NULL AND p.cniStatut <> 'VERIFIED' " +
+        "AND (:search IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(p.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))",
+        countQuery = "SELECT COUNT(p) FROM People p " +
+        "WHERE p.cniStatut IS NOT NULL AND p.cniStatut <> 'VERIFIED' " +
+        "AND (:search IS NULL OR LOWER(p.nom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+        "OR LOWER(p.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))"
     )
-    Page<People> findAllNotVerified(Pageable pageable);
+    Page<People> findAllNotVerified(@Param("search") String search, Pageable pageable);
 }
