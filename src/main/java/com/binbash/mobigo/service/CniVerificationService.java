@@ -152,17 +152,30 @@ public class CniVerificationService {
             }
         }
 
-        // 4b. AI Vision — si MRZ a échoué ou est incomplet
-        if (!mrzData.isValid() || isIncomplete(mrzData)) {
-            LOG.info("MRZ insufficient — attempting AI vision extraction for people {}", peopleId);
-            MrzData visionData = extractFromVision(rectoPath, versoPath);
-            if (visionData.isValid()) {
-                if (mrzData.isValid()) {
-                    // MRZ a des champs partiels — Vision comble les lacunes
-                    mergeVisualData(mrzData, visionData);
-                } else {
-                    mrzData = visionData;
-                }
+        // 4b. If MRZ failed entirely, try visual text extraction (for old-format CNI without MRZ)
+        if (!mrzData.isValid()) {
+            LOG.info("MRZ extraction failed — attempting visual text extraction for people {}", peopleId);
+            MrzData visualData = extractFromVisualText(rectoPath, versoPath);
+            if (visualData.isValid()) {
+                mrzData = visualData;
+            }
+        }
+
+        // 4c. AI Vision — toujours tenter la lecture LLM pour tous les documents
+        LOG.info("Attempting AI vision extraction for people {}", peopleId);
+        MrzData visionData = extractFromVision(rectoPath, versoPath);
+        if (visionData.isValid()) {
+            if (!mrzData.isValid()) {
+                // Aucune donnée OCR valide — utiliser le résultat Vision directement
+                mrzData = visionData;
+            } else if ("VISUAL".equals(mrzData.getFormat()) && !isIncomplete(visionData)) {
+                // Tesseract VISUAL data is unreliable on old/damaged cards;
+                // Vision returned complete data — replace entirely
+                LOG.info("Vision returned complete data — replacing Tesseract VISUAL result");
+                mrzData = visionData;
+            } else {
+                // MRZ-sourced data (TD1/TD3) — Vision comble les lacunes
+                mergeVisualData(mrzData, visionData);
             }
         }
 
