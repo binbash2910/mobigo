@@ -297,8 +297,8 @@ public class AdminResource {
                 map.put("documentType", p.getDocumentType());
                 map.put("cniStatut", p.getCniStatut());
                 map.put("cniVerifieAt", p.getCniVerifieAt());
-                map.put("cniPhotoRecto", p.getCniPhotoRecto());
-                map.put("cniPhotoVerso", p.getCniPhotoVerso());
+                map.put("cniPhotoRecto", normalizeCniImagePath(p.getCniPhotoRecto()));
+                map.put("cniPhotoVerso", normalizeCniImagePath(p.getCniPhotoVerso()));
                 map.put("cniNumero", p.getCniNumero());
                 map.put("cniDateExpiration", p.getCniDateExpiration());
                 map.put("cniNomMrz", p.getCniNomMrz());
@@ -310,5 +310,20 @@ public class AdminResource {
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), peoplePage);
 
         return ResponseEntity.ok().headers(headers).body(result);
+    }
+
+    /**
+     * Normalize a CNI image path stored in the database.
+     * Old entries may contain absolute filesystem paths (e.g. "/var/data/images/cni/cni_recto_1554.JPG").
+     * New entries contain URL paths (e.g. "/api/images/cni/cni_recto_1554.JPG").
+     * This method ensures a consistent URL format is returned to the frontend.
+     */
+    private static String normalizeCniImagePath(String path) {
+        if (path == null || path.isBlank()) return null;
+        if (path.startsWith("/api/images/")) return path;
+        // Extract filename from absolute path and build URL
+        String filename = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+        filename = filename.contains("\\") ? filename.substring(filename.lastIndexOf('\\') + 1) : filename;
+        return "/api/images/cni/" + filename;
     }
 }
