@@ -26,4 +26,10 @@ public interface PeopleRepository extends JpaRepository<People, Long> {
         "AND (:cniStatut IS NULL OR p.cniStatut = CAST(:cniStatut AS string))"
     )
     Page<People> findAllWithCniSubmitted(@Param("cniStatut") String cniStatut, Pageable pageable);
+
+    @Query(
+        value = "SELECT p FROM People p LEFT JOIN FETCH p.user " + "WHERE p.cniStatut IS NOT NULL AND p.cniStatut <> 'VERIFIED'",
+        countQuery = "SELECT COUNT(p) FROM People p " + "WHERE p.cniStatut IS NOT NULL AND p.cniStatut <> 'VERIFIED'"
+    )
+    Page<People> findAllNotVerified(Pageable pageable);
 }

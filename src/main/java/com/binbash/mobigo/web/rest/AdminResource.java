@@ -277,7 +277,12 @@ public class AdminResource {
 
         String cniStatutParam = (cniStatut != null && !cniStatut.isBlank()) ? cniStatut : null;
 
-        Page<People> peoplePage = peopleRepository.findAllWithCniSubmitted(cniStatutParam, pageable);
+        Page<People> peoplePage;
+        if ("NOT_VERIFIED".equals(cniStatutParam)) {
+            peoplePage = peopleRepository.findAllNotVerified(pageable);
+        } else {
+            peoplePage = peopleRepository.findAllWithCniSubmitted(cniStatutParam, pageable);
+        }
 
         List<Map<String, Object>> result = peoplePage
             .getContent()
