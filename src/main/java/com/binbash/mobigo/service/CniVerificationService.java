@@ -108,12 +108,16 @@ public class CniVerificationService {
             .findById(peopleId)
             .orElseThrow(() -> new IllegalArgumentException("People not found with id: " + peopleId));
 
-        // 1. Store images
+        // 1. Store images (URL paths for DB storage)
         String rectoPath = storeImage(peopleId, rectoFile, "recto");
         String versoPath = null;
         if (versoFile != null && !versoFile.isEmpty()) {
             versoPath = storeImage(peopleId, versoFile, "verso");
         }
+
+        // 1b. Resolve absolute filesystem paths for OCR processing
+        String rectoAbsPath = fileStorageService.resolveAbsolutePath(rectoPath);
+        String versoAbsPath = versoPath != null ? fileStorageService.resolveAbsolutePath(versoPath) : null;
 
         // 2. Run OCR - order depends on document type
         boolean isPassport = documentType != null && documentType.startsWith("PASSPORT");
@@ -122,12 +126,12 @@ public class CniVerificationService {
 
         if (isPassport) {
             // Passport: MRZ is on the identity page (recto)
-            primaryPath = rectoPath;
-            fallbackPath = versoPath;
+            primaryPath = rectoAbsPath;
+            fallbackPath = versoAbsPath;
         } else {
             // CNI / Carte de sejour: MRZ is on the back (verso)
-            primaryPath = versoPath != null ? versoPath : rectoPath;
-            fallbackPath = versoPath != null ? rectoPath : null;
+            primaryPath = versoAbsPath != null ? versoAbsPath : rectoAbsPath;
+            fallbackPath = versoAbsPath != null ? rectoAbsPath : null;
         }
 
         // 2b. OCR + parse: try each strategy until a valid MRZ is found
@@ -155,7 +159,7 @@ public class CniVerificationService {
         // 4b. If MRZ failed entirely, try visual text extraction (for old-format CNI without MRZ)
         if (!mrzData.isValid()) {
             LOG.info("MRZ extraction failed — attempting visual text extraction for people {}", peopleId);
-            MrzData visualData = extractFromVisualText(rectoPath, versoPath);
+            MrzData visualData = extractFromVisualText(rectoAbsPath, versoAbsPath);
             if (visualData.isValid()) {
                 mrzData = visualData;
             }
@@ -163,7 +167,7 @@ public class CniVerificationService {
 
         // 4c. AI Vision — toujours tenter la lecture LLM pour tous les documents
         LOG.info("Attempting AI vision extraction for people {}", peopleId);
-        MrzData visionData = extractFromVision(rectoPath, versoPath);
+        MrzData visionData = extractFromVision(rectoAbsPath, versoAbsPath);
         if (visionData.isValid()) {
             if (!mrzData.isValid()) {
                 // Aucune donnée OCR valide — utiliser le résultat Vision directement

@@ -100,7 +100,7 @@ public class FileStorageService {
      * @param peopleId the people entity ID
      * @param file the uploaded document image
      * @param side "recto" or "verso"
-     * @return the absolute filesystem path (used for OCR processing, not served via URL)
+     * @return the URL path to store in the database (e.g. "/api/images/cni/cni_recto_42.JPG")
      */
     public String storeCniImage(Long peopleId, MultipartFile file, String side) throws IOException {
         String subDir = applicationProperties.getStorage().getCniDir();
@@ -110,7 +110,21 @@ public class FileStorageService {
         Path target = dir.resolve(filename);
         Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
         LOG.debug("Stored CNI {} image for people {} at {}", side, peopleId, target);
-        return target.toAbsolutePath().toString();
+        return "/api/images/" + subDir + "/" + filename;
+    }
+
+    /**
+     * Resolve a URL path (e.g. "/api/images/cni/cni_recto_42.JPG") to an absolute filesystem path.
+     *
+     * @param urlPath the URL path stored in the database
+     * @return the absolute filesystem path, or null if the file does not exist
+     */
+    public String resolveAbsolutePath(String urlPath) {
+        if (urlPath == null) return null;
+        // Strip "/api/images/" prefix to get the relative subpath
+        String subPath = urlPath.replaceFirst("^/api/images/", "");
+        Path resolved = resolveFile(subPath);
+        return resolved != null ? resolved.toAbsolutePath().toString() : null;
     }
 
     /**
