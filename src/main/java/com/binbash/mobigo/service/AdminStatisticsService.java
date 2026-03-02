@@ -70,7 +70,7 @@ public class AdminStatisticsService {
         dto.setTotalBookings(allBookings.size());
 
         // CNI verification stats
-        dto.setPendingVerifications(allPeople.stream().filter(p -> p.getCniStatut() == null || "PENDING".equals(p.getCniStatut())).count());
+        dto.setPendingVerifications(allPeople.stream().filter(p -> "PENDING".equals(p.getCniStatut())).count());
         dto.setRejectedVerifications(allPeople.stream().filter(p -> "REJECTED".equals(p.getCniStatut())).count());
         dto.setVerifiedUsers(allPeople.stream().filter(p -> "VERIFIED".equals(p.getCniStatut())).count());
 
