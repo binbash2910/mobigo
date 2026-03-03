@@ -65,7 +65,7 @@ public class NotificationEventService {
 
             notificationService.createAndSend(
                 driver.getUser().getLogin(),
-                driver.getUser().getId(),
+                driver.getId(),
                 NotificationType.BOOKING_RECEIVED,
                 title,
                 message,
@@ -98,7 +98,7 @@ public class NotificationEventService {
 
             notificationService.createAndSend(
                 passenger.getUser().getLogin(),
-                passenger.getUser().getId(),
+                passenger.getId(),
                 NotificationType.BOOKING_ACCEPTED,
                 title,
                 message,
@@ -131,7 +131,7 @@ public class NotificationEventService {
 
             notificationService.createAndSend(
                 passenger.getUser().getLogin(),
-                passenger.getUser().getId(),
+                passenger.getId(),
                 NotificationType.BOOKING_REJECTED,
                 title,
                 message,
@@ -166,7 +166,7 @@ public class NotificationEventService {
 
                 notificationService.createAndSend(
                     passenger.getUser().getLogin(),
-                    passenger.getUser().getId(),
+                    passenger.getId(),
                     NotificationType.BOOKING_CANCELLED,
                     title,
                     message,
@@ -185,7 +185,7 @@ public class NotificationEventService {
 
                 notificationService.createAndSend(
                     driver.getUser().getLogin(),
-                    driver.getUser().getId(),
+                    driver.getId(),
                     NotificationType.BOOKING_CANCELLED,
                     title,
                     message,
@@ -226,7 +226,7 @@ public class NotificationEventService {
                         try {
                             notificationService.createAndSend(
                                 passenger.getUser().getLogin(),
-                                passenger.getUser().getId(),
+                                passenger.getId(),
                                 NotificationType.TRIP_CANCELLED,
                                 title,
                                 message,
@@ -269,7 +269,7 @@ public class NotificationEventService {
                         try {
                             notificationService.createAndSend(
                                 passenger.getUser().getLogin(),
-                                passenger.getUser().getId(),
+                                passenger.getId(),
                                 NotificationType.TRIP_MODIFIED,
                                 title,
                                 message,
@@ -317,7 +317,7 @@ public class NotificationEventService {
 
             notificationService.createAndSend(
                 driver.getUser().getLogin(),
-                driver.getUser().getId(),
+                driver.getId(),
                 NotificationType.RATING_RECEIVED,
                 title,
                 message,
