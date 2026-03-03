@@ -8,8 +8,10 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import jakarta.annotation.PostConstruct;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,7 +43,7 @@ public class FirebaseService {
 
         try {
             if (FirebaseApp.getApps().isEmpty()) {
-                FileInputStream serviceAccount = new FileInputStream(credentialsPath);
+                InputStream serviceAccount = Files.newInputStream(Paths.get(credentialsPath));
                 FirebaseOptions options = FirebaseOptions.builder().setCredentials(GoogleCredentials.fromStream(serviceAccount)).build();
                 FirebaseApp.initializeApp(options);
                 initialized = true;
