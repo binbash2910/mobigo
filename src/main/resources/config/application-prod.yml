@@ -162,3 +162,6 @@ application:
     api-key: ${ANTHROPIC_API_KEY:}
     model: claude-haiku-4-5-20251001
     enabled: true
+  firebase:
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+    enabled: ${FIREBASE_ENABLED:false}

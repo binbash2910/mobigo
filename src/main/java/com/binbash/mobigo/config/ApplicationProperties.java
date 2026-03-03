@@ -17,6 +17,7 @@ public class ApplicationProperties {
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Storage storage = new Storage();
     private final Pricing pricing = new Pricing();
+    private final Firebase firebase = new Firebase();
 
     public String getFrontendUrl() {
         return frontendUrl;
@@ -44,6 +45,10 @@ public class ApplicationProperties {
 
     public Pricing getPricing() {
         return pricing;
+    }
+
+    public Firebase getFirebase() {
+        return firebase;
     }
 
     public static class Tesseract {
@@ -162,6 +167,28 @@ public class ApplicationProperties {
 
         public void setCommissionRate(double commissionRate) {
             this.commissionRate = commissionRate;
+        }
+    }
+
+    public static class Firebase {
+
+        private String credentialsPath;
+        private boolean enabled = false;
+
+        public String getCredentialsPath() {
+            return credentialsPath;
+        }
+
+        public void setCredentialsPath(String credentialsPath) {
+            this.credentialsPath = credentialsPath;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

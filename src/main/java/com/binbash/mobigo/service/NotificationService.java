@@ -1,7 +1,9 @@
 package com.binbash.mobigo.service;
 
+import com.binbash.mobigo.domain.DeviceToken;
 import com.binbash.mobigo.domain.Notification;
 import com.binbash.mobigo.domain.enumeration.NotificationType;
+import com.binbash.mobigo.repository.DeviceTokenRepository;
 import com.binbash.mobigo.repository.NotificationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -23,15 +25,21 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final SimpMessageSendingOperations messagingTemplate;
     private final ObjectMapper objectMapper;
+    private final FirebaseService firebaseService;
+    private final DeviceTokenRepository deviceTokenRepository;
 
     public NotificationService(
         NotificationRepository notificationRepository,
         SimpMessageSendingOperations messagingTemplate,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        FirebaseService firebaseService,
+        DeviceTokenRepository deviceTokenRepository
     ) {
         this.notificationRepository = notificationRepository;
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
+        this.firebaseService = firebaseService;
+        this.deviceTokenRepository = deviceTokenRepository;
     }
 
     public Notification createAndSend(
@@ -65,6 +73,16 @@ public class NotificationService {
             LOG.debug("WebSocket notification sent to user {}", userLogin);
         } catch (Exception e) {
             LOG.warn("Failed to send WebSocket notification to user {}: {}", userLogin, e.getMessage());
+        }
+
+        // Send push notifications to all registered devices for this user
+        try {
+            List<DeviceToken> devices = deviceTokenRepository.findByUserId(userId);
+            for (DeviceToken device : devices) {
+                firebaseService.sendPush(device.getToken(), title, message, notification.getData());
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to send push notifications for userId {}: {}", userId, e.getMessage());
         }
 
         return notification;
