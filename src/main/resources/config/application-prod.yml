@@ -113,6 +113,7 @@ jhipster:
       timeToLiveInDays: 1461
   cors:
     allowed-origins: '${JHIPSTER_CORS_ALLOWED_ORIGINS}'
+    allowed-origin-patterns: 'https://localhost,capacitor://localhost,http://localhost'
     allowed-methods: '*'
     allowed-headers: '*'
     exposed-headers: 'Authorization,Link,X-Total-Count,X-${jhipster.clientApp.name}-alert,X-${jhipster.clientApp.name}-error,X-${jhipster.clientApp.name}-params'
