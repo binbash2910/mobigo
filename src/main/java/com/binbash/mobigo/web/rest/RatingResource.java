@@ -3,6 +3,7 @@ package com.binbash.mobigo.web.rest;
 import com.binbash.mobigo.domain.Rating;
 import com.binbash.mobigo.repository.RatingRepository;
 import com.binbash.mobigo.repository.search.RatingSearchRepository;
+import com.binbash.mobigo.service.NotificationEventService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import com.binbash.mobigo.web.websocket.WebSocketNotificationService;
@@ -44,14 +45,18 @@ public class RatingResource {
 
     private final WebSocketNotificationService webSocketNotificationService;
 
+    private final NotificationEventService notificationEventService;
+
     public RatingResource(
         RatingRepository ratingRepository,
         RatingSearchRepository ratingSearchRepository,
-        WebSocketNotificationService webSocketNotificationService
+        WebSocketNotificationService webSocketNotificationService,
+        NotificationEventService notificationEventService
     ) {
         this.ratingRepository = ratingRepository;
         this.ratingSearchRepository = ratingSearchRepository;
         this.webSocketNotificationService = webSocketNotificationService;
+        this.notificationEventService = notificationEventService;
     }
 
     /**
@@ -70,6 +75,13 @@ public class RatingResource {
         rating = ratingRepository.save(rating);
         ratingSearchRepository.index(rating);
         webSocketNotificationService.notifyDataChanged("RATINGS_CHANGED");
+        try {
+            if (rating.getConducteur() != null) {
+                notificationEventService.onRatingReceived(rating, rating.getConducteur());
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to create notification for rating: {}", e.getMessage());
+        }
         return ResponseEntity.created(new URI("/api/ratings/" + rating.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, rating.getId().toString()))
             .body(rating);
