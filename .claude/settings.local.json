@@ -64,7 +64,8 @@
       "Bash(xargs basename:*)",
       "Bash(ls:*)",
       "Bash(wmic process:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "mcp__render__get_metrics"
     ]
   }
 }
