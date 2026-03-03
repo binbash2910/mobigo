@@ -22,6 +22,9 @@ public class WebsocketSecurityConfiguration extends AbstractSecurityWebSocketMes
             // /topic/messages-user<id>)
             .simpDestMatchers("/topic/**")
             .authenticated()
+            // allow authenticated users to subscribe to their own user-specific destinations
+            .simpSubscribeDestMatchers("/user/**")
+            .authenticated()
             // message types other than MESSAGE and SUBSCRIBE
             .simpTypeMatchers(SimpMessageType.MESSAGE, SimpMessageType.SUBSCRIBE)
             .denyAll()

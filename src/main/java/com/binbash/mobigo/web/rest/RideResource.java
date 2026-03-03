@@ -3,6 +3,7 @@ package com.binbash.mobigo.web.rest;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.search.RideSearchRepository;
+import com.binbash.mobigo.service.NotificationEventService;
 import com.binbash.mobigo.service.RideService;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
@@ -47,16 +48,20 @@ public class RideResource {
 
     private final WebSocketNotificationService webSocketNotificationService;
 
+    private final NotificationEventService notificationEventService;
+
     public RideResource(
         RideRepository rideRepository,
         RideSearchRepository rideSearchRepository,
         RideService rideService,
-        WebSocketNotificationService webSocketNotificationService
+        WebSocketNotificationService webSocketNotificationService,
+        NotificationEventService notificationEventService
     ) {
         this.rideRepository = rideRepository;
         this.rideSearchRepository = rideSearchRepository;
         this.rideService = rideService;
         this.webSocketNotificationService = webSocketNotificationService;
+        this.notificationEventService = notificationEventService;
     }
 
     /**
@@ -108,6 +113,14 @@ public class RideResource {
         ride = rideRepository.save(ride);
         rideSearchRepository.index(ride);
         webSocketNotificationService.notifyDataChanged("RIDES_CHANGED");
+
+        // Send in-app notifications to booked passengers
+        try {
+            notificationEventService.onTripModified(ride);
+        } catch (Exception e) {
+            LOG.warn("Failed to create notifications for modified ride: {}", e.getMessage());
+        }
+
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, ride.getId().toString()))
             .body(ride);

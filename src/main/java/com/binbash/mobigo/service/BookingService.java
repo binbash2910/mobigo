@@ -35,6 +35,7 @@ public class BookingService {
     private final MailService mailService;
     private final EntityManager entityManager;
     private final ApplicationProperties applicationProperties;
+    private final NotificationEventService notificationEventService;
 
     public BookingService(
         BookingRepository bookingRepository,
@@ -43,7 +44,8 @@ public class BookingService {
         PaymentService paymentService,
         MailService mailService,
         EntityManager entityManager,
-        ApplicationProperties applicationProperties
+        ApplicationProperties applicationProperties,
+        NotificationEventService notificationEventService
     ) {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
@@ -52,6 +54,7 @@ public class BookingService {
         this.mailService = mailService;
         this.entityManager = entityManager;
         this.applicationProperties = applicationProperties;
+        this.notificationEventService = notificationEventService;
     }
 
     /**
@@ -100,6 +103,17 @@ public class BookingService {
             ride.getId(),
             booking.getNbPlacesReservees()
         );
+
+        // Send in-app notification to driver
+        try {
+            entityManager.flush();
+            Booking fullBooking = bookingRepository.findByIdWithRelations(booking.getId()).orElse(null);
+            if (fullBooking != null) {
+                notificationEventService.onBookingCreated(fullBooking, fullBooking.getTrajet());
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to create notification for new booking: {}", e.getMessage());
+        }
 
         // Send email notifications
         sendBookingEmails(booking.getId(), "NEW_BOOKING");
@@ -160,6 +174,16 @@ public class BookingService {
 
         LOG.info("Booking {} accepted for ride {}", bookingId, ride.getId());
 
+        // Send in-app notification to passenger
+        try {
+            Booking fullBooking = bookingRepository.findByIdWithRelations(bookingId).orElse(null);
+            if (fullBooking != null) {
+                notificationEventService.onBookingAccepted(fullBooking, fullBooking.getTrajet());
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to create notification for accepted booking: {}", e.getMessage());
+        }
+
         // Send email notifications
         sendBookingEmails(bookingId, "ACCEPTED");
 
@@ -186,6 +210,16 @@ public class BookingService {
         bookingSearchRepository.index(booking);
 
         LOG.info("Booking {} rejected for ride {}", bookingId, booking.getTrajet().getId());
+
+        // Send in-app notification to passenger
+        try {
+            Booking fullBooking = bookingRepository.findByIdWithRelations(bookingId).orElse(null);
+            if (fullBooking != null) {
+                notificationEventService.onBookingRejected(fullBooking, fullBooking.getTrajet());
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to create notification for rejected booking: {}", e.getMessage());
+        }
 
         // Send email notifications
         sendBookingEmails(bookingId, "REJECTED");
@@ -232,6 +266,16 @@ public class BookingService {
             LOG.info("Booking {} cancelled (was CONFIRME). {} seats restored for ride {}", bookingId, restoredSeats, ride.getId());
         } else {
             LOG.info("Booking {} cancelled (was EN_ATTENTE)", bookingId);
+        }
+
+        // Send in-app notification to driver (passenger cancelled)
+        try {
+            Booking fullBooking = bookingRepository.findByIdWithRelations(bookingId).orElse(null);
+            if (fullBooking != null) {
+                notificationEventService.onBookingCancelled(fullBooking, fullBooking.getTrajet(), false);
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to create notification for cancelled booking: {}", e.getMessage());
         }
 
         // Send email notifications

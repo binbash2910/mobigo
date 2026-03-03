@@ -27,17 +27,20 @@ public class RideService {
     private final BookingRepository bookingRepository;
     private final MailService mailService;
     private final EntityManager entityManager;
+    private final NotificationEventService notificationEventService;
 
     public RideService(
         RideRepository rideRepository,
         BookingRepository bookingRepository,
         MailService mailService,
-        EntityManager entityManager
+        EntityManager entityManager,
+        NotificationEventService notificationEventService
     ) {
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
         this.mailService = mailService;
         this.entityManager = entityManager;
+        this.notificationEventService = notificationEventService;
     }
 
     /**
@@ -119,6 +122,13 @@ public class RideService {
         ride = rideRepository.save(ride);
 
         LOG.info("Ride {} cancelled successfully. {} bookings cancelled, {} seats restored.", rideId, activeBookings.size(), restoredSeats);
+
+        // Send in-app notifications to all passengers
+        try {
+            notificationEventService.onTripCancelled(ride);
+        } catch (Exception e) {
+            LOG.warn("Failed to create notifications for cancelled ride: {}", e.getMessage());
+        }
 
         // Send email notifications to all passengers with cancelled bookings
         sendRideNotificationEmails(rideId, ride, "RIDE_CANCELLED");

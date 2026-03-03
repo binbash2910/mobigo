@@ -17,6 +17,8 @@ import org.springframework.stereotype.Repository;
 public interface PeopleRepository extends JpaRepository<People, Long> {
     Optional<People> findByUser(User user);
 
+    Optional<People> findByUserLogin(String login);
+
     @Query(
         value = "SELECT p FROM People p LEFT JOIN FETCH p.user " +
         "WHERE p.cniStatut IS NOT NULL " +
