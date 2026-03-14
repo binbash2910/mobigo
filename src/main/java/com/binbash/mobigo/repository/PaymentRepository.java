@@ -1,6 +1,7 @@
 package com.binbash.mobigo.repository;
 
 import com.binbash.mobigo.domain.Payment;
+import com.binbash.mobigo.domain.enumeration.PaymentStatusEnum;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.*;
@@ -17,4 +18,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByBookingId(Long bookingId);
 
     List<Payment> findByBookingPassagerId(Long passagerId);
+
+    Optional<Payment> findByExternalReference(String externalReference);
+
+    Optional<Payment> findByCampayTransactionId(String campayTransactionId);
+
+    List<Payment> findByStatut(PaymentStatusEnum statut);
 }
