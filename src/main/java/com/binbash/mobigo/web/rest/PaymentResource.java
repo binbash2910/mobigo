@@ -154,7 +154,7 @@ public class PaymentResource {
         if (paymentOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        Payment payment = paymentOpt.get();
+        Payment payment = paymentOpt.orElseThrow();
         Map<String, String> result = new HashMap<>();
         result.put("statut", payment.getStatut().name());
         result.put("externalReference", payment.getExternalReference() != null ? payment.getExternalReference() : "");
