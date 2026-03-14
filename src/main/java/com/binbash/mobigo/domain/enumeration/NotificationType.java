@@ -13,4 +13,6 @@ public enum NotificationType {
     TRIP_REMINDER,
     RATING_RECEIVED,
     MESSAGE_RECEIVED,
+    IDENTITY_VERIFIED,
+    IDENTITY_REJECTED,
 }
