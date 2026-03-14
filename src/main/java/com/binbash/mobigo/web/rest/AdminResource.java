@@ -11,6 +11,8 @@ import com.binbash.mobigo.repository.PeopleRepository;
 import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.UserRepository;
 import com.binbash.mobigo.service.AdminStatisticsService;
+import com.binbash.mobigo.service.MailService;
+import com.binbash.mobigo.service.NotificationEventService;
 import com.binbash.mobigo.service.UserService;
 import com.binbash.mobigo.service.dto.AdminStatisticsDTO;
 import com.binbash.mobigo.service.dto.AdminUserDetailDTO;
@@ -45,6 +47,8 @@ public class AdminResource {
 
     private final AdminStatisticsService adminStatisticsService;
     private final BookingRepository bookingRepository;
+    private final MailService mailService;
+    private final NotificationEventService notificationEventService;
     private final PeopleRepository peopleRepository;
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
@@ -53,6 +57,8 @@ public class AdminResource {
     public AdminResource(
         AdminStatisticsService adminStatisticsService,
         BookingRepository bookingRepository,
+        MailService mailService,
+        NotificationEventService notificationEventService,
         PeopleRepository peopleRepository,
         RideRepository rideRepository,
         UserRepository userRepository,
@@ -60,6 +66,8 @@ public class AdminResource {
     ) {
         this.adminStatisticsService = adminStatisticsService;
         this.bookingRepository = bookingRepository;
+        this.mailService = mailService;
+        this.notificationEventService = notificationEventService;
         this.peopleRepository = peopleRepository;
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
@@ -147,7 +155,59 @@ public class AdminResource {
                 if ("VERIFIED".equals(status)) {
                     people.setCniVerifieAt(Instant.now());
                 }
+
+                // Update editable CNI fields if provided
+                if (request.containsKey("cniNomMrz")) {
+                    people.setCniNomMrz(request.get("cniNomMrz"));
+                }
+                if (request.containsKey("cniPrenomMrz")) {
+                    people.setCniPrenomMrz(request.get("cniPrenomMrz"));
+                }
+                if (request.containsKey("cniNumero")) {
+                    people.setCniNumero(request.get("cniNumero"));
+                }
+                if (request.containsKey("cniDateExpiration")) {
+                    String dateExp = request.get("cniDateExpiration");
+                    people.setCniDateExpiration(dateExp != null && !dateExp.isBlank() ? java.time.LocalDate.parse(dateExp) : null);
+                }
+                if (request.containsKey("cniSexe")) {
+                    people.setCniSexe(request.get("cniSexe"));
+                }
+                if (request.containsKey("cniDateNaissanceMrz")) {
+                    String dateNais = request.get("cniDateNaissanceMrz");
+                    people.setCniDateNaissanceMrz(dateNais != null && !dateNais.isBlank() ? java.time.LocalDate.parse(dateNais) : null);
+                }
+
                 peopleRepository.save(people);
+
+                // Send email notification
+                String comment = request.get("comment");
+                String recipientName =
+                    ((people.getPrenom() != null ? people.getPrenom() : "") +
+                        " " +
+                        (people.getNom() != null ? people.getNom() : "")).trim();
+                String cniExpiration = people.getCniDateExpiration() != null
+                    ? people.getCniDateExpiration().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    : null;
+
+                mailService.sendCniVerificationEmail(
+                    people.getEmail(),
+                    recipientName,
+                    status,
+                    people.getCniNomMrz(),
+                    people.getCniPrenomMrz(),
+                    people.getCniNumero(),
+                    cniExpiration,
+                    comment
+                );
+
+                // Send in-app + push notification
+                if ("VERIFIED".equals(status)) {
+                    notificationEventService.onIdentityVerified(people, comment);
+                } else {
+                    notificationEventService.onIdentityRejected(people, comment);
+                }
+
                 return ResponseEntity.ok().<Void>build();
             })
             .orElse(ResponseEntity.notFound().build());
