@@ -213,6 +213,57 @@ public class MailService {
         sendEmailSync(recipientEmail, subject, content, false, true);
     }
 
+    // ── CNI verification notification emails ───────────────────────────
+
+    @Async
+    public void sendCniVerificationEmail(
+        String recipientEmail,
+        String recipientName,
+        String status,
+        String cniNom,
+        String cniPrenom,
+        String cniNumero,
+        String cniExpiration,
+        String adminComment
+    ) {
+        if (recipientEmail == null) {
+            LOG.debug("Cannot send CNI verification email: recipient email is null");
+            return;
+        }
+
+        LOG.debug("Sending CNI verification email to '{}' for status '{}'", recipientEmail, status);
+
+        Locale locale = Locale.FRENCH;
+        String baseUrl = jHipsterProperties.getMail().getBaseUrl();
+
+        String subject = messageSource.getMessage("email.cni." + status + ".subject", null, locale);
+        String headerSubtitle = messageSource.getMessage("email.cni." + status + ".header", null, locale);
+        String mainMessage = messageSource.getMessage("email.cni." + status + ".message", null, locale);
+        String statusLabel = messageSource.getMessage("email.cni." + status + ".status", null, locale);
+
+        String statusStyle = "VERIFIED".equals(status)
+            ? "background-color: #d1fae5; color: #065f46;"
+            : "background-color: #fee2e2; color: #991b1b;";
+
+        Context context = new Context(locale);
+        context.setVariable("subject", subject);
+        context.setVariable("headerSubtitle", headerSubtitle);
+        context.setVariable("statusLabel", statusLabel);
+        context.setVariable("statusStyle", statusStyle);
+        context.setVariable("greeting", messageSource.getMessage("email.cni.greeting", new Object[] { recipientName }, locale));
+        context.setVariable("mainMessage", mainMessage);
+        context.setVariable("adminComment", adminComment);
+        context.setVariable("cniNom", cniNom);
+        context.setVariable("cniPrenom", cniPrenom);
+        context.setVariable("cniNumero", cniNumero);
+        context.setVariable("cniExpiration", cniExpiration);
+        context.setVariable("actionUrl", baseUrl + "/profile/identity");
+        context.setVariable("actionLabel", messageSource.getMessage("email.cni.action.viewProfile", null, locale));
+
+        String content = templateEngine.process("mail/cniVerificationEmail", context);
+        sendEmailSync(recipientEmail, subject, content, false, true);
+    }
+
     private String resolveMainMessage(String action, boolean isDriver, String name, Booking booking, Ride ride, Locale locale) {
         String route = ride.getVilleDepart() + " → " + ride.getVilleArrivee();
         String key = "email.booking." + action + (isDriver ? ".message.driver" : ".message.passenger");
