@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -229,6 +230,106 @@ public class RideResource {
     public List<Ride> getAllRides() {
         LOG.debug("REST request to get all Rides");
         return rideRepository.findAllWithVehiculeAndProprietaire();
+    }
+
+    /**
+     * {@code GET  /rides/search} : search rides with filters.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<Map<String, Object>>> searchRides(
+        @RequestParam(required = false) String departure,
+        @RequestParam(required = false) String arrival,
+        @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(
+            iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE
+        ) java.time.LocalDate date,
+        org.springframework.data.domain.Pageable pageable
+    ) {
+        LOG.debug("REST request to search rides: departure={}, arrival={}, date={}", departure, arrival, date);
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate dateFrom = null;
+        java.time.LocalDate dateTo = null;
+        java.time.LocalDate exactDate = today;
+
+        if (date != null) {
+            exactDate = date;
+            dateFrom = date.minusDays(2);
+            dateTo = date.plusDays(2);
+            if (dateFrom.isBefore(today)) {
+                dateFrom = today;
+            }
+        }
+
+        String dep = (departure != null && !departure.isBlank()) ? departure : null;
+        String arr = (arrival != null && !arrival.isBlank()) ? arrival : null;
+
+        org.springframework.data.domain.Page<Ride> page = rideRepository.searchRides(
+            dep,
+            arr,
+            dateFrom,
+            dateTo,
+            exactDate,
+            today,
+            pageable
+        );
+
+        List<Map<String, Object>> result = page
+            .getContent()
+            .stream()
+            .map(ride -> {
+                Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", ride.getId());
+                map.put("villeDepart", ride.getVilleDepart());
+                map.put("villeArrivee", ride.getVilleArrivee());
+                map.put("lieuDitDepart", ride.getLieuDitDepart());
+                map.put("lieuDitArrivee", ride.getLieuDitArrivee());
+                map.put("dateDepart", ride.getDateDepart() != null ? ride.getDateDepart().toString() : null);
+                map.put("dateArrivee", ride.getDateArrivee() != null ? ride.getDateArrivee().toString() : null);
+                map.put("heureDepart", ride.getHeureDepart());
+                map.put("minuteDepart", ride.getMinuteDepart());
+                map.put("heureArrivee", ride.getHeureArrivee());
+                map.put("minuteArrivee", ride.getMinuteArrivee());
+                map.put("prixParPlace", ride.getPrixParPlace());
+                map.put("nbrePlaceDisponible", ride.getNbrePlaceDisponible());
+                map.put("nbrePlaces", ride.getNbrePlaces());
+                map.put("statut", ride.getStatut() != null ? ride.getStatut().name() : null);
+                map.put("description", ride.getDescription());
+                map.put("bagage", ride.getBagage());
+                map.put("fumeur", ride.getFumeur());
+                map.put("animaux", ride.getAnimaux());
+                map.put("filleUniquement", ride.getFilleUniquement());
+                map.put("exactDateMatch", date != null && ride.getDateDepart() != null && ride.getDateDepart().equals(date));
+
+                if (ride.getVehicule() != null && ride.getVehicule().getProprietaire() != null) {
+                    var owner = ride.getVehicule().getProprietaire();
+                    Map<String, Object> driver = new java.util.HashMap<>();
+                    driver.put("id", owner.getId());
+                    String driverName =
+                        (owner.getPrenom() != null ? owner.getPrenom() : "") +
+                        (owner.getNom() != null ? " " + owner.getNom().charAt(0) + "." : "");
+                    driver.put("name", driverName.trim());
+                    driver.put("photo", owner.getPhoto());
+                    map.put("driver", driver);
+
+                    Map<String, Object> vehicule = new java.util.HashMap<>();
+                    vehicule.put("id", ride.getVehicule().getId());
+                    vehicule.put("marque", ride.getVehicule().getMarque());
+                    vehicule.put("modele", ride.getVehicule().getModele());
+                    vehicule.put("couleur", ride.getVehicule().getCouleur());
+                    vehicule.put("photo", ride.getVehicule().getPhoto());
+                    map.put("vehicule", vehicule);
+                }
+
+                return map;
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        org.springframework.http.HttpHeaders headers = tech.jhipster.web.util.PaginationUtil.generatePaginationHttpHeaders(
+            org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromCurrentRequest(),
+            page
+        );
+
+        return ResponseEntity.ok().headers(headers).body(result);
     }
 
     /**
