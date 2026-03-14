@@ -12,7 +12,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -125,6 +127,38 @@ public class PaymentResource {
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .body(payment);
+    }
+
+    /**
+     * {@code POST  /payments/initiate-collect/:bookingId} : Initiate a Campay collect for a booking.
+     *
+     * @param bookingId the booking id.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the payment.
+     */
+    @PostMapping("/initiate-collect/{bookingId}")
+    public ResponseEntity<Payment> initiateCollect(@PathVariable("bookingId") Long bookingId) {
+        LOG.debug("REST request to initiate Campay collect for booking {}", bookingId);
+        Payment payment = paymentService.initiateCollect(bookingId);
+        return ResponseEntity.ok(payment);
+    }
+
+    /**
+     * {@code GET  /payments/status/:bookingId} : Get the payment status for a booking.
+     *
+     * @param bookingId the booking id.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the payment status, or with status {@code 404 (Not Found)}.
+     */
+    @GetMapping("/status/{bookingId}")
+    public ResponseEntity<Map<String, String>> getPaymentStatus(@PathVariable("bookingId") Long bookingId) {
+        Optional<Payment> paymentOpt = paymentService.getPaymentByBooking(bookingId);
+        if (paymentOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Payment payment = paymentOpt.get();
+        Map<String, String> result = new HashMap<>();
+        result.put("statut", payment.getStatut().name());
+        result.put("externalReference", payment.getExternalReference() != null ? payment.getExternalReference() : "");
+        return ResponseEntity.ok(result);
     }
 
     /**
