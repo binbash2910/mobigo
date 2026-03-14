@@ -1,0 +1,228 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${subject}">Notification Mobigo</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f4f6f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    "
+  >
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f6f9; padding: 32px 16px">
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              max-width: 600px;
+              width: 100%;
+              background-color: #ffffff;
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            "
+          >
+            <!-- Header gradient -->
+            <tr>
+              <td style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); padding: 32px 40px; text-align: center">
+                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px">mobigo</h1>
+                <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.85)" th:text="${headerSubtitle}">
+                  Vérification d'identité
+                </p>
+              </td>
+            </tr>
+
+            <!-- Status badge -->
+            <tr>
+              <td style="padding: 28px 40px 0; text-align: center">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto">
+                  <tr>
+                    <td
+                      th:style="'display: inline-block; padding: 8px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; ' + ${statusStyle}"
+                    >
+                      <span th:text="${statusLabel}">VÉRIFIÉE</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Greeting -->
+            <tr>
+              <td style="padding: 24px 40px 8px">
+                <p style="margin: 0; font-size: 16px; color: #374151" th:text="${greeting}">Bonjour Jean,</p>
+              </td>
+            </tr>
+
+            <!-- Main message -->
+            <tr>
+              <td style="padding: 8px 40px 24px">
+                <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6" th:text="${mainMessage}">
+                  Votre identité a été vérifiée avec succès.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Admin comment block (only if comment is not empty) -->
+            <tr th:if="${adminComment != null and !adminComment.isEmpty()}">
+              <td style="padding: 0 40px 24px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="background-color: #fef3c7; border-radius: 12px; border: 1px solid #fbbf24"
+                >
+                  <tr>
+                    <td style="padding: 16px 24px">
+                      <p
+                        style="
+                          margin: 0 0 8px;
+                          font-size: 12px;
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;
+                          color: #92400e;
+                          font-weight: 600;
+                        "
+                        th:text="#{email.cni.adminComment}"
+                      >
+                        Commentaire de l'administrateur :
+                      </p>
+                      <p style="margin: 0; font-size: 14px; color: #78350f; line-height: 1.5" th:text="${adminComment}">Commentaire ici</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Document details card -->
+            <tr>
+              <td style="padding: 0 40px 24px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e5e7eb"
+                >
+                  <!-- Card title -->
+                  <tr>
+                    <td style="padding: 20px 24px 16px">
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 13px;
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;
+                          color: #6b7280;
+                          font-weight: 600;
+                        "
+                        th:text="#{email.cni.documentDetails}"
+                      >
+                        Détails du document
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Divider -->
+                  <tr>
+                    <td style="padding: 0 24px">
+                      <div style="height: 1px; background-color: #e5e7eb"></div>
+                    </td>
+                  </tr>
+
+                  <!-- Details grid -->
+                  <tr>
+                    <td style="padding: 16px 24px 20px">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td width="50%" valign="top" style="padding-right: 8px">
+                            <p
+                              style="margin: 0 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af"
+                              th:text="#{email.cni.name}"
+                            >
+                              Nom
+                            </p>
+                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151" th:text="${cniNom ?: '-'}">-</p>
+                          </td>
+                          <td width="50%" valign="top" style="padding-left: 8px">
+                            <p
+                              style="margin: 0 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af"
+                              th:text="#{email.cni.firstName}"
+                            >
+                              Prénom
+                            </p>
+                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151" th:text="${cniPrenom ?: '-'}">-</p>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td width="50%" valign="top" style="padding-right: 8px; padding-top: 12px">
+                            <p
+                              style="margin: 0 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af"
+                              th:text="#{email.cni.documentNumber}"
+                            >
+                              Numéro de document
+                            </p>
+                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151" th:text="${cniNumero ?: '-'}">-</p>
+                          </td>
+                          <td width="50%" valign="top" style="padding-left: 8px; padding-top: 12px">
+                            <p
+                              style="margin: 0 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af"
+                              th:text="#{email.cni.expirationDate}"
+                            >
+                              Date d'expiration
+                            </p>
+                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151" th:text="${cniExpiration ?: '-'}">-</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- CTA button -->
+            <tr>
+              <td style="padding: 0 40px 28px; text-align: center">
+                <a
+                  th:href="${actionUrl}"
+                  style="
+                    display: inline-block;
+                    padding: 14px 40px;
+                    background: linear-gradient(135deg, #2196f3, #1976d2);
+                    color: #ffffff;
+                    text-decoration: none;
+                    font-size: 15px;
+                    font-weight: 600;
+                    border-radius: 50px;
+                    letter-spacing: 0.3px;
+                  "
+                  th:text="${actionLabel}"
+                  >Voir mon profil</a
+                >
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="background-color: #f8fafc; padding: 24px 40px; border-top: 1px solid #e5e7eb; text-align: center">
+                <p style="margin: 0 0 4px; font-size: 13px; color: #9ca3af">Cet email a été envoyé automatiquement par</p>
+                <p style="margin: 0; font-size: 15px; font-weight: 700; color: #2196f3">mobigo</p>
+                <p style="margin: 8px 0 0; font-size: 12px; color: #d1d5db">Partageons la route, simplifions le voyage.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
