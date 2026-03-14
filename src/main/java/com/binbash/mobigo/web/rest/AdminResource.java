@@ -191,7 +191,7 @@ public class AdminResource {
                     : null;
 
                 mailService.sendCniVerificationEmail(
-                    people.getEmail(),
+                    people.getUser() != null ? people.getUser().getEmail() : null,
                     recipientName,
                     status,
                     people.getCniNomMrz(),
