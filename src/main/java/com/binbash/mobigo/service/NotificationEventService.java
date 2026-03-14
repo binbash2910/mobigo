@@ -329,6 +329,144 @@ public class NotificationEventService {
     }
 
     // -------------------------------------------------------------------------
+    // Payment events
+    // -------------------------------------------------------------------------
+
+    public void onPaymentRequested(Booking booking) {
+        try {
+            People passenger = booking.getPassager();
+            if (passenger == null || passenger.getUser() == null) return;
+
+            String route = formatRoute(booking.getTrajet());
+            String title = "Confirmez votre paiement";
+            String message =
+                "Votre réservation pour " +
+                route +
+                " a été acceptée. Veuillez confirmer le paiement de " +
+                Math.round(booking.getMontantTotal()) +
+                " FCFA.";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("bookingId", booking.getId());
+            data.put("rideId", booking.getTrajet().getId());
+            data.put("action", "PAYMENT_REQUESTED");
+
+            notificationService.createAndSend(
+                passenger.getUser().getLogin(),
+                passenger.getId(),
+                NotificationType.PAYMENT_REQUESTED,
+                title,
+                message,
+                data
+            );
+        } catch (Exception e) {
+            LOG.warn("Failed to notify payment requested for booking {}: {}", booking.getId(), e.getMessage());
+        }
+    }
+
+    public void onPaymentSuccess(Booking booking) {
+        try {
+            People passenger = booking.getPassager();
+            if (passenger == null || passenger.getUser() == null) return;
+
+            String route = formatRoute(booking.getTrajet());
+            String title = "Paiement confirmé";
+            String message = "Votre paiement de " + Math.round(booking.getMontantTotal()) + " FCFA pour " + route + " a été confirmé.";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("bookingId", booking.getId());
+            data.put("rideId", booking.getTrajet().getId());
+
+            notificationService.createAndSend(
+                passenger.getUser().getLogin(),
+                passenger.getId(),
+                NotificationType.PAYMENT_SUCCESS,
+                title,
+                message,
+                data
+            );
+        } catch (Exception e) {
+            LOG.warn("Failed to notify payment success for booking {}: {}", booking.getId(), e.getMessage());
+        }
+    }
+
+    public void onPaymentFailed(Booking booking) {
+        try {
+            People passenger = booking.getPassager();
+            if (passenger == null || passenger.getUser() == null) return;
+
+            String route = formatRoute(booking.getTrajet());
+            String title = "Paiement échoué";
+            String message = "Votre paiement pour " + route + " a échoué. Veuillez réessayer.";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("bookingId", booking.getId());
+            data.put("rideId", booking.getTrajet().getId());
+            data.put("action", "PAYMENT_FAILED");
+
+            notificationService.createAndSend(
+                passenger.getUser().getLogin(),
+                passenger.getId(),
+                NotificationType.PAYMENT_FAILED,
+                title,
+                message,
+                data
+            );
+        } catch (Exception e) {
+            LOG.warn("Failed to notify payment failure for booking {}: {}", booking.getId(), e.getMessage());
+        }
+    }
+
+    public void onPaymentRefunded(Booking booking) {
+        try {
+            People passenger = booking.getPassager();
+            if (passenger == null || passenger.getUser() == null) return;
+
+            String route = formatRoute(booking.getTrajet());
+            String title = "Remboursement effectué";
+            String message = "Vous avez été remboursé de " + Math.round(booking.getMontantTotal()) + " FCFA pour " + route + ".";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("bookingId", booking.getId());
+
+            notificationService.createAndSend(
+                passenger.getUser().getLogin(),
+                passenger.getId(),
+                NotificationType.PAYMENT_REFUNDED,
+                title,
+                message,
+                data
+            );
+        } catch (Exception e) {
+            LOG.warn("Failed to notify payment refund for booking {}: {}", booking.getId(), e.getMessage());
+        }
+    }
+
+    public void onPaymentDisbursed(Ride ride, People driver, float amount) {
+        try {
+            if (driver.getUser() == null) return;
+
+            String route = formatRoute(ride);
+            String title = "Versement reçu";
+            String message = "Vous avez reçu " + Math.round(amount) + " FCFA pour votre trajet " + route + ".";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("rideId", ride.getId());
+
+            notificationService.createAndSend(
+                driver.getUser().getLogin(),
+                driver.getId(),
+                NotificationType.PAYMENT_DISBURSED,
+                title,
+                message,
+                data
+            );
+        } catch (Exception e) {
+            LOG.warn("Failed to notify payment disbursement for ride {}: {}", ride.getId(), e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Identity verification events
     // -------------------------------------------------------------------------
 
