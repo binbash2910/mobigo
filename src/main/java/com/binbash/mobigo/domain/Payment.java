@@ -45,6 +45,24 @@ public class Payment extends AbstractAuditingEntity<Long> implements Serializabl
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private PaymentStatusEnum statut;
 
+    @Column(name = "external_reference")
+    private String externalReference;
+
+    @Column(name = "campay_transaction_id")
+    private String campayTransactionId;
+
+    @Column(name = "operateur")
+    private String operateur;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "disbursement_reference")
+    private String disbursementReference;
+
+    @Column(name = "disbursement_status")
+    private String disbursementStatus;
+
     @JsonIgnoreProperties(value = { "payement", "trajet", "passager" }, allowSetters = true)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(unique = true)
@@ -128,6 +146,84 @@ public class Payment extends AbstractAuditingEntity<Long> implements Serializabl
     public Payment booking(Booking booking) {
         this.setBooking(booking);
         return this;
+    }
+
+    public String getExternalReference() {
+        return this.externalReference;
+    }
+
+    public Payment externalReference(String externalReference) {
+        this.setExternalReference(externalReference);
+        return this;
+    }
+
+    public void setExternalReference(String externalReference) {
+        this.externalReference = externalReference;
+    }
+
+    public String getCampayTransactionId() {
+        return this.campayTransactionId;
+    }
+
+    public Payment campayTransactionId(String campayTransactionId) {
+        this.setCampayTransactionId(campayTransactionId);
+        return this;
+    }
+
+    public void setCampayTransactionId(String campayTransactionId) {
+        this.campayTransactionId = campayTransactionId;
+    }
+
+    public String getOperateur() {
+        return this.operateur;
+    }
+
+    public Payment operateur(String operateur) {
+        this.setOperateur(operateur);
+        return this;
+    }
+
+    public void setOperateur(String operateur) {
+        this.operateur = operateur;
+    }
+
+    public String getPhoneNumber() {
+        return this.phoneNumber;
+    }
+
+    public Payment phoneNumber(String phoneNumber) {
+        this.setPhoneNumber(phoneNumber);
+        return this;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getDisbursementReference() {
+        return this.disbursementReference;
+    }
+
+    public Payment disbursementReference(String disbursementReference) {
+        this.setDisbursementReference(disbursementReference);
+        return this;
+    }
+
+    public void setDisbursementReference(String disbursementReference) {
+        this.disbursementReference = disbursementReference;
+    }
+
+    public String getDisbursementStatus() {
+        return this.disbursementStatus;
+    }
+
+    public Payment disbursementStatus(String disbursementStatus) {
+        this.setDisbursementStatus(disbursementStatus);
+        return this;
+    }
+
+    public void setDisbursementStatus(String disbursementStatus) {
+        this.disbursementStatus = disbursementStatus;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
