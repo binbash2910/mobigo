@@ -291,13 +291,8 @@ public class RideResource {
                 map.put("minuteArrivee", ride.getMinuteArrivee());
                 map.put("prixParPlace", ride.getPrixParPlace());
                 map.put("nbrePlaceDisponible", ride.getNbrePlaceDisponible());
-                map.put("nbrePlaces", ride.getNbrePlaces());
                 map.put("statut", ride.getStatut() != null ? ride.getStatut().name() : null);
                 map.put("description", ride.getDescription());
-                map.put("bagage", ride.getBagage());
-                map.put("fumeur", ride.getFumeur());
-                map.put("animaux", ride.getAnimaux());
-                map.put("filleUniquement", ride.getFilleUniquement());
                 map.put("exactDateMatch", date != null && ride.getDateDepart() != null && ride.getDateDepart().equals(date));
 
                 if (ride.getVehicule() != null && ride.getVehicule().getProprietaire() != null) {

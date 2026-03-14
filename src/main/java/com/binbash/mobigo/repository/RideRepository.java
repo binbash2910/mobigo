@@ -47,16 +47,16 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
         "AND r.dateDepart >= :today " +
         "AND (:departure IS NULL OR LOWER(r.villeDepart) LIKE LOWER(CONCAT('%', CAST(:departure AS string), '%'))) " +
         "AND (:arrival IS NULL OR LOWER(r.villeArrivee) LIKE LOWER(CONCAT('%', CAST(:arrival AS string), '%'))) " +
-        "AND (:dateFrom IS NULL OR r.dateDepart >= :dateFrom) " +
-        "AND (:dateTo IS NULL OR r.dateDepart <= :dateTo) " +
+        "AND r.dateDepart >= COALESCE(:dateFrom, r.dateDepart) " +
+        "AND r.dateDepart <= COALESCE(:dateTo, r.dateDepart) " +
         "ORDER BY CASE WHEN r.dateDepart = :exactDate THEN 0 ELSE 1 END, r.dateDepart ASC, r.heureDepart ASC",
         countQuery = "SELECT COUNT(r) FROM Ride r " +
         "WHERE r.statut = com.binbash.mobigo.domain.enumeration.RideStatusEnum.OUVERT " +
         "AND r.dateDepart >= :today " +
         "AND (:departure IS NULL OR LOWER(r.villeDepart) LIKE LOWER(CONCAT('%', CAST(:departure AS string), '%'))) " +
         "AND (:arrival IS NULL OR LOWER(r.villeArrivee) LIKE LOWER(CONCAT('%', CAST(:arrival AS string), '%'))) " +
-        "AND (:dateFrom IS NULL OR r.dateDepart >= :dateFrom) " +
-        "AND (:dateTo IS NULL OR r.dateDepart <= :dateTo)"
+        "AND r.dateDepart >= COALESCE(:dateFrom, r.dateDepart) " +
+        "AND r.dateDepart <= COALESCE(:dateTo, r.dateDepart)"
     )
     Page<Ride> searchRides(
         @Param("departure") String departure,
