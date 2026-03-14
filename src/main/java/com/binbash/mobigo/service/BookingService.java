@@ -2,7 +2,6 @@ package com.binbash.mobigo.service;
 
 import com.binbash.mobigo.config.ApplicationProperties;
 import com.binbash.mobigo.domain.Booking;
-import com.binbash.mobigo.domain.Payment;
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
@@ -161,15 +160,9 @@ public class BookingService {
         booking = bookingRepository.save(booking);
         bookingSearchRepository.index(booking);
 
-        // Process payment if payment method was specified
+        // Notify passenger to confirm payment (Campay flow)
         if (booking.getMethodePayment() != null) {
-            try {
-                Payment payment = paymentService.processPayment(bookingId, booking.getMethodePayment());
-                paymentService.confirmPayment(payment.getId());
-                LOG.info("Payment processed and confirmed for booking {}", bookingId);
-            } catch (Exception e) {
-                LOG.warn("Payment processing failed for booking {}: {}", bookingId, e.getMessage());
-            }
+            notificationEventService.onPaymentRequested(booking);
         }
 
         LOG.info("Booking {} accepted for ride {}", bookingId, ride.getId());
@@ -247,6 +240,9 @@ public class BookingService {
         booking.setStatut(BookingStatusEnum.ANNULE);
         booking = bookingRepository.save(booking);
         bookingSearchRepository.index(booking);
+
+        // Refund passenger if payment was collected
+        paymentService.refundPassenger(bookingId);
 
         // If was confirmed, restore seats and potentially reopen ride
         if (wasConfirmed) {
