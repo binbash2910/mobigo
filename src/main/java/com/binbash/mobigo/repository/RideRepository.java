@@ -39,4 +39,32 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
         "AND (:statut IS NULL OR r.statut = :statut)"
     )
     Page<Ride> findAllForAdmin(@Param("search") String search, @Param("statut") RideStatusEnum statut, Pageable pageable);
+
+    @Query(
+        value = "SELECT r FROM Ride r " +
+        "LEFT JOIN FETCH r.vehicule v LEFT JOIN FETCH v.proprietaire p " +
+        "WHERE r.statut = com.binbash.mobigo.domain.enumeration.RideStatusEnum.OUVERT " +
+        "AND r.dateDepart >= :today " +
+        "AND (:departure IS NULL OR LOWER(r.villeDepart) LIKE LOWER(CONCAT('%', CAST(:departure AS string), '%'))) " +
+        "AND (:arrival IS NULL OR LOWER(r.villeArrivee) LIKE LOWER(CONCAT('%', CAST(:arrival AS string), '%'))) " +
+        "AND (:dateFrom IS NULL OR r.dateDepart >= :dateFrom) " +
+        "AND (:dateTo IS NULL OR r.dateDepart <= :dateTo) " +
+        "ORDER BY CASE WHEN r.dateDepart = :exactDate THEN 0 ELSE 1 END, r.dateDepart ASC, r.heureDepart ASC",
+        countQuery = "SELECT COUNT(r) FROM Ride r " +
+        "WHERE r.statut = com.binbash.mobigo.domain.enumeration.RideStatusEnum.OUVERT " +
+        "AND r.dateDepart >= :today " +
+        "AND (:departure IS NULL OR LOWER(r.villeDepart) LIKE LOWER(CONCAT('%', CAST(:departure AS string), '%'))) " +
+        "AND (:arrival IS NULL OR LOWER(r.villeArrivee) LIKE LOWER(CONCAT('%', CAST(:arrival AS string), '%'))) " +
+        "AND (:dateFrom IS NULL OR r.dateDepart >= :dateFrom) " +
+        "AND (:dateTo IS NULL OR r.dateDepart <= :dateTo)"
+    )
+    Page<Ride> searchRides(
+        @Param("departure") String departure,
+        @Param("arrival") String arrival,
+        @Param("dateFrom") java.time.LocalDate dateFrom,
+        @Param("dateTo") java.time.LocalDate dateTo,
+        @Param("exactDate") java.time.LocalDate exactDate,
+        @Param("today") java.time.LocalDate today,
+        Pageable pageable
+    );
 }
