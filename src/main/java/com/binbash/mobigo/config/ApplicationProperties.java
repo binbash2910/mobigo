@@ -18,6 +18,7 @@ public class ApplicationProperties {
     private final Storage storage = new Storage();
     private final Pricing pricing = new Pricing();
     private final Firebase firebase = new Firebase();
+    private final Campay campay = new Campay();
 
     public String getFrontendUrl() {
         return frontendUrl;
@@ -49,6 +50,10 @@ public class ApplicationProperties {
 
     public Firebase getFirebase() {
         return firebase;
+    }
+
+    public Campay getCampay() {
+        return campay;
     }
 
     public static class Tesseract {
@@ -189,6 +194,64 @@ public class ApplicationProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class Campay {
+
+        private String apiUsername;
+        private String apiPassword;
+        private String webhookSecret;
+        private String baseUrl = "https://demo.campay.net/api";
+        private boolean enabled = false;
+        private int paymentTimeoutMinutes = 5;
+
+        public String getApiUsername() {
+            return apiUsername;
+        }
+
+        public void setApiUsername(String apiUsername) {
+            this.apiUsername = apiUsername;
+        }
+
+        public String getApiPassword() {
+            return apiPassword;
+        }
+
+        public void setApiPassword(String apiPassword) {
+            this.apiPassword = apiPassword;
+        }
+
+        public String getWebhookSecret() {
+            return webhookSecret;
+        }
+
+        public void setWebhookSecret(String webhookSecret) {
+            this.webhookSecret = webhookSecret;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public int getPaymentTimeoutMinutes() {
+            return paymentTimeoutMinutes;
+        }
+
+        public void setPaymentTimeoutMinutes(int paymentTimeoutMinutes) {
+            this.paymentTimeoutMinutes = paymentTimeoutMinutes;
         }
     }
 }

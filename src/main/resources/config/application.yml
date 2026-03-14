@@ -229,3 +229,10 @@ turnstile:
 application:
   pricing:
     commission-rate: 0.10
+  campay:
+    api-username: ${CAMPAY_API_USERNAME:}
+    api-password: ${CAMPAY_API_PASSWORD:}
+    webhook-secret: ${CAMPAY_WEBHOOK_SECRET:}
+    base-url: ${CAMPAY_BASE_URL:https://demo.campay.net/api}
+    enabled: ${CAMPAY_ENABLED:false}
+    payment-timeout-minutes: 5
