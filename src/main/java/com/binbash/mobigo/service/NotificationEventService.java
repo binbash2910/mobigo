@@ -329,6 +329,50 @@ public class NotificationEventService {
     }
 
     // -------------------------------------------------------------------------
+    // Identity verification events
+    // -------------------------------------------------------------------------
+
+    public void onIdentityVerified(People people, String adminComment) {
+        sendIdentityNotification(
+            people,
+            NotificationType.IDENTITY_VERIFIED,
+            "Identit\u00e9 v\u00e9rifi\u00e9e",
+            "Votre identit\u00e9 a \u00e9t\u00e9 v\u00e9rifi\u00e9e avec succ\u00e8s. Vous pouvez d\u00e9sormais profiter de toutes les fonctionnalit\u00e9s.",
+            adminComment
+        );
+    }
+
+    public void onIdentityRejected(People people, String adminComment) {
+        sendIdentityNotification(
+            people,
+            NotificationType.IDENTITY_REJECTED,
+            "V\u00e9rification refus\u00e9e",
+            "Votre v\u00e9rification d'identit\u00e9 n'a pas pu \u00eatre valid\u00e9e. Veuillez soumettre \u00e0 nouveau votre document.",
+            adminComment
+        );
+    }
+
+    private void sendIdentityNotification(People people, NotificationType type, String title, String message, String adminComment) {
+        try {
+            if (people.getUser() == null) {
+                LOG.warn("Cannot notify user for identity verification: user is null for people {}", people.getId());
+                return;
+            }
+
+            if (adminComment != null && !adminComment.isBlank()) {
+                message = message + " \u2014 " + adminComment;
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("peopleId", people.getId());
+
+            notificationService.createAndSend(people.getUser().getLogin(), people.getId(), type, title, message, data);
+        } catch (Exception e) {
+            LOG.warn("Failed to create notification for identity verification of people {}: {}", people.getId(), e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
