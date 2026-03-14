@@ -28,19 +28,22 @@ public class RideService {
     private final MailService mailService;
     private final EntityManager entityManager;
     private final NotificationEventService notificationEventService;
+    private final PaymentService paymentService;
 
     public RideService(
         RideRepository rideRepository,
         BookingRepository bookingRepository,
         MailService mailService,
         EntityManager entityManager,
-        NotificationEventService notificationEventService
+        NotificationEventService notificationEventService,
+        PaymentService paymentService
     ) {
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
         this.mailService = mailService;
         this.entityManager = entityManager;
         this.notificationEventService = notificationEventService;
+        this.paymentService = paymentService;
     }
 
     /**
@@ -79,6 +82,14 @@ public class RideService {
 
         LOG.info("Ride {} completed successfully", rideId);
 
+        // Disburse funds to driver
+        People driver = ride.getVehicule() != null && ride.getVehicule().getProprietaire() != null
+            ? ride.getVehicule().getProprietaire()
+            : null;
+        if (driver != null) {
+            paymentService.disburseToDriver(rideId, ride, driver);
+        }
+
         // Send email notifications to all passengers with active bookings
         sendRideNotificationEmails(rideId, ride, "COMPLETED");
 
@@ -114,6 +125,9 @@ public class RideService {
                 bookingRepository.save(booking);
                 restoredSeats += booking.getNbPlacesReservees() != null ? booking.getNbPlacesReservees().intValue() : 0;
                 LOG.debug("Cancelled booking {} for cancelled ride {}", booking.getId(), rideId);
+
+                // Refund passenger if payment was collected
+                paymentService.refundPassenger(booking.getId());
             }
         }
 
