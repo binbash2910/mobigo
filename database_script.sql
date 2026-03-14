@@ -31,3 +31,11 @@ INSERT INTO jhi_user_authority (user_id, authority_name) VALUES (1552, 'ROLE_USE
 -- 3. Attribuer ROLE_USER a tous les autres utilisateurs
 INSERT INTO jhi_user_authority (user_id, authority_name)
 SELECT id, 'ROLE_USER' FROM jhi_user WHERE id != 1552;
+
+ALTER TABLE notification DROP CONSTRAINT notification_type_check;
+ALTER TABLE notification
+  ADD CONSTRAINT notification_type_check CHECK (
+    type::text = ANY (ARRAY[ 'BOOKING_RECEIVED', 'BOOKING_ACCEPTED', 'BOOKING_REJECTED', 'BOOKING_CANCELLED',
+  'TRIP_MODIFIED', 'TRIP_CANCELLED', 'TRIP_REMINDER', 'RATING_RECEIVED', 'MESSAGE_RECEIVED',
+  'IDENTITY_VERIFIED', 'IDENTITY_REJECTED' ]::text[])
+  );

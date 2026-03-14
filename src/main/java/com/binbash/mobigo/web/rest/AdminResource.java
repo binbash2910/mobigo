@@ -370,6 +370,8 @@ public class AdminResource {
                 map.put("cniDateExpiration", p.getCniDateExpiration());
                 map.put("cniNomMrz", p.getCniNomMrz());
                 map.put("cniPrenomMrz", p.getCniPrenomMrz());
+                map.put("cniSexe", p.getCniSexe());
+                map.put("cniDateNaissanceMrz", p.getCniDateNaissanceMrz());
                 return map;
             })
             .collect(Collectors.toList());
