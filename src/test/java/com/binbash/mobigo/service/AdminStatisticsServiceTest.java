@@ -42,11 +42,14 @@ class AdminStatisticsServiceTest {
     @Mock
     private BookingRepository bookingRepository;
 
+    @Mock
+    private com.binbash.mobigo.repository.PaymentRepository paymentRepository;
+
     private AdminStatisticsService service;
 
     @BeforeEach
     void setUp() {
-        service = new AdminStatisticsService(userRepository, peopleRepository, rideRepository, bookingRepository);
+        service = new AdminStatisticsService(userRepository, peopleRepository, rideRepository, bookingRepository, paymentRepository);
     }
 
     @Test
