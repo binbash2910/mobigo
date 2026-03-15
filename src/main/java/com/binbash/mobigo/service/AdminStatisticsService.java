@@ -7,6 +7,7 @@ import com.binbash.mobigo.domain.User;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
 import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
 import com.binbash.mobigo.repository.BookingRepository;
+import com.binbash.mobigo.repository.PaymentRepository;
 import com.binbash.mobigo.repository.PeopleRepository;
 import com.binbash.mobigo.repository.RideRepository;
 import com.binbash.mobigo.repository.UserRepository;
@@ -37,17 +38,20 @@ public class AdminStatisticsService {
     private final PeopleRepository peopleRepository;
     private final RideRepository rideRepository;
     private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
 
     public AdminStatisticsService(
         UserRepository userRepository,
         PeopleRepository peopleRepository,
         RideRepository rideRepository,
-        BookingRepository bookingRepository
+        BookingRepository bookingRepository,
+        PaymentRepository paymentRepository
     ) {
         this.userRepository = userRepository;
         this.peopleRepository = peopleRepository;
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     /**
@@ -93,6 +97,19 @@ public class AdminStatisticsService {
             bookingsByStatus.putIfAbsent(status.name(), 0L);
         }
         dto.setBookingsByStatus(bookingsByStatus);
+
+        // Payment / Financial statistics
+        dto.setTotalPayments(paymentRepository.countAll());
+        dto.setTotalCollected(paymentRepository.sumCollectedAmount());
+        dto.setTotalCommission(paymentRepository.sumCommissionPlateforme());
+        dto.setTotalCampayFees(paymentRepository.sumFraisCampay());
+        dto.setTotalNetRevenue(paymentRepository.sumRevenuNetPlateforme());
+
+        Map<String, Long> paymentsByStatus = new HashMap<>();
+        for (com.binbash.mobigo.domain.enumeration.PaymentStatusEnum ps : com.binbash.mobigo.domain.enumeration.PaymentStatusEnum.values()) {
+            paymentsByStatus.put(ps.name(), paymentRepository.countByStatutValue(ps));
+        }
+        dto.setPaymentsByStatus(paymentsByStatus);
 
         // Monthly activity (last 12 months)
         dto.setMonthlyActivity(buildMonthlyActivity(allRides, allBookings));
