@@ -19,6 +19,12 @@ public class AdminStatisticsDTO {
     private Map<String, Long> bookingsByStatus;
     private List<MonthlyStats> monthlyActivity;
     private List<RecentActivity> recentActivity;
+    private long totalPayments;
+    private double totalCollected;
+    private double totalCommission;
+    private double totalCampayFees;
+    private double totalNetRevenue;
+    private Map<String, Long> paymentsByStatus;
 
     // ── Inner classes ───────────────────────────────────────────────────
 
@@ -199,5 +205,53 @@ public class AdminStatisticsDTO {
 
     public void setRecentActivity(List<RecentActivity> recentActivity) {
         this.recentActivity = recentActivity;
+    }
+
+    public long getTotalPayments() {
+        return totalPayments;
+    }
+
+    public void setTotalPayments(long totalPayments) {
+        this.totalPayments = totalPayments;
+    }
+
+    public double getTotalCollected() {
+        return totalCollected;
+    }
+
+    public void setTotalCollected(double totalCollected) {
+        this.totalCollected = totalCollected;
+    }
+
+    public double getTotalCommission() {
+        return totalCommission;
+    }
+
+    public void setTotalCommission(double totalCommission) {
+        this.totalCommission = totalCommission;
+    }
+
+    public double getTotalCampayFees() {
+        return totalCampayFees;
+    }
+
+    public void setTotalCampayFees(double totalCampayFees) {
+        this.totalCampayFees = totalCampayFees;
+    }
+
+    public double getTotalNetRevenue() {
+        return totalNetRevenue;
+    }
+
+    public void setTotalNetRevenue(double totalNetRevenue) {
+        this.totalNetRevenue = totalNetRevenue;
+    }
+
+    public Map<String, Long> getPaymentsByStatus() {
+        return paymentsByStatus;
+    }
+
+    public void setPaymentsByStatus(Map<String, Long> paymentsByStatus) {
+        this.paymentsByStatus = paymentsByStatus;
     }
 }
