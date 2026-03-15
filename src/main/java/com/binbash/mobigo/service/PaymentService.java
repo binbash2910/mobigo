@@ -240,6 +240,8 @@ public class PaymentService {
         payment.setStatut(PaymentStatusEnum.EN_COURS);
         payment.setBooking(booking);
         payment.setExternalReference(externalRef);
+        // Track commission breakdown
+        payment.setCommissionPlateforme(booking.getCommission());
         payment.setOperateur(operateur);
         payment.setPhoneNumber(phoneNumber);
 
@@ -317,10 +319,17 @@ public class PaymentService {
         float totalToDisburse = 0;
         for (Booking booking : paidBookings) {
             float driverAmount = booking.getMontantTotal() - booking.getCommission();
+            // Campay charges ~1.5% on collect + 1.5% on disburse (estimate)
+            float fraisCampayCollect = booking.getMontantTotal() * 0.015f;
+            float fraisCampayDisburse = driverAmount * 0.015f;
+            float totalFraisCampay = fraisCampayCollect + fraisCampayDisburse;
+            float revenuNet = booking.getCommission() - totalFraisCampay;
             totalToDisburse += driverAmount;
 
             Payment payment = paymentRepository.findByBookingId(booking.getId()).orElse(null);
             if (payment != null) {
+                payment.setFraisCampay(totalFraisCampay);
+                payment.setRevenuNetPlateforme(revenuNet);
                 String disbRef = "DIS-" + booking.getId() + "-" + System.currentTimeMillis();
                 try {
                     CampayService.DisbursementResponse resp = campayService.disburse(
@@ -342,7 +351,20 @@ public class PaymentService {
         }
 
         notificationEventService.onPaymentDisbursed(ride, driver, totalToDisburse);
-        LOG.info("Disbursed {} FCFA to driver {} for ride {}", Math.round(totalToDisburse), driver.getId(), rideId);
+        float totalCommission = paidBookings.stream().map(b -> b.getCommission()).reduce(0f, Float::sum);
+        float totalFrais = paidBookings
+            .stream()
+            .map(b -> paymentRepository.findByBookingId(b.getId()).map(Payment::getFraisCampay).orElse(0f))
+            .reduce(0f, Float::sum);
+        LOG.info(
+            "Ride {} financial summary: collected={} FCFA, driver={} FCFA, commission={} FCFA, campayFees={} FCFA, netRevenue={} FCFA",
+            rideId,
+            paidBookings.stream().map(b -> b.getMontantTotal()).reduce(0f, Float::sum).intValue(),
+            Math.round(totalToDisburse),
+            Math.round(totalCommission),
+            Math.round(totalFrais),
+            Math.round(totalCommission - totalFrais)
+        );
     }
 
     /**
@@ -361,6 +383,11 @@ public class PaymentService {
         try {
             campayService.disburse(payment.getPhoneNumber(), amount, refundRef, "Mobigo remboursement");
             payment.setStatut(PaymentStatusEnum.REMBOURSE);
+            // Refund costs: platform loses the collect fees + refund disburse fees
+            float fraisRefund = payment.getMontant() * 0.015f; // disburse fee for refund
+            float totalFrais = (payment.getFraisCampay() != null ? payment.getFraisCampay() : 0) + fraisRefund;
+            payment.setFraisCampay(totalFrais);
+            payment.setRevenuNetPlateforme(-totalFrais); // Net loss on refunded payment
             payment.setDisbursementReference(refundRef);
             paymentRepository.save(payment);
             notificationEventService.onPaymentRefunded(booking);
