@@ -63,6 +63,15 @@ public class Payment extends AbstractAuditingEntity<Long> implements Serializabl
     @Column(name = "disbursement_status")
     private String disbursementStatus;
 
+    @Column(name = "commission_plateforme")
+    private Float commissionPlateforme;
+
+    @Column(name = "frais_campay")
+    private Float fraisCampay;
+
+    @Column(name = "revenu_net_plateforme")
+    private Float revenuNetPlateforme;
+
     @JsonIgnoreProperties(value = { "payement", "trajet", "passager" }, allowSetters = true)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(unique = true)
@@ -224,6 +233,45 @@ public class Payment extends AbstractAuditingEntity<Long> implements Serializabl
 
     public void setDisbursementStatus(String disbursementStatus) {
         this.disbursementStatus = disbursementStatus;
+    }
+
+    public Float getCommissionPlateforme() {
+        return this.commissionPlateforme;
+    }
+
+    public Payment commissionPlateforme(Float commissionPlateforme) {
+        this.setCommissionPlateforme(commissionPlateforme);
+        return this;
+    }
+
+    public void setCommissionPlateforme(Float commissionPlateforme) {
+        this.commissionPlateforme = commissionPlateforme;
+    }
+
+    public Float getFraisCampay() {
+        return this.fraisCampay;
+    }
+
+    public Payment fraisCampay(Float fraisCampay) {
+        this.setFraisCampay(fraisCampay);
+        return this;
+    }
+
+    public void setFraisCampay(Float fraisCampay) {
+        this.fraisCampay = fraisCampay;
+    }
+
+    public Float getRevenuNetPlateforme() {
+        return this.revenuNetPlateforme;
+    }
+
+    public Payment revenuNetPlateforme(Float revenuNetPlateforme) {
+        this.setRevenuNetPlateforme(revenuNetPlateforme);
+        return this;
+    }
+
+    public void setRevenuNetPlateforme(Float revenuNetPlateforme) {
+        this.revenuNetPlateforme = revenuNetPlateforme;
     }
 
     // jhipster-needle-entity-add-getters-setters - JHipster will add getters and setters here
