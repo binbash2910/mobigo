@@ -227,8 +227,6 @@ jhipster:
 turnstile:
   secret-key: ${TURNSTILE_SECRET_KEY:0x4AAAAAACflJeePr3iRc_NfjbzZlODDvfY}
 application:
-  pricing:
-    commission-rate: 0.10
   campay:
     api-username: ${CAMPAY_API_USERNAME:}
     api-password: ${CAMPAY_API_PASSWORD:}

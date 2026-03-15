@@ -16,7 +16,6 @@ public class ApplicationProperties {
     private final Anthropic anthropic = new Anthropic();
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Storage storage = new Storage();
-    private final Pricing pricing = new Pricing();
     private final Firebase firebase = new Firebase();
     private final Campay campay = new Campay();
 
@@ -42,10 +41,6 @@ public class ApplicationProperties {
 
     public Storage getStorage() {
         return storage;
-    }
-
-    public Pricing getPricing() {
-        return pricing;
     }
 
     public Firebase getFirebase() {
@@ -159,19 +154,6 @@ public class ApplicationProperties {
 
         public void setCniDir(String cniDir) {
             this.cniDir = cniDir;
-        }
-    }
-
-    public static class Pricing {
-
-        private double commissionRate = 0.10;
-
-        public double getCommissionRate() {
-            return commissionRate;
-        }
-
-        public void setCommissionRate(double commissionRate) {
-            this.commissionRate = commissionRate;
         }
     }
 
