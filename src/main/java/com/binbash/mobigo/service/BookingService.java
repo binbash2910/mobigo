@@ -1,6 +1,5 @@
 package com.binbash.mobigo.service;
 
-import com.binbash.mobigo.config.ApplicationProperties;
 import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Ride;
@@ -33,7 +32,7 @@ public class BookingService {
     private final PaymentService paymentService;
     private final MailService mailService;
     private final EntityManager entityManager;
-    private final ApplicationProperties applicationProperties;
+    private final AppSettingService appSettingService;
     private final NotificationEventService notificationEventService;
 
     public BookingService(
@@ -43,7 +42,7 @@ public class BookingService {
         PaymentService paymentService,
         MailService mailService,
         EntityManager entityManager,
-        ApplicationProperties applicationProperties,
+        AppSettingService appSettingService,
         NotificationEventService notificationEventService
     ) {
         this.bookingRepository = bookingRepository;
@@ -52,7 +51,7 @@ public class BookingService {
         this.paymentService = paymentService;
         this.mailService = mailService;
         this.entityManager = entityManager;
-        this.applicationProperties = applicationProperties;
+        this.appSettingService = appSettingService;
         this.notificationEventService = notificationEventService;
     }
 
@@ -85,7 +84,7 @@ public class BookingService {
         booking.setDateReservation(LocalDate.now());
 
         // Compute commission and total amount from backend config
-        double commissionRate = applicationProperties.getPricing().getCommissionRate();
+        double commissionRate = appSettingService.getCommissionRate();
         float prixParPlace = ride.getPrixParPlace();
         long nbPlaces = booking.getNbPlacesReservees();
         float commission = Math.round((float) (prixParPlace * commissionRate * nbPlaces));
