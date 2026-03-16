@@ -226,7 +226,9 @@ public class PaymentService {
         }
 
         People passenger = booking.getPassager();
-        String phoneNumber = resolvePhoneNumber(passenger, booking.getMethodePayment());
+        String phoneNumber = booking.getTelephonePaiement() != null && !booking.getTelephonePaiement().isBlank()
+            ? booking.getTelephonePaiement()
+            : resolvePhoneNumber(passenger, booking.getMethodePayment());
         String operateur = booking.getMethodePayment() == PaymentMethodEnum.ORANGE_MONEY ? "OM" : "MOMO";
 
         int amount = Math.round(booking.getMontantTotal());

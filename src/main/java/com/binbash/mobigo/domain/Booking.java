@@ -51,6 +51,9 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
     @org.springframework.data.elasticsearch.annotations.Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
     private PaymentMethodEnum methodePayment;
 
+    @Column(name = "telephone_paiement", length = 20)
+    private String telephonePaiement;
+
     @JsonIgnoreProperties(value = { "booking" }, allowSetters = true)
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "booking")
     @org.springframework.data.annotation.Transient
@@ -169,6 +172,19 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
         this.methodePayment = methodePayment;
     }
 
+    public String getTelephonePaiement() {
+        return this.telephonePaiement;
+    }
+
+    public Booking telephonePaiement(String telephonePaiement) {
+        this.setTelephonePaiement(telephonePaiement);
+        return this;
+    }
+
+    public void setTelephonePaiement(String telephonePaiement) {
+        this.telephonePaiement = telephonePaiement;
+    }
+
     public Payment getPayement() {
         return this.payement;
     }
@@ -244,6 +260,7 @@ public class Booking extends AbstractAuditingEntity<Long> implements Serializabl
             ", dateReservation='" + getDateReservation() + "'" +
             ", statut='" + getStatut() + "'" +
             ", methodePayment='" + getMethodePayment() + "'" +
+            ", telephonePaiement='" + getTelephonePaiement() + "'" +
             "}";
     }
 }
