@@ -33,9 +33,16 @@ public class CampayService {
     }
 
     /**
-     * Get or refresh Campay API token.
+     * Get Campay API token.
+     * Uses permanent token if configured, otherwise falls back to username/password authentication.
      */
     public String getToken() throws Exception {
+        // Use permanent token if available
+        if (config.getPermanentToken() != null && !config.getPermanentToken().isBlank()) {
+            return config.getPermanentToken();
+        }
+
+        // Fallback: authenticate with username/password
         if (cachedToken != null && tokenExpiry != null && Instant.now().isBefore(tokenExpiry)) {
             return cachedToken;
         }

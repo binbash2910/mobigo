@@ -183,6 +183,7 @@ public class ApplicationProperties {
 
         private String apiUsername;
         private String apiPassword;
+        private String permanentToken;
         private String webhookSecret;
         private String baseUrl = "https://demo.campay.net/api";
         private boolean enabled = false;
@@ -202,6 +203,14 @@ public class ApplicationProperties {
 
         public void setApiPassword(String apiPassword) {
             this.apiPassword = apiPassword;
+        }
+
+        public String getPermanentToken() {
+            return permanentToken;
+        }
+
+        public void setPermanentToken(String permanentToken) {
+            this.permanentToken = permanentToken;
         }
 
         public String getWebhookSecret() {

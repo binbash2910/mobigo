@@ -230,6 +230,7 @@ application:
   campay:
     api-username: ${CAMPAY_API_USERNAME:}
     api-password: ${CAMPAY_API_PASSWORD:}
+    permanent-token: ${CAMPAY_PERMANENT_TOKEN:}
     webhook-secret: ${CAMPAY_WEBHOOK_SECRET:}
     base-url: ${CAMPAY_BASE_URL:https://demo.campay.net/api}
     enabled: ${CAMPAY_ENABLED:false}
