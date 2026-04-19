@@ -226,12 +226,39 @@ jhipster:
 
 turnstile:
   secret-key: ${TURNSTILE_SECRET_KEY:0x4AAAAAACflJeePr3iRc_NfjbzZlODDvfY}
+
+# ===================================================================
+# Campay configuration (Orange Money + MTN Mobile Money)
+# Clés à récupérer sur https://demo.campay.net/fr/developer/applications/
+# (ou https://campay.net/ en production).
+# Toutes les valeurs sont lues depuis des variables d'environnement —
+# définis-les dans ton OS, IntelliJ (Run Config > Environment variables),
+# ou sur Render (Dashboard > Environment).
+# ===================================================================
 application:
   campay:
+    # Active l'intégration Campay. Si false, CampayService simule collect/disburse.
+    enabled: ${CAMPAY_ENABLED:true}
+
+    # URL de l'API Campay. Sandbox par défaut ; mettre https://campay.net/api en prod.
+    base-url: ${CAMPAY_BASE_URL:https://demo.campay.net/api}
+
+    # ID de l'application Campay (le long token "app-id" utilisé par le widget JS SDK
+    # et visible dans le dashboard). Utile pour le logging/debug et pour certaines
+    # intégrations widget côté frontend.
+    app-id: ${CAMPAY_APP_ID:}
+
+    # --- Authentification (deux options, une suffit) ---
+    # Option A (recommandée) : jeton permanent — aucune expiration.
+    permanent-token: ${CAMPAY_PERMANENT_TOKEN:}
+
+    # Option B : auth par username/password — CampayService demandera un token de 1h auto-renouvelé.
     api-username: ${CAMPAY_API_USERNAME:}
     api-password: ${CAMPAY_API_PASSWORD:}
-    permanent-token: ${CAMPAY_PERMANENT_TOKEN:}
+
+    # --- Webhook ---
+    # Clé secrète de l'application — sert à vérifier la signature HMAC-SHA256
+    # des callbacks Campay (voir CampayWebhookResource). Laisser vide désactive la vérif.
     webhook-secret: ${CAMPAY_WEBHOOK_SECRET:}
-    base-url: ${CAMPAY_BASE_URL:https://demo.campay.net/api}
-    enabled: ${CAMPAY_ENABLED:false}
-    payment-timeout-minutes: 5
+
+    # Délai max (minutes) avant qu'un

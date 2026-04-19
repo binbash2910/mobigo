@@ -55,3 +55,5 @@ ALTER TABLE notification
   'IDENTITY_VERIFIED','IDENTITY_REJECTED',
   'PAYMENT_REQUESTED','PAYMENT_SUCCESS','PAYMENT_FAILED','PAYMENT_REFUNDED','PAYMENT_DISBURSED'
   ]::text[]) );
+
+INSERT INTO app_setting (setting_key, setting_value) VALUES ('commission_rate', '0.10');

@@ -4,6 +4,7 @@ import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
+import com.binbash.mobigo.domain.enumeration.PaymentMethodEnum;
 import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
 import com.binbash.mobigo.repository.BookingRepository;
 import com.binbash.mobigo.repository.RideRepository;
@@ -165,6 +166,25 @@ public class BookingService {
         }
 
         LOG.info("Booking {} accepted for ride {}", bookingId, ride.getId());
+
+        // Trigger Campay collect (USSD push to passenger's phone) for mobile money payments.
+        // Wrapped in try/catch so the accept doesn't rollback if Campay is temporarily unreachable.
+        // The passenger can retry via the dedicated payment status page.
+        PaymentMethodEnum method = booking.getMethodePayment();
+        boolean isMobileMoney = method == PaymentMethodEnum.ORANGE_MONEY || method == PaymentMethodEnum.MTN_MOBILE_MONEY;
+        if (isMobileMoney) {
+            try {
+                paymentService.initiateCollect(bookingId);
+                LOG.info("Campay collect initiated on accept for booking {}", bookingId);
+            } catch (Exception e) {
+                LOG.warn(
+                    "Campay collect could not be initiated on accept for booking {}: {}. " +
+                    "The passenger will be able to retry via the payment status page.",
+                    bookingId,
+                    e.getMessage()
+                );
+            }
+        }
 
         // Send in-app notification to passenger
         try {

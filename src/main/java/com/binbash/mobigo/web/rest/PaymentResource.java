@@ -12,9 +12,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -143,22 +141,51 @@ public class PaymentResource {
     }
 
     /**
-     * {@code GET  /payments/status/:bookingId} : Get the payment status for a booking.
+     * {@code POST  /payments/refund/:bookingId} : Refund a booking's collected payment.
+     * Idempotent: skips silently if no eligible payment is found.
      *
      * @param bookingId the booking id.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the payment status, or with status {@code 404 (Not Found)}.
+     * @param body optional JSON body like {@code { "reason": "..." }}.
+     */
+    @PostMapping("/refund/{bookingId}")
+    public ResponseEntity<Void> refund(@PathVariable("bookingId") Long bookingId, @RequestBody(required = false) RefundRequest body) {
+        LOG.debug("REST request to refund booking {}", bookingId);
+        String reason = body != null ? body.reason() : null;
+        paymentService.refund(bookingId, reason);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * {@code POST  /payments/disburse} : Payout on demand to a mobile money wallet (driver).
+     */
+    @PostMapping("/disburse")
+    public ResponseEntity<Payment> disburse(@Valid @RequestBody DisburseRequest request) {
+        LOG.debug("REST request to disburse {} to {}", request.amount(), request.phone());
+        Payment payment = paymentService.disburseOnDemand(
+            Math.round(request.amount()),
+            request.phone(),
+            request.operator(),
+            request.description()
+        );
+        return ResponseEntity.ok(payment);
+    }
+
+    /**
+     * {@code GET  /payments/status/:bookingId} : Get the payment status for a booking.
+     * If the payment is still EN_COURS, refreshes the status from Campay on the fly so the
+     * frontend polling picks up the terminal state without waiting for the webhook.
+     *
+     * @param bookingId the booking id.
+     * @return the full payment, or 404 if none.
      */
     @GetMapping("/status/{bookingId}")
-    public ResponseEntity<Map<String, String>> getPaymentStatus(@PathVariable("bookingId") Long bookingId) {
+    public ResponseEntity<Payment> getPaymentStatus(@PathVariable("bookingId") Long bookingId) {
         Optional<Payment> paymentOpt = paymentService.getPaymentByBooking(bookingId);
         if (paymentOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        Payment payment = paymentOpt.orElseThrow();
-        Map<String, String> result = new HashMap<>();
-        result.put("statut", payment.getStatut().name());
-        result.put("externalReference", payment.getExternalReference() != null ? payment.getExternalReference() : "");
-        return ResponseEntity.ok(result);
+        Payment payment = paymentService.refreshStatusFromCampay(paymentOpt.orElseThrow());
+        return ResponseEntity.ok(payment);
     }
 
     /**
@@ -336,4 +363,14 @@ public class PaymentResource {
      * Request body for updating payment status.
      */
     public record UpdateStatusRequest(@NotNull PaymentStatusEnum statut) {}
+
+    /**
+     * Request body for refunding a booking.
+     */
+    public record RefundRequest(String reason) {}
+
+    /**
+     * Request body for an on-demand disbursement (driver payout).
+     */
+    public record DisburseRequest(@NotNull Float amount, @NotNull String phone, String operator, String description, Long bookingId) {}
 }

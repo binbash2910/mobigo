@@ -214,22 +214,46 @@ public class PaymentService {
 
     /**
      * Initiate a Campay collect for a booking.
-     * Called when the passenger confirms payment after driver acceptance.
+     * Called automatically by BookingService.acceptBooking when the driver accepts a mobile-money booking,
+     * or manually by the passenger via POST /api/payments/initiate-collect/{bookingId}.
+     *
+     * Idempotent: returns the existing payment if a collect is already in progress or succeeded.
      */
     public Payment initiateCollect(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
 
-        // Check existing payment
+        // Guard: only mobile money methods can be collected via Campay USSD
+        PaymentMethodEnum method = booking.getMethodePayment();
+        if (method != PaymentMethodEnum.ORANGE_MONEY && method != PaymentMethodEnum.MTN_MOBILE_MONEY) {
+            throw new BadRequestAlertException(
+                "Collect only supported for ORANGE_MONEY or MTN_MOBILE_MONEY (booking method: " + method + ")",
+                ENTITY_NAME,
+                "invalidmethod"
+            );
+        }
+
+        // Idempotency: if a collect is already pending / successful, just return it
         Payment existingPayment = paymentRepository.findByBookingId(bookingId).orElse(null);
-        if (existingPayment != null && existingPayment.getStatut() != PaymentStatusEnum.ECHOUE) {
-            throw new RuntimeException("Payment already exists for booking " + bookingId);
+        if (existingPayment != null) {
+            PaymentStatusEnum st = existingPayment.getStatut();
+            if (st == PaymentStatusEnum.EN_COURS || st == PaymentStatusEnum.COLLECTE_REUSSIE || st == PaymentStatusEnum.REUSSI) {
+                LOG.info("Campay collect already in state {} for booking {}, returning existing payment", st, bookingId);
+                return existingPayment;
+            }
+            // For EN_ATTENTE / ECHOUE / REMBOURSE we retry with a fresh external reference
         }
 
         People passenger = booking.getPassager();
         String phoneNumber = booking.getTelephonePaiement() != null && !booking.getTelephonePaiement().isBlank()
             ? booking.getTelephonePaiement()
-            : resolvePhoneNumber(passenger, booking.getMethodePayment());
-        String operateur = booking.getMethodePayment() == PaymentMethodEnum.ORANGE_MONEY ? "OM" : "MOMO";
+            : resolvePhoneNumber(passenger, method);
+
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new BadRequestAlertException("No phone number available for collect", ENTITY_NAME, "nophonenumber");
+        }
+        phoneNumber = normalizePhone(phoneNumber);
+
+        String operateur = method == PaymentMethodEnum.ORANGE_MONEY ? "OM" : "MOMO";
 
         int amount = Math.round(booking.getMontantTotal());
         String externalRef = "PAY-" + bookingId + "-" + System.currentTimeMillis();
@@ -264,6 +288,39 @@ public class PaymentService {
     }
 
     /**
+     * Refresh a payment's status from Campay when it's still EN_COURS.
+     * Avoids relying solely on the webhook — the frontend polls this endpoint.
+     */
+    public Payment refreshStatusFromCampay(Payment payment) {
+        if (payment == null) return null;
+        if (payment.getStatut() != PaymentStatusEnum.EN_COURS) return payment;
+        String ref = payment.getCampayTransactionId() != null ? payment.getCampayTransactionId() : payment.getExternalReference();
+        if (ref == null || ref.isBlank()) return payment;
+
+        try {
+            String remoteStatus = campayService.getTransactionStatus(ref);
+            if ("SUCCESSFUL".equalsIgnoreCase(remoteStatus)) {
+                payment.setStatut(PaymentStatusEnum.COLLECTE_REUSSIE);
+                paymentRepository.save(payment);
+                paymentSearchRepository.index(payment);
+                if (payment.getBooking() != null) {
+                    notificationEventService.onPaymentSuccess(payment.getBooking());
+                }
+            } else if ("FAILED".equalsIgnoreCase(remoteStatus)) {
+                payment.setStatut(PaymentStatusEnum.ECHOUE);
+                paymentRepository.save(payment);
+                paymentSearchRepository.index(payment);
+                if (payment.getBooking() != null) {
+                    notificationEventService.onPaymentFailed(payment.getBooking());
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("Unable to refresh Campay status for payment {}: {}", payment.getId(), e.getMessage());
+        }
+        return payment;
+    }
+
+    /**
      * Handle Campay webhook callback.
      */
     public void handleWebhook(String reference, String status, String externalReference) {
@@ -290,6 +347,58 @@ public class PaymentService {
             paymentRepository.save(payment);
             notificationEventService.onPaymentFailed(booking);
             LOG.info("Payment failed for booking {}", booking.getId());
+        }
+    }
+
+    /**
+     * On-demand payout to the current driver's mobile wallet.
+     * Used by the frontend DriverPayout page (POST /api/payments/disburse).
+     *
+     * @param amount      XAF amount requested
+     * @param phone       driver's mobile money number (will be normalized)
+     * @param operator    "ORANGE" or "MTN" (informational)
+     * @param description free-text description shown in Campay statement
+     * @return the saved Payment (as DISBURSE type tracking row)
+     */
+    public Payment disburseOnDemand(int amount, String phone, String operator, String description) {
+        if (amount <= 0) {
+            throw new BadRequestAlertException("Invalid amount", ENTITY_NAME, "invalidamount");
+        }
+        if (phone == null || phone.isBlank()) {
+            throw new BadRequestAlertException("Phone number required", ENTITY_NAME, "nophonenumber");
+        }
+        String normalizedPhone = normalizePhone(phone);
+        String externalRef = "PAYOUT-" + System.currentTimeMillis();
+        String desc = description != null && !description.isBlank() ? description : "Mobigo versement conducteur";
+        PaymentMethodEnum methode = "MTN".equalsIgnoreCase(operator) ? PaymentMethodEnum.MTN_MOBILE_MONEY : PaymentMethodEnum.ORANGE_MONEY;
+
+        Payment payout = new Payment();
+        payout.setMontant((float) amount);
+        payout.setDatePaiement(LocalDate.now());
+        payout.setMethode(methode);
+        payout.setStatut(PaymentStatusEnum.EN_COURS);
+        payout.setOperateur("MTN".equalsIgnoreCase(operator) ? "MOMO" : "OM");
+        payout.setPhoneNumber(normalizedPhone);
+        payout.setExternalReference(externalRef);
+        payout = paymentRepository.save(payout);
+
+        try {
+            CampayService.DisbursementResponse resp = campayService.disburse(normalizedPhone, amount, externalRef, desc);
+            payout.setDisbursementReference(resp.reference());
+            payout.setDisbursementStatus(resp.status());
+            if ("SUCCESSFUL".equalsIgnoreCase(resp.status())) {
+                payout.setStatut(PaymentStatusEnum.REUSSI);
+            }
+            payout = paymentRepository.save(payout);
+            paymentSearchRepository.index(payout);
+            LOG.info("On-demand payout {} FCFA initiated to {} (ref: {})", amount, normalizedPhone, externalRef);
+            return payout;
+        } catch (Exception e) {
+            LOG.error("On-demand payout failed: {}", e.getMessage());
+            payout.setStatut(PaymentStatusEnum.ECHOUE);
+            payout.setDisbursementStatus("FAILED");
+            paymentRepository.save(payout);
+            throw new RuntimeException("Payout failed: " + e.getMessage());
         }
     }
 
@@ -370,20 +479,37 @@ public class PaymentService {
     }
 
     /**
-     * Refund passenger for a booking.
+     * Refund passenger for a booking (no reason provided).
+     * Called by BookingService.cancelBooking.
      */
     public void refundPassenger(Long bookingId) {
+        refundPassenger(bookingId, null);
+    }
+
+    /**
+     * Refund passenger for a booking with an optional audit reason.
+     * Only refunds if the payment was collected (COLLECTE_REUSSIE or REUSSI).
+     */
+    public void refundPassenger(Long bookingId, String reason) {
         Payment payment = paymentRepository.findByBookingId(bookingId).orElse(null);
-        if (payment == null || payment.getStatut() != PaymentStatusEnum.COLLECTE_REUSSIE) {
+        if (payment == null) {
+            LOG.debug("No payment to refund for booking {}", bookingId);
+            return;
+        }
+        if (payment.getStatut() != PaymentStatusEnum.COLLECTE_REUSSIE && payment.getStatut() != PaymentStatusEnum.REUSSI) {
+            LOG.debug("Payment for booking {} is in state {}, skipping refund", bookingId, payment.getStatut());
             return;
         }
 
         Booking booking = payment.getBooking();
         String refundRef = "REF-" + bookingId + "-" + System.currentTimeMillis();
         int amount = Math.round(payment.getMontant());
+        String description = reason != null && !reason.isBlank()
+            ? "Mobigo remboursement (" + truncate(reason, 60) + ")"
+            : "Mobigo remboursement";
 
         try {
-            campayService.disburse(payment.getPhoneNumber(), amount, refundRef, "Mobigo remboursement");
+            campayService.disburse(payment.getPhoneNumber(), amount, refundRef, description);
             payment.setStatut(PaymentStatusEnum.REMBOURSE);
             // Refund costs: platform loses the collect fees + refund disburse fees
             float fraisRefund = payment.getMontant() * 0.015f; // disburse fee for refund
@@ -392,11 +518,19 @@ public class PaymentService {
             payment.setRevenuNetPlateforme(-totalFrais); // Net loss on refunded payment
             payment.setDisbursementReference(refundRef);
             paymentRepository.save(payment);
+            paymentSearchRepository.index(payment);
             notificationEventService.onPaymentRefunded(booking);
-            LOG.info("Refunded {} FCFA for booking {}", amount, bookingId);
+            LOG.info("Refunded {} FCFA for booking {} (reason: {})", amount, bookingId, reason);
         } catch (Exception e) {
             LOG.error("Refund failed for booking {}: {}", bookingId, e.getMessage());
         }
+    }
+
+    /**
+     * Alias exposed as {@code refund(Long, String)} for clarity at the REST layer.
+     */
+    public void refund(Long bookingId, String reason) {
+        refundPassenger(bookingId, reason);
     }
 
     private String resolvePhoneNumber(People passenger, PaymentMethodEnum method) {
@@ -411,6 +545,29 @@ public class PaymentService {
             )
             .map(m -> m.getPhone())
             .orElseThrow(() -> new RuntimeException("No phone number found for payment method " + method));
+    }
+
+    /**
+     * Normalize a Cameroonian phone number to Campay's expected international format: 237XXXXXXXXX (no '+').
+     * Accepts local (6XXXXXXXX) or international ('00237...' / '+237...' / '237...') formats.
+     */
+    private String normalizePhone(String phone) {
+        if (phone == null) return null;
+        String digits = phone.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) return phone;
+        if (digits.startsWith("00237")) digits = digits.substring(2);
+        if (digits.length() == 9 && digits.startsWith("6")) {
+            return "237" + digits;
+        }
+        if (digits.length() == 12 && digits.startsWith("237")) {
+            return digits;
+        }
+        return digits;
+    }
+
+    private String truncate(String s, int max) {
+        if (s == null) return null;
+        return s.length() > max ? s.substring(0, max) : s;
     }
 
     private String resolveDriverPhone(People driver) {

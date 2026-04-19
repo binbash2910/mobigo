@@ -181,6 +181,7 @@ public class ApplicationProperties {
 
     public static class Campay {
 
+        private String appId;
         private String apiUsername;
         private String apiPassword;
         private String permanentToken;
@@ -188,6 +189,14 @@ public class ApplicationProperties {
         private String baseUrl = "https://demo.campay.net/api";
         private boolean enabled = false;
         private int paymentTimeoutMinutes = 5;
+
+        public String getAppId() {
+            return appId;
+        }
+
+        public void setAppId(String appId) {
+            this.appId = appId;
+        }
 
         public String getApiUsername() {
             return apiUsername;
