@@ -73,7 +73,7 @@ class WalletResourceIT {
         mockMvc
             .perform(get("/api/wallet/balance").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.available").exists())
+            .andExpect(jsonPath("$.available").value(12000))
             .andExpect(jsonPath("$.driverAvailable").exists());
     }
 }
