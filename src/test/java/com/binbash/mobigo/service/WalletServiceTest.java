@@ -2,6 +2,7 @@ package com.binbash.mobigo.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.binbash.mobigo.domain.LedgerAccount;
@@ -297,5 +298,64 @@ class WalletServiceTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.voidBookingSettlement(300L)).isInstanceOf(
             IllegalStateException.class
         );
+    }
+
+    @Test
+    void rechargeComputesGrossFeeOnTopAndCallsCampay() throws Exception {
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PASSENGER:7")).thenReturn(Optional.empty());
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(campayService.collect(eq("237600000000"), eq(10200), any(), any())).thenReturn(
+            new CampayService.CollectResponse("CR-1", "PENDING", "#150#")
+        );
+
+        com.binbash.mobigo.domain.LedgerTransaction tx = wallet.rechargeWallet(7L, new BigDecimal("10000"), "237600000000");
+
+        assertThat(tx.getType()).isEqualTo(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.DRAFT);
+        assertThat(tx.getCampayReference()).isEqualTo("CR-1");
+        verify(campayService).collect(eq("237600000000"), eq(10200), any(), any());
+    }
+
+    @Test
+    void rechargeCallbackSuccessPostsAndCreditsPassenger() {
+        LedgerAccount ext = new LedgerAccount();
+        ext.setAccountKey("EXTERNAL");
+        ext.setBalance(BigDecimal.ZERO);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(BigDecimal.ZERO);
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setType(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setExternalReference("RCG-x");
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(ext, LedgerDirection.DEBIT, new BigDecimal("10000")));
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.CREDIT, new BigDecimal("10000")));
+        when(txRepo.findByExternalReference("RCG-x")).thenReturn(Optional.of(tx));
+        when(accountRepo.lockByAccountKey("EXTERNAL")).thenReturn(Optional.of(ext));
+        when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.handleCampayCallback("RCG-x", "SUCCESSFUL");
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.POSTED);
+        assertThat(pass.getBalance()).isEqualByComparingTo(new BigDecimal("10000"));
+    }
+
+    @Test
+    void rechargeCallbackFailedVoids() {
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setType(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setExternalReference("RCG-y");
+        when(txRepo.findByExternalReference("RCG-y")).thenReturn(Optional.of(tx));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.handleCampayCallback("RCG-y", "FAILED");
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
     }
 }

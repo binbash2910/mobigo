@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -178,6 +179,65 @@ public class WalletService {
         tx.setStatus(LedgerTransactionStatus.VOID);
         txRepo.save(tx);
         LOG.info("Settlement VOID for booking {}", bookingId);
+    }
+
+    public LedgerTransaction rechargeWallet(Long passengerPeopleId, BigDecimal netAmount, String phone) {
+        if (netAmount.signum() <= 0) {
+            throw new IllegalArgumentException("Recharge amount must be positive");
+        }
+        double feeRate = appSettingService.getCampayFeeRate();
+        BigDecimal fee = netAmount.multiply(BigDecimal.valueOf(feeRate)).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal gross = netAmount.add(fee);
+
+        LedgerAccount external = getOrCreateAccount(LedgerAccountType.EXTERNAL, null);
+        LedgerAccount passenger = getOrCreateAccount(LedgerAccountType.PASSENGER, passengerPeopleId);
+
+        LedgerTransaction tx = new LedgerTransaction();
+        tx.setType(LedgerTransactionType.RECHARGE);
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setExternalReference("RCG-" + UUID.randomUUID().toString().substring(0, 12));
+        tx.setDescription("Recharge porte-monnaie (" + netAmount + " net, frais " + fee + ")");
+        tx.addEntry(LedgerEntry.of(external, LedgerDirection.DEBIT, netAmount));
+        tx.addEntry(LedgerEntry.of(passenger, LedgerDirection.CREDIT, netAmount));
+
+        try {
+            CampayService.CollectResponse resp = campayService.collect(
+                phone,
+                toInt(gross),
+                tx.getExternalReference(),
+                "Recharge Mobigo #" + tx.getExternalReference()
+            );
+            tx.setCampayReference(resp.reference());
+            return txRepo.save(tx);
+        } catch (Exception e) {
+            LOG.error("Campay collect failed for recharge {}", tx.getExternalReference(), e);
+            throw new RuntimeException("Échec de l'initiation de la recharge: " + e.getMessage(), e);
+        }
+    }
+
+    public void handleCampayCallback(String externalReference, String status) {
+        LedgerTransaction tx = txRepo.findByExternalReference(externalReference).orElse(null);
+        if (tx == null) {
+            LOG.warn("Campay callback: no ledger tx for externalReference {}", externalReference);
+            return;
+        }
+        if (tx.getStatus() != LedgerTransactionStatus.DRAFT) {
+            LOG.debug("Campay callback idempotent skip {} status {}", externalReference, tx.getStatus());
+            return;
+        }
+        String s = status == null ? "" : status.toUpperCase();
+        if (s.contains("SUCCESS")) {
+            applyEntries(tx);
+            tx.setStatus(LedgerTransactionStatus.POSTED);
+            txRepo.save(tx);
+            LOG.info("Campay tx {} POSTED ({})", externalReference, tx.getType());
+        } else if (s.contains("FAIL")) {
+            tx.setStatus(LedgerTransactionStatus.VOID);
+            txRepo.save(tx);
+            LOG.info("Campay tx {} VOID ({})", externalReference, tx.getType());
+        } else {
+            LOG.debug("Campay callback {} non-terminal status {}", externalReference, status);
+        }
     }
 
     /** Applique chaque ligne au solde du compte (verrou pessimiste). */
