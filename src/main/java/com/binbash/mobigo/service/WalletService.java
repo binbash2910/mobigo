@@ -83,6 +83,14 @@ public class WalletService {
             });
     }
 
+    /**
+     * Available balance = posted balance − Σ(DRAFT debits).
+     * NOTE: {@code @Transactional(readOnly=true)} applies only when called through the
+     * Spring proxy (e.g. the REST layer). Internal self-invocations (holdForBooking,
+     * requestPayout) bypass the proxy and correctly participate in the caller's
+     * read-write transaction — this is intentional and required so the pessimistic
+     * account lock taken by the caller is visible to this balance read.
+     */
     @Transactional(readOnly = true)
     public BigDecimal availableBalance(String accountKey) {
         BigDecimal posted = accountRepo.findByAccountKey(accountKey).map(LedgerAccount::getBalance).orElse(BigDecimal.ZERO);
@@ -253,6 +261,8 @@ public class WalletService {
         //    (committed before any Campay call). The driver-account pessimistic lock serializes
         //    concurrent payout requests so two cannot both pass the balance check.
         LedgerTransaction draft = txTemplate.execute(st -> {
+            // Pessimistic row lock acquired for its side-effect only (serializes
+            // concurrent payout requests for this driver). Absence => zero balance below.
             accountRepo.lockByAccountKey(driverKey);
             BigDecimal available = availableBalance(driverKey);
             if (available.compareTo(amount) < 0) {

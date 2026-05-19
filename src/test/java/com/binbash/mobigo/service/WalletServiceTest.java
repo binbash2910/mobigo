@@ -2,6 +2,7 @@ package com.binbash.mobigo.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -448,5 +449,37 @@ class WalletServiceTest {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         assertThat(debitSum).isEqualByComparingTo(creditSum);
         verify(campayService).disburse(eq("237690000000"), eq(10000), any(), any());
+    }
+
+    @Test
+    void requestPayoutVoidsDraftWhenDisburseFails() throws Exception {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        LedgerAccount drv = new LedgerAccount();
+        drv.setAccountKey("DRIVER:9");
+        drv.setBalance(new BigDecimal("20000"));
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PLATFORM")).thenReturn(Optional.empty());
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        java.util.concurrent.atomic.AtomicReference<com.binbash.mobigo.domain.LedgerTransaction> saved =
+            new java.util.concurrent.atomic.AtomicReference<>();
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> {
+            com.binbash.mobigo.domain.LedgerTransaction t = i.getArgument(0);
+            saved.set(t);
+            return t;
+        });
+        when(txRepo.findByExternalReference(any())).thenAnswer(i -> Optional.ofNullable(saved.get()));
+        when(campayService.disburse(any(), anyInt(), any(), any())).thenThrow(new RuntimeException("network down"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.requestPayout(9L, new BigDecimal("10000"), "237690000000")
+        ).isInstanceOf(RuntimeException.class);
+
+        assertThat(saved.get()).isNotNull();
+        assertThat(saved.get().getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
     }
 }
