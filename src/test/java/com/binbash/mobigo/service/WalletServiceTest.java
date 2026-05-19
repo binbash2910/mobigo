@@ -244,7 +244,7 @@ class WalletServiceTest {
         tx.setIdempotencyKey("SETTLE-100");
         tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.DEBIT, new BigDecimal("6000")));
         tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(esc, LedgerDirection.CREDIT, new BigDecimal("6000")));
-        when(txRepo.findByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
+        when(txRepo.lockByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
         when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
         when(accountRepo.lockByAccountKey("ESCROW")).thenReturn(Optional.of(esc));
         when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
@@ -261,11 +261,13 @@ class WalletServiceTest {
     void confirmIsIdempotentWhenAlreadyPosted() {
         com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
         tx.setStatus(LedgerTransactionStatus.POSTED);
-        when(txRepo.findByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
+        tx.setIdempotencyKey("SETTLE-100");
+        when(txRepo.lockByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
 
         wallet.confirmBookingSettlement(100L);
 
         verify(accountRepo, never()).save(any());
+        verify(txRepo, never()).save(any());
     }
 
     @Test
@@ -276,7 +278,7 @@ class WalletServiceTest {
         com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
         tx.setStatus(LedgerTransactionStatus.DRAFT);
         tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.DEBIT, new BigDecimal("6000")));
-        when(txRepo.findByIdempotencyKey("SETTLE-200")).thenReturn(Optional.of(tx));
+        when(txRepo.lockByIdempotencyKey("SETTLE-200")).thenReturn(Optional.of(tx));
         when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         wallet.voidBookingSettlement(200L);
@@ -289,7 +291,8 @@ class WalletServiceTest {
     void voidPostedThrows() {
         com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
         tx.setStatus(LedgerTransactionStatus.POSTED);
-        when(txRepo.findByIdempotencyKey("SETTLE-300")).thenReturn(Optional.of(tx));
+        tx.setIdempotencyKey("SETTLE-300");
+        when(txRepo.lockByIdempotencyKey("SETTLE-300")).thenReturn(Optional.of(tx));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.voidBookingSettlement(300L)).isInstanceOf(
             IllegalStateException.class

@@ -12,6 +12,8 @@ import com.binbash.mobigo.domain.enumeration.LedgerTransactionType;
 import com.binbash.mobigo.repository.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -145,7 +147,7 @@ public class WalletService {
     }
 
     public void confirmBookingSettlement(Long bookingId) {
-        LedgerTransaction tx = txRepo.findByIdempotencyKey("SETTLE-" + bookingId).orElse(null);
+        LedgerTransaction tx = txRepo.lockByIdempotencyKey("SETTLE-" + bookingId).orElse(null);
         if (tx == null) {
             LOG.debug("confirmBookingSettlement: no settlement for booking {}", bookingId);
             return;
@@ -161,12 +163,13 @@ public class WalletService {
     }
 
     public void voidBookingSettlement(Long bookingId) {
-        LedgerTransaction tx = txRepo.findByIdempotencyKey("SETTLE-" + bookingId).orElse(null);
+        LedgerTransaction tx = txRepo.lockByIdempotencyKey("SETTLE-" + bookingId).orElse(null);
         if (tx == null) {
             LOG.debug("voidBookingSettlement: no settlement for booking {}", bookingId);
             return;
         }
         if (tx.getStatus() == LedgerTransactionStatus.VOID) {
+            LOG.debug("voidBookingSettlement idempotent skip booking {} status VOID", bookingId);
             return;
         }
         if (tx.getStatus() == LedgerTransactionStatus.POSTED) {
@@ -179,12 +182,26 @@ public class WalletService {
 
     /** Applique chaque ligne au solde du compte (verrou pessimiste). */
     private void applyEntries(LedgerTransaction tx) {
+        // Lock each DISTINCT account exactly once, in a deterministic global order
+        // (sorted by accountKey) so concurrent transactions touching shared accounts
+        // (ESCROW, PLATFORM) can never form a lock-ordering deadlock cycle.
+        Map<String, LedgerAccount> locked = new LinkedHashMap<>();
+        tx
+            .getEntries()
+            .stream()
+            .map(e -> e.getAccount().getAccountKey())
+            .distinct()
+            .sorted()
+            .forEach(key ->
+                locked.put(key, accountRepo.lockByAccountKey(key).orElseThrow(() -> new IllegalStateException("Account not found: " + key)))
+            );
+        // Apply deltas in original entry order on the locked instances.
         for (LedgerEntry e : tx.getEntries()) {
-            String key = e.getAccount().getAccountKey();
-            LedgerAccount acc = accountRepo.lockByAccountKey(key).orElseThrow(() -> new IllegalStateException("Account not found: " + key));
+            LedgerAccount acc = locked.get(e.getAccount().getAccountKey());
             BigDecimal delta = e.getDirection() == LedgerDirection.CREDIT ? e.getAmount() : e.getAmount().negate();
             acc.setBalance(acc.getBalance().add(delta));
-            accountRepo.save(acc);
         }
+        // Persist each distinct locked account once.
+        locked.values().forEach(accountRepo::save);
     }
 }
