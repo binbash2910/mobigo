@@ -230,4 +230,69 @@ class WalletServiceTest {
 
         verify(txRepo, never()).save(any());
     }
+
+    @Test
+    void confirmAppliesEntriesToBalancesAndPosts() {
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        LedgerAccount esc = new LedgerAccount();
+        esc.setAccountKey("ESCROW");
+        esc.setBalance(BigDecimal.ZERO);
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setIdempotencyKey("SETTLE-100");
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.DEBIT, new BigDecimal("6000")));
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(esc, LedgerDirection.CREDIT, new BigDecimal("6000")));
+        when(txRepo.findByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
+        when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(accountRepo.lockByAccountKey("ESCROW")).thenReturn(Optional.of(esc));
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.confirmBookingSettlement(100L);
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.POSTED);
+        assertThat(pass.getBalance()).isEqualByComparingTo(new BigDecimal("4000"));
+        assertThat(esc.getBalance()).isEqualByComparingTo(new BigDecimal("6000"));
+    }
+
+    @Test
+    void confirmIsIdempotentWhenAlreadyPosted() {
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.POSTED);
+        when(txRepo.findByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
+
+        wallet.confirmBookingSettlement(100L);
+
+        verify(accountRepo, never()).save(any());
+    }
+
+    @Test
+    void voidDraftLeavesBalancesUntouched() {
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.DEBIT, new BigDecimal("6000")));
+        when(txRepo.findByIdempotencyKey("SETTLE-200")).thenReturn(Optional.of(tx));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.voidBookingSettlement(200L);
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
+        assertThat(pass.getBalance()).isEqualByComparingTo(new BigDecimal("10000"));
+    }
+
+    @Test
+    void voidPostedThrows() {
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.POSTED);
+        when(txRepo.findByIdempotencyKey("SETTLE-300")).thenReturn(Optional.of(tx));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.voidBookingSettlement(300L)).isInstanceOf(
+            IllegalStateException.class
+        );
+    }
 }

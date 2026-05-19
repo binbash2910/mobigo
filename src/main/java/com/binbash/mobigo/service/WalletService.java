@@ -143,4 +143,48 @@ public class WalletService {
         txRepo.save(tx);
         LOG.info("Hold DRAFT created for booking {} total={} net={} commission={}", bookingId, total, net, commission);
     }
+
+    public void confirmBookingSettlement(Long bookingId) {
+        LedgerTransaction tx = txRepo.findByIdempotencyKey("SETTLE-" + bookingId).orElse(null);
+        if (tx == null) {
+            LOG.debug("confirmBookingSettlement: no settlement for booking {}", bookingId);
+            return;
+        }
+        if (tx.getStatus() != LedgerTransactionStatus.DRAFT) {
+            LOG.debug("confirmBookingSettlement idempotent skip booking {} status {}", bookingId, tx.getStatus());
+            return;
+        }
+        applyEntries(tx);
+        tx.setStatus(LedgerTransactionStatus.POSTED);
+        txRepo.save(tx);
+        LOG.info("Settlement POSTED for booking {}", bookingId);
+    }
+
+    public void voidBookingSettlement(Long bookingId) {
+        LedgerTransaction tx = txRepo.findByIdempotencyKey("SETTLE-" + bookingId).orElse(null);
+        if (tx == null) {
+            LOG.debug("voidBookingSettlement: no settlement for booking {}", bookingId);
+            return;
+        }
+        if (tx.getStatus() == LedgerTransactionStatus.VOID) {
+            return;
+        }
+        if (tx.getStatus() == LedgerTransactionStatus.POSTED) {
+            throw new IllegalStateException("Cannot void a POSTED settlement for booking " + bookingId);
+        }
+        tx.setStatus(LedgerTransactionStatus.VOID);
+        txRepo.save(tx);
+        LOG.info("Settlement VOID for booking {}", bookingId);
+    }
+
+    /** Applique chaque ligne au solde du compte (verrou pessimiste). */
+    private void applyEntries(LedgerTransaction tx) {
+        for (LedgerEntry e : tx.getEntries()) {
+            String key = e.getAccount().getAccountKey();
+            LedgerAccount acc = accountRepo.lockByAccountKey(key).orElseThrow(() -> new IllegalStateException("Account not found: " + key));
+            BigDecimal delta = e.getDirection() == LedgerDirection.CREDIT ? e.getAmount() : e.getAmount().negate();
+            acc.setBalance(acc.getBalance().add(delta));
+            accountRepo.save(acc);
+        }
+    }
 }
