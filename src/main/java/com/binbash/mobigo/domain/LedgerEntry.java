@@ -41,6 +41,11 @@ public class LedgerEntry implements Serializable {
         return id;
     }
 
+    public LedgerEntry id(Long id) {
+        this.setId(id);
+        return this;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -49,28 +54,48 @@ public class LedgerEntry implements Serializable {
         return transaction;
     }
 
-    public void setTransaction(LedgerTransaction t) {
-        this.transaction = t;
+    public LedgerEntry transaction(LedgerTransaction transaction) {
+        this.setTransaction(transaction);
+        return this;
+    }
+
+    public void setTransaction(LedgerTransaction transaction) {
+        this.transaction = transaction;
     }
 
     public LedgerAccount getAccount() {
         return account;
     }
 
-    public void setAccount(LedgerAccount a) {
-        this.account = a;
+    public LedgerEntry account(LedgerAccount account) {
+        this.setAccount(account);
+        return this;
+    }
+
+    public void setAccount(LedgerAccount account) {
+        this.account = account;
     }
 
     public LedgerDirection getDirection() {
         return direction;
     }
 
-    public void setDirection(LedgerDirection d) {
-        this.direction = d;
+    public LedgerEntry direction(LedgerDirection direction) {
+        this.setDirection(direction);
+        return this;
+    }
+
+    public void setDirection(LedgerDirection direction) {
+        this.direction = direction;
     }
 
     public BigDecimal getAmount() {
         return amount;
+    }
+
+    public LedgerEntry amount(BigDecimal amount) {
+        this.setAmount(amount);
+        return this;
     }
 
     public void setAmount(BigDecimal amount) {
@@ -83,5 +108,32 @@ public class LedgerEntry implements Serializable {
         e.setDirection(dir);
         e.setAmount(amount);
         return e;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof LedgerEntry)) {
+            return false;
+        }
+        return getId() != null && getId().equals(((LedgerEntry) o).getId());
+    }
+
+    @Override
+    public int hashCode() {
+        // see https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
+        return getClass().hashCode();
+    }
+
+    // prettier-ignore
+    @Override
+    public String toString() {
+        return "LedgerEntry{" +
+            "id=" + getId() +
+            ", direction='" + getDirection() + "'" +
+            ", amount=" + getAmount() +
+            "}";
     }
 }

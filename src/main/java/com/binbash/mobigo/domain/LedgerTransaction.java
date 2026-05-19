@@ -59,12 +59,22 @@ public class LedgerTransaction extends AbstractAuditingEntity<Long> implements S
         return id;
     }
 
+    public LedgerTransaction id(Long id) {
+        this.setId(id);
+        return this;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
 
     public LedgerTransactionType getType() {
         return type;
+    }
+
+    public LedgerTransaction type(LedgerTransactionType type) {
+        this.setType(type);
+        return this;
     }
 
     public void setType(LedgerTransactionType type) {
@@ -75,12 +85,22 @@ public class LedgerTransaction extends AbstractAuditingEntity<Long> implements S
         return status;
     }
 
+    public LedgerTransaction status(LedgerTransactionStatus status) {
+        this.setStatus(status);
+        return this;
+    }
+
     public void setStatus(LedgerTransactionStatus status) {
         this.status = status;
     }
 
     public Long getBookingId() {
         return bookingId;
+    }
+
+    public LedgerTransaction bookingId(Long bookingId) {
+        this.setBookingId(bookingId);
+        return this;
     }
 
     public void setBookingId(Long bookingId) {
@@ -91,44 +111,98 @@ public class LedgerTransaction extends AbstractAuditingEntity<Long> implements S
         return idempotencyKey;
     }
 
-    public void setIdempotencyKey(String k) {
-        this.idempotencyKey = k;
+    public LedgerTransaction idempotencyKey(String idempotencyKey) {
+        this.setIdempotencyKey(idempotencyKey);
+        return this;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 
     public String getExternalReference() {
         return externalReference;
     }
 
-    public void setExternalReference(String r) {
-        this.externalReference = r;
+    public LedgerTransaction externalReference(String externalReference) {
+        this.setExternalReference(externalReference);
+        return this;
+    }
+
+    public void setExternalReference(String externalReference) {
+        this.externalReference = externalReference;
     }
 
     public String getCampayReference() {
         return campayReference;
     }
 
-    public void setCampayReference(String r) {
-        this.campayReference = r;
+    public LedgerTransaction campayReference(String campayReference) {
+        this.setCampayReference(campayReference);
+        return this;
+    }
+
+    public void setCampayReference(String campayReference) {
+        this.campayReference = campayReference;
     }
 
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String d) {
-        this.description = d;
+    public LedgerTransaction description(String description) {
+        this.setDescription(description);
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public List<LedgerEntry> getEntries() {
         return entries;
     }
 
+    public LedgerTransaction entries(List<LedgerEntry> entries) {
+        this.setEntries(entries);
+        return this;
+    }
+
     public void setEntries(List<LedgerEntry> entries) {
         this.entries = entries;
     }
 
-    public void addEntry(LedgerEntry e) {
-        e.setTransaction(this);
-        this.entries.add(e);
+    public void addEntry(LedgerEntry entry) {
+        entry.setTransaction(this);
+        this.entries.add(entry);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof LedgerTransaction)) {
+            return false;
+        }
+        return getId() != null && getId().equals(((LedgerTransaction) o).getId());
+    }
+
+    @Override
+    public int hashCode() {
+        // see https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
+        return getClass().hashCode();
+    }
+
+    // prettier-ignore
+    @Override
+    public String toString() {
+        return "LedgerTransaction{" +
+            "id=" + getId() +
+            ", type='" + getType() + "'" +
+            ", status='" + getStatus() + "'" +
+            ", bookingId=" + getBookingId() +
+            ", externalReference='" + getExternalReference() + "'" +
+            "}";
     }
 }
