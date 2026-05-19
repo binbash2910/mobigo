@@ -21,25 +21,25 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class WalletServiceTest {
 
     @Mock
-    LedgerAccountRepository accountRepo;
+    private LedgerAccountRepository accountRepo;
 
     @Mock
-    LedgerTransactionRepository txRepo;
+    private LedgerTransactionRepository txRepo;
 
     @Mock
-    LedgerEntryRepository entryRepo;
+    private LedgerEntryRepository entryRepo;
 
     @Mock
-    BookingRepository bookingRepo;
+    private BookingRepository bookingRepo;
 
     @Mock
-    PeopleRepository peopleRepo;
+    private PeopleRepository peopleRepo;
 
     @Mock
-    CampayService campayService;
+    private CampayService campayService;
 
     @Mock
-    AppSettingService appSettingService;
+    private AppSettingService appSettingService;
 
     WalletService wallet;
 
@@ -85,5 +85,17 @@ class WalletServiceTest {
         BigDecimal available = wallet.availableBalance("PASSENGER:7");
 
         assertThat(available).isEqualByComparingTo(new BigDecimal("7000"));
+    }
+
+    @Test
+    void getOrCreateAccountReturnsExistingAccount() {
+        LedgerAccount existing = new LedgerAccount();
+        existing.setAccountKey("PASSENGER:99");
+        when(accountRepo.findByAccountKey("PASSENGER:99")).thenReturn(Optional.of(existing));
+
+        LedgerAccount result = wallet.getOrCreateAccount(LedgerAccountType.PASSENGER, 99L);
+
+        assertThat(result).isSameAs(existing);
+        verify(accountRepo, never()).save(any());
     }
 }

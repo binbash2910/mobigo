@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class WalletService {
 
-    private static final Logger log = LoggerFactory.getLogger(WalletService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WalletService.class);
 
     private final LedgerAccountRepository accountRepo;
     private final LedgerTransactionRepository txRepo;
@@ -53,18 +54,25 @@ public class WalletService {
         return accountRepo
             .findByAccountKey(key)
             .orElseGet(() -> {
+                LOG.debug("Creating new LedgerAccount: key={}, type={}", key, type);
                 LedgerAccount a = new LedgerAccount();
                 a.setAccountKey(key);
                 a.setAccountType(type);
                 a.setOwnerPeopleId(ownerPeopleId);
                 a.setBalance(BigDecimal.ZERO);
-                return accountRepo.save(a);
+                try {
+                    return accountRepo.save(a);
+                } catch (DataIntegrityViolationException ex) {
+                    // Concurrent first-touch lost the race; the winner's row now exists.
+                    return accountRepo.findByAccountKey(key).orElseThrow(() -> ex);
+                }
             });
     }
 
     @Transactional(readOnly = true)
     public BigDecimal availableBalance(String accountKey) {
         BigDecimal posted = accountRepo.findByAccountKey(accountKey).map(LedgerAccount::getBalance).orElse(BigDecimal.ZERO);
+        // COALESCE in the query guarantees non-null; guard kept as defense-in-depth
         BigDecimal draftDebits = entryRepo.sumByAccountDirectionAndStatus(accountKey, LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT);
         return posted.subtract(draftDebits == null ? BigDecimal.ZERO : draftDebits);
     }
