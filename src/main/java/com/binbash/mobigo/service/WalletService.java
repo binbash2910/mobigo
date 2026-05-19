@@ -100,6 +100,15 @@ public class WalletService {
             : BigDecimal.valueOf(booking.getCommission()).setScale(0, RoundingMode.HALF_UP);
         BigDecimal net = total.subtract(commission);
 
+        if (net.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException(
+                "Commission exceeds total for booking " + bookingId + ": total=" + total + ", commission=" + commission
+            );
+        }
+
+        if (booking.getPassager() == null || booking.getPassager().getId() == null) {
+            throw new IllegalStateException("No passenger resolvable for booking " + bookingId);
+        }
         Long passengerId = booking.getPassager().getId();
         People driver = booking.getTrajet() != null && booking.getTrajet().getVehicule() != null
             ? booking.getTrajet().getVehicule().getProprietaire()

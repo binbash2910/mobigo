@@ -179,6 +179,47 @@ class WalletServiceTest {
     }
 
     @Test
+    void holdForBookingHandlesNullCommission() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(103L, 6000f, null, 7L, 9L);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(txRepo.findByIdempotencyKey("SETTLE-103")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey(any())).thenAnswer(i -> {
+            String k = i.getArgument(0);
+            if (k.equals("PASSENGER:7")) return Optional.of(pass);
+            return Optional.empty();
+        });
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.holdForBooking(b);
+
+        org.mockito.ArgumentCaptor<com.binbash.mobigo.domain.LedgerTransaction> cap = org.mockito.ArgumentCaptor.forClass(
+            com.binbash.mobigo.domain.LedgerTransaction.class
+        );
+        verify(txRepo).save(cap.capture());
+        com.binbash.mobigo.domain.LedgerTransaction tx = cap.getValue();
+        BigDecimal debitSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal creditSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debitSum).isEqualByComparingTo(creditSum);
+        assertThat(tx.getEntries()).hasSize(6);
+    }
+
+    @Test
     void holdForBookingIsIdempotent() {
         com.binbash.mobigo.domain.Booking b = bookingFixture(102L, 6000f, 1000f, 7L, 9L);
         LedgerTransaction existing = new LedgerTransaction();
