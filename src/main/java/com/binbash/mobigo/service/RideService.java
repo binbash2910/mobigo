@@ -29,6 +29,7 @@ public class RideService {
     private final EntityManager entityManager;
     private final NotificationEventService notificationEventService;
     private final PaymentService paymentService;
+    private final WalletService walletService;
 
     public RideService(
         RideRepository rideRepository,
@@ -36,7 +37,8 @@ public class RideService {
         MailService mailService,
         EntityManager entityManager,
         NotificationEventService notificationEventService,
-        PaymentService paymentService
+        PaymentService paymentService,
+        WalletService walletService
     ) {
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
@@ -44,6 +46,7 @@ public class RideService {
         this.entityManager = entityManager;
         this.notificationEventService = notificationEventService;
         this.paymentService = paymentService;
+        this.walletService = walletService;
     }
 
     /**
@@ -82,12 +85,11 @@ public class RideService {
 
         LOG.info("Ride {} completed successfully", rideId);
 
-        // Disburse funds to driver
-        People driver = ride.getVehicule() != null && ride.getVehicule().getProprietaire() != null
-            ? ride.getVehicule().getProprietaire()
-            : null;
-        if (driver != null) {
-            paymentService.disburseToDriver(rideId, ride, driver);
+        // Confirm wallet settlements for all confirmed/pending bookings (DRAFT → POSTED)
+        for (Booking bk : bookingRepository.findByTrajetId(rideId)) {
+            if (bk.getStatut() == BookingStatusEnum.CONFIRME || bk.getStatut() == BookingStatusEnum.EN_ATTENTE) {
+                walletService.confirmBookingSettlement(bk.getId());
+            }
         }
 
         // Send email notifications to all passengers with active bookings
@@ -126,8 +128,8 @@ public class RideService {
                 restoredSeats += booking.getNbPlacesReservees() != null ? booking.getNbPlacesReservees().intValue() : 0;
                 LOG.debug("Cancelled booking {} for cancelled ride {}", booking.getId(), rideId);
 
-                // Refund passenger if payment was collected
-                paymentService.refundPassenger(booking.getId());
+                // Release passenger hold in the internal wallet (idempotent; no-op if no settlement)
+                walletService.voidBookingSettlement(booking.getId());
             }
         }
 

@@ -4,7 +4,6 @@ import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.Ride;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
-import com.binbash.mobigo.domain.enumeration.PaymentMethodEnum;
 import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
 import com.binbash.mobigo.repository.BookingRepository;
 import com.binbash.mobigo.repository.RideRepository;
@@ -35,6 +34,7 @@ public class BookingService {
     private final EntityManager entityManager;
     private final AppSettingService appSettingService;
     private final NotificationEventService notificationEventService;
+    private final WalletService walletService;
 
     public BookingService(
         BookingRepository bookingRepository,
@@ -44,7 +44,8 @@ public class BookingService {
         MailService mailService,
         EntityManager entityManager,
         AppSettingService appSettingService,
-        NotificationEventService notificationEventService
+        NotificationEventService notificationEventService,
+        WalletService walletService
     ) {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
@@ -54,6 +55,7 @@ public class BookingService {
         this.entityManager = entityManager;
         this.appSettingService = appSettingService;
         this.notificationEventService = notificationEventService;
+        this.walletService = walletService;
     }
 
     /**
@@ -102,6 +104,9 @@ public class BookingService {
             ride.getId(),
             booking.getNbPlacesReservees()
         );
+
+        // Reserve passenger funds in the internal wallet (throws InsufficientWalletBalanceException if underfunded)
+        walletService.holdForBooking(booking);
 
         // Send in-app notification to driver
         try {
@@ -167,24 +172,7 @@ public class BookingService {
 
         LOG.info("Booking {} accepted for ride {}", bookingId, ride.getId());
 
-        // Trigger Campay collect (USSD push to passenger's phone) for mobile money payments.
-        // Wrapped in try/catch so the accept doesn't rollback if Campay is temporarily unreachable.
-        // The passenger can retry via the dedicated payment status page.
-        PaymentMethodEnum method = booking.getMethodePayment();
-        boolean isMobileMoney = method == PaymentMethodEnum.ORANGE_MONEY || method == PaymentMethodEnum.MTN_MOBILE_MONEY;
-        if (isMobileMoney) {
-            try {
-                paymentService.initiateCollect(bookingId);
-                LOG.info("Campay collect initiated on accept for booking {}", bookingId);
-            } catch (Exception e) {
-                LOG.warn(
-                    "Campay collect could not be initiated on accept for booking {}: {}. " +
-                    "The passenger will be able to retry via the payment status page.",
-                    bookingId,
-                    e.getMessage()
-                );
-            }
-        }
+        // Paiement géré par le porte-monnaie interne : hold créé à la réservation, confirmé à la complétion. Aucun appel Campay ici.
 
         // Send in-app notification to passenger
         try {
@@ -220,6 +208,9 @@ public class BookingService {
         booking.setStatut(BookingStatusEnum.REFUSE);
         booking = bookingRepository.save(booking);
         bookingSearchRepository.index(booking);
+
+        // Release the passenger hold (DRAFT → VOID)
+        walletService.voidBookingSettlement(bookingId);
 
         LOG.info("Booking {} rejected for ride {}", bookingId, booking.getTrajet().getId());
 
@@ -260,8 +251,8 @@ public class BookingService {
         booking = bookingRepository.save(booking);
         bookingSearchRepository.index(booking);
 
-        // Refund passenger if payment was collected
-        paymentService.refundPassenger(bookingId);
+        // Release the passenger hold (idempotent; no-op if no settlement exists)
+        walletService.voidBookingSettlement(bookingId);
 
         // If was confirmed, restore seats and potentially reopen ride
         if (wasConfirmed) {
