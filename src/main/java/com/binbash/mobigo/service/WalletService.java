@@ -1,9 +1,14 @@
 package com.binbash.mobigo.service;
 
+import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.domain.LedgerAccount;
+import com.binbash.mobigo.domain.LedgerEntry;
+import com.binbash.mobigo.domain.LedgerTransaction;
+import com.binbash.mobigo.domain.People;
 import com.binbash.mobigo.domain.enumeration.LedgerAccountType;
 import com.binbash.mobigo.domain.enumeration.LedgerDirection;
 import com.binbash.mobigo.domain.enumeration.LedgerTransactionStatus;
+import com.binbash.mobigo.domain.enumeration.LedgerTransactionType;
 import com.binbash.mobigo.repository.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -79,5 +84,54 @@ public class WalletService {
 
     static int toInt(BigDecimal b) {
         return b.setScale(0, RoundingMode.HALF_UP).intValueExact();
+    }
+
+    public void holdForBooking(Booking booking) {
+        Long bookingId = booking.getId();
+        String idem = "SETTLE-" + bookingId;
+        if (txRepo.findByIdempotencyKey(idem).isPresent()) {
+            LOG.debug("holdForBooking idempotent skip for booking {}", bookingId);
+            return;
+        }
+
+        BigDecimal total = BigDecimal.valueOf(booking.getMontantTotal()).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal commission = booking.getCommission() == null
+            ? BigDecimal.ZERO
+            : BigDecimal.valueOf(booking.getCommission()).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal net = total.subtract(commission);
+
+        Long passengerId = booking.getPassager().getId();
+        People driver = booking.getTrajet() != null && booking.getTrajet().getVehicule() != null
+            ? booking.getTrajet().getVehicule().getProprietaire()
+            : null;
+        if (driver == null) {
+            throw new IllegalStateException("No driver resolvable for booking " + bookingId);
+        }
+
+        String passKey = accountKey(LedgerAccountType.PASSENGER, passengerId);
+        BigDecimal available = availableBalance(passKey);
+        if (available.compareTo(total) < 0) {
+            throw new InsufficientWalletBalanceException(total.subtract(available));
+        }
+
+        LedgerAccount passenger = getOrCreateAccount(LedgerAccountType.PASSENGER, passengerId);
+        LedgerAccount escrow = getOrCreateAccount(LedgerAccountType.ESCROW, null);
+        LedgerAccount driverAcc = getOrCreateAccount(LedgerAccountType.DRIVER, driver.getId());
+        LedgerAccount platform = getOrCreateAccount(LedgerAccountType.PLATFORM, null);
+
+        LedgerTransaction tx = new LedgerTransaction();
+        tx.setType(LedgerTransactionType.BOOKING_SETTLEMENT);
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setBookingId(bookingId);
+        tx.setIdempotencyKey(idem);
+        tx.setDescription("Réservation #" + bookingId);
+        tx.addEntry(LedgerEntry.of(passenger, LedgerDirection.DEBIT, total));
+        tx.addEntry(LedgerEntry.of(escrow, LedgerDirection.CREDIT, total));
+        tx.addEntry(LedgerEntry.of(escrow, LedgerDirection.DEBIT, net));
+        tx.addEntry(LedgerEntry.of(driverAcc, LedgerDirection.CREDIT, net));
+        tx.addEntry(LedgerEntry.of(escrow, LedgerDirection.DEBIT, commission));
+        tx.addEntry(LedgerEntry.of(platform, LedgerDirection.CREDIT, commission));
+        txRepo.save(tx);
+        LOG.info("Hold DRAFT created for booking {} total={} net={} commission={}", bookingId, total, net, commission);
     }
 }
