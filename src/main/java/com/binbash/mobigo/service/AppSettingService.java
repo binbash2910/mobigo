@@ -18,6 +18,9 @@ public class AppSettingService {
     public static final String COMMISSION_RATE = "commission_rate";
     private static final String DEFAULT_COMMISSION_RATE = "0.10";
 
+    public static final String CAMPAY_FEE_RATE = "campay_fee_rate";
+    public static final String WALLET_MIN_WITHDRAWAL = "wallet_min_withdrawal";
+
     private final AppSettingRepository repository;
     private final Map<String, String> cache = new ConcurrentHashMap<>();
 
@@ -55,5 +58,25 @@ public class AppSettingService {
 
     public void setCommissionRate(double rate) {
         set(COMMISSION_RATE, String.valueOf(rate));
+    }
+
+    public double getCampayFeeRate() {
+        String value = get(CAMPAY_FEE_RATE, "0.02");
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            LOG.warn("Invalid campay fee rate in DB: {}, using default", value);
+            return 0.02;
+        }
+    }
+
+    public java.math.BigDecimal getMinWithdrawal() {
+        String value = get(WALLET_MIN_WITHDRAWAL, "5000");
+        try {
+            return new java.math.BigDecimal(value);
+        } catch (NumberFormatException e) {
+            LOG.warn("Invalid min withdrawal in DB: {}, using default", value);
+            return new java.math.BigDecimal("5000");
+        }
     }
 }
