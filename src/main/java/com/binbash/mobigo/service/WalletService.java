@@ -19,7 +19,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
@@ -34,6 +37,7 @@ public class WalletService {
     private final PeopleRepository peopleRepo;
     private final CampayService campayService;
     private final AppSettingService appSettingService;
+    private final TransactionTemplate txTemplate;
 
     public WalletService(
         LedgerAccountRepository accountRepo,
@@ -42,7 +46,8 @@ public class WalletService {
         BookingRepository bookingRepo,
         PeopleRepository peopleRepo,
         CampayService campayService,
-        AppSettingService appSettingService
+        AppSettingService appSettingService,
+        PlatformTransactionManager transactionManager
     ) {
         this.accountRepo = accountRepo;
         this.txRepo = txRepo;
@@ -51,6 +56,7 @@ public class WalletService {
         this.peopleRepo = peopleRepo;
         this.campayService = campayService;
         this.appSettingService = appSettingService;
+        this.txTemplate = new TransactionTemplate(transactionManager);
     }
 
     static String accountKey(LedgerAccountType type, Long ownerPeopleId) {
@@ -181,6 +187,7 @@ public class WalletService {
         LOG.info("Settlement VOID for booking {}", bookingId);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public LedgerTransaction rechargeWallet(Long passengerPeopleId, BigDecimal netAmount, String phone) {
         if (netAmount.signum() <= 0) {
             throw new IllegalArgumentException("Recharge amount must be positive");
@@ -188,35 +195,51 @@ public class WalletService {
         double feeRate = appSettingService.getCampayFeeRate();
         BigDecimal fee = netAmount.multiply(BigDecimal.valueOf(feeRate)).setScale(0, RoundingMode.HALF_UP);
         BigDecimal gross = netAmount.add(fee);
+        final String extRef = "RCG-" + UUID.randomUUID();
 
-        LedgerAccount external = getOrCreateAccount(LedgerAccountType.EXTERNAL, null);
-        LedgerAccount passenger = getOrCreateAccount(LedgerAccountType.PASSENGER, passengerPeopleId);
+        // 1. Persist the DRAFT in its own committed transaction BEFORE calling Campay.
+        LedgerTransaction draft = txTemplate.execute(st -> {
+            LedgerAccount external = getOrCreateAccount(LedgerAccountType.EXTERNAL, null);
+            LedgerAccount passenger = getOrCreateAccount(LedgerAccountType.PASSENGER, passengerPeopleId);
+            LedgerTransaction t = new LedgerTransaction();
+            t.setType(LedgerTransactionType.RECHARGE);
+            t.setStatus(LedgerTransactionStatus.DRAFT);
+            t.setExternalReference(extRef);
+            t.setDescription("Recharge porte-monnaie (" + netAmount + " net, frais " + fee + ")");
+            t.addEntry(LedgerEntry.of(external, LedgerDirection.DEBIT, netAmount));
+            t.addEntry(LedgerEntry.of(passenger, LedgerDirection.CREDIT, netAmount));
+            return txRepo.save(t);
+        });
 
-        LedgerTransaction tx = new LedgerTransaction();
-        tx.setType(LedgerTransactionType.RECHARGE);
-        tx.setStatus(LedgerTransactionStatus.DRAFT);
-        tx.setExternalReference("RCG-" + UUID.randomUUID().toString().substring(0, 12));
-        tx.setDescription("Recharge porte-monnaie (" + netAmount + " net, frais " + fee + ")");
-        tx.addEntry(LedgerEntry.of(external, LedgerDirection.DEBIT, netAmount));
-        tx.addEntry(LedgerEntry.of(passenger, LedgerDirection.CREDIT, netAmount));
-
+        // 2. Call Campay OUTSIDE any DB transaction (no connection held during network I/O).
         try {
-            CampayService.CollectResponse resp = campayService.collect(
-                phone,
-                toInt(gross),
-                tx.getExternalReference(),
-                "Recharge Mobigo #" + tx.getExternalReference()
-            );
-            tx.setCampayReference(resp.reference());
-            return txRepo.save(tx);
+            CampayService.CollectResponse resp = campayService.collect(phone, toInt(gross), extRef, "Recharge Mobigo #" + extRef);
+            // 3. Attach the Campay reference in its own short transaction.
+            txTemplate.execute(st -> {
+                LedgerTransaction managed = txRepo.findByExternalReference(extRef).orElse(draft);
+                managed.setCampayReference(resp.reference());
+                return txRepo.save(managed);
+            });
+            draft.setCampayReference(resp.reference());
+            return draft;
         } catch (Exception e) {
-            LOG.error("Campay collect failed for recharge {}", tx.getExternalReference(), e);
+            LOG.error("Campay collect failed for recharge {}", extRef, e);
+            // DRAFT was already committed; VOID it so it does not linger.
+            txTemplate.execute(st -> {
+                txRepo
+                    .findByExternalReference(extRef)
+                    .ifPresent(t -> {
+                        t.setStatus(LedgerTransactionStatus.VOID);
+                        txRepo.save(t);
+                    });
+                return null;
+            });
             throw new RuntimeException("Échec de l'initiation de la recharge: " + e.getMessage(), e);
         }
     }
 
     public void handleCampayCallback(String externalReference, String status) {
-        LedgerTransaction tx = txRepo.findByExternalReference(externalReference).orElse(null);
+        LedgerTransaction tx = txRepo.lockByExternalReference(externalReference).orElse(null);
         if (tx == null) {
             LOG.warn("Campay callback: no ledger tx for externalReference {}", externalReference);
             return;
@@ -231,7 +254,7 @@ public class WalletService {
             tx.setStatus(LedgerTransactionStatus.POSTED);
             txRepo.save(tx);
             LOG.info("Campay tx {} POSTED ({})", externalReference, tx.getType());
-        } else if (s.contains("FAIL")) {
+        } else if (s.contains("FAIL") || s.contains("CANCEL") || s.contains("EXPIR") || s.contains("REJECT")) {
             tx.setStatus(LedgerTransactionStatus.VOID);
             txRepo.save(tx);
             LOG.info("Campay tx {} VOID ({})", externalReference, tx.getType());

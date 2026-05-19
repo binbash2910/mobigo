@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 @ExtendWith(MockitoExtension.class)
 class WalletServiceTest {
@@ -44,11 +46,17 @@ class WalletServiceTest {
     @Mock
     private AppSettingService appSettingService;
 
+    @Mock
+    private PlatformTransactionManager ptm;
+
     WalletService wallet;
 
     @BeforeEach
     void setUp() {
-        wallet = new WalletService(accountRepo, txRepo, entryRepo, bookingRepo, peopleRepo, campayService, appSettingService);
+        org.mockito.Mockito.lenient()
+            .when(ptm.getTransaction(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(org.mockito.Mockito.mock(TransactionStatus.class));
+        wallet = new WalletService(accountRepo, txRepo, entryRepo, bookingRepo, peopleRepo, campayService, appSettingService, ptm);
     }
 
     @Test
@@ -307,6 +315,7 @@ class WalletServiceTest {
         when(accountRepo.findByAccountKey("PASSENGER:7")).thenReturn(Optional.empty());
         when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
         when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.findByExternalReference(org.mockito.ArgumentMatchers.any())).thenReturn(Optional.empty());
         when(campayService.collect(eq("237600000000"), eq(10200), any(), any())).thenReturn(
             new CampayService.CollectResponse("CR-1", "PENDING", "#150#")
         );
@@ -317,6 +326,21 @@ class WalletServiceTest {
         assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.DRAFT);
         assertThat(tx.getCampayReference()).isEqualTo("CR-1");
         verify(campayService).collect(eq("237600000000"), eq(10200), any(), any());
+        assertThat(tx.getEntries()).hasSize(2);
+        BigDecimal extDebit = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal passCredit = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(extDebit).isEqualByComparingTo(new BigDecimal("10000"));
+        assertThat(passCredit).isEqualByComparingTo(new BigDecimal("10000"));
     }
 
     @Test
@@ -333,7 +357,7 @@ class WalletServiceTest {
         tx.setExternalReference("RCG-x");
         tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(ext, LedgerDirection.DEBIT, new BigDecimal("10000")));
         tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.CREDIT, new BigDecimal("10000")));
-        when(txRepo.findByExternalReference("RCG-x")).thenReturn(Optional.of(tx));
+        when(txRepo.lockByExternalReference("RCG-x")).thenReturn(Optional.of(tx));
         when(accountRepo.lockByAccountKey("EXTERNAL")).thenReturn(Optional.of(ext));
         when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
         when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
@@ -351,7 +375,7 @@ class WalletServiceTest {
         tx.setType(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
         tx.setStatus(LedgerTransactionStatus.DRAFT);
         tx.setExternalReference("RCG-y");
-        when(txRepo.findByExternalReference("RCG-y")).thenReturn(Optional.of(tx));
+        when(txRepo.lockByExternalReference("RCG-y")).thenReturn(Optional.of(tx));
         when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         wallet.handleCampayCallback("RCG-y", "FAILED");

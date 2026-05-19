@@ -21,4 +21,8 @@ public interface LedgerTransactionRepository extends JpaRepository<LedgerTransac
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from LedgerTransaction t where t.idempotencyKey = :key")
     Optional<LedgerTransaction> lockByIdempotencyKey(@Param("key") String key);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from LedgerTransaction t where t.externalReference = :ref")
+    Optional<LedgerTransaction> lockByExternalReference(@Param("ref") String ref);
 }
