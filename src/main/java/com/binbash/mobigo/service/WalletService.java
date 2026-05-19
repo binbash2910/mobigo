@@ -238,6 +238,68 @@ public class WalletService {
         }
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public LedgerTransaction requestPayout(Long driverPeopleId, BigDecimal amount, String phone) {
+        BigDecimal min = appSettingService.getMinWithdrawal();
+        if (amount.compareTo(min) < 0) {
+            throw new IllegalArgumentException("Montant inférieur au minimum de retrait (" + min + ")");
+        }
+        double feeRate = appSettingService.getCampayFeeRate();
+        BigDecimal fee = amount.multiply(BigDecimal.valueOf(feeRate)).setScale(0, RoundingMode.HALF_UP);
+        final String extRef = "WDR-" + UUID.randomUUID();
+        final String driverKey = accountKey(LedgerAccountType.DRIVER, driverPeopleId);
+
+        // 1. Atomically: lock the driver account, re-check available balance, persist the DRAFT
+        //    (committed before any Campay call). The driver-account pessimistic lock serializes
+        //    concurrent payout requests so two cannot both pass the balance check.
+        LedgerTransaction draft = txTemplate.execute(st -> {
+            accountRepo.lockByAccountKey(driverKey);
+            BigDecimal available = availableBalance(driverKey);
+            if (available.compareTo(amount) < 0) {
+                throw new InsufficientWalletBalanceException(amount.subtract(available));
+            }
+            LedgerAccount driver = getOrCreateAccount(LedgerAccountType.DRIVER, driverPeopleId);
+            LedgerAccount external = getOrCreateAccount(LedgerAccountType.EXTERNAL, null);
+            LedgerAccount platform = getOrCreateAccount(LedgerAccountType.PLATFORM, null);
+            LedgerTransaction t = new LedgerTransaction();
+            t.setType(LedgerTransactionType.WITHDRAWAL);
+            t.setStatus(LedgerTransactionStatus.DRAFT);
+            t.setExternalReference(extRef);
+            t.setDescription("Retrait conducteur " + amount + " (frais plateforme " + fee + ")");
+            t.addEntry(LedgerEntry.of(driver, LedgerDirection.DEBIT, amount));
+            t.addEntry(LedgerEntry.of(external, LedgerDirection.CREDIT, amount));
+            t.addEntry(LedgerEntry.of(platform, LedgerDirection.DEBIT, fee));
+            t.addEntry(LedgerEntry.of(external, LedgerDirection.CREDIT, fee));
+            return txRepo.save(t);
+        });
+
+        // 2. Call Campay OUTSIDE any DB transaction (no connection held during network I/O).
+        try {
+            CampayService.DisbursementResponse resp = campayService.disburse(phone, toInt(amount), extRef, "Versement Mobigo #" + extRef);
+            // 3. Attach the Campay reference in its own short transaction.
+            txTemplate.execute(st -> {
+                LedgerTransaction managed = txRepo.findByExternalReference(extRef).orElse(draft);
+                managed.setCampayReference(resp.reference());
+                return txRepo.save(managed);
+            });
+            draft.setCampayReference(resp.reference());
+            return draft;
+        } catch (Exception e) {
+            LOG.error("Campay disburse failed for payout {}", extRef, e);
+            // DRAFT was already committed; VOID it so it does not linger.
+            txTemplate.execute(st -> {
+                txRepo
+                    .findByExternalReference(extRef)
+                    .ifPresent(t -> {
+                        t.setStatus(LedgerTransactionStatus.VOID);
+                        txRepo.save(t);
+                    });
+                return null;
+            });
+            throw new RuntimeException("Échec de l'initiation du retrait: " + e.getMessage(), e);
+        }
+    }
+
     public void handleCampayCallback(String externalReference, String status) {
         LedgerTransaction tx = txRepo.lockByExternalReference(externalReference).orElse(null);
         if (tx == null) {

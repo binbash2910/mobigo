@@ -382,4 +382,71 @@ class WalletServiceTest {
 
         assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
     }
+
+    @Test
+    void requestPayoutRejectsBelowMinWithdrawal() {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.requestPayout(9L, new BigDecimal("3000"), "237690000000")
+        ).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void requestPayoutRejectsWhenInsufficientAvailable() {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        LedgerAccount drv = new LedgerAccount();
+        drv.setAccountKey("DRIVER:9");
+        drv.setBalance(new BigDecimal("4000"));
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.requestPayout(9L, new BigDecimal("6000"), "237690000000")
+        ).isInstanceOf(InsufficientWalletBalanceException.class);
+    }
+
+    @Test
+    void requestPayoutCreatesWithdrawalDraftAndCallsDisburse() throws Exception {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        LedgerAccount drv = new LedgerAccount();
+        drv.setAccountKey("DRIVER:9");
+        drv.setBalance(new BigDecimal("20000"));
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PLATFORM")).thenReturn(Optional.empty());
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.findByExternalReference(any())).thenReturn(Optional.empty());
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(campayService.disburse(eq("237690000000"), eq(10000), any(), any())).thenReturn(
+            new CampayService.DisbursementResponse("DR-1", "PENDING")
+        );
+
+        com.binbash.mobigo.domain.LedgerTransaction tx = wallet.requestPayout(9L, new BigDecimal("10000"), "237690000000");
+
+        assertThat(tx.getType()).isEqualTo(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.WITHDRAWAL);
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.DRAFT);
+        assertThat(tx.getEntries()).hasSize(4);
+        BigDecimal debitSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal creditSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debitSum).isEqualByComparingTo(creditSum);
+        verify(campayService).disburse(eq("237690000000"), eq(10000), any(), any());
+    }
 }
