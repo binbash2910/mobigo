@@ -13,6 +13,7 @@ import com.binbash.mobigo.repository.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -332,6 +333,27 @@ public class WalletService {
             LOG.info("Campay tx {} VOID ({})", externalReference, tx.getType());
         } else {
             LOG.debug("Campay callback {} non-terminal status {}", externalReference, status);
+        }
+    }
+
+    public void runScheduledPayouts() {
+        BigDecimal min = appSettingService.getMinWithdrawal();
+        for (LedgerAccount acc : accountRepo.findByAccountTypeAndBalanceGreaterThanEqual(LedgerAccountType.DRIVER, min)) {
+            BigDecimal available = availableBalance(acc.getAccountKey());
+            if (available.compareTo(min) < 0) {
+                continue;
+            }
+            People driver = peopleRepo.findById(acc.getOwnerPeopleId()).orElse(null);
+            if (driver == null || driver.getTelephone() == null) {
+                LOG.warn("Scheduled payout skipped: no phone for driver account {}", acc.getAccountKey());
+                continue;
+            }
+            try {
+                requestPayout(acc.getOwnerPeopleId(), available, driver.getTelephone());
+                LOG.info("Scheduled payout initiated for {} amount {}", acc.getAccountKey(), available);
+            } catch (Exception e) {
+                LOG.error("Scheduled payout failed for {}: {}", acc.getAccountKey(), e.getMessage());
+            }
         }
     }
 

@@ -482,4 +482,47 @@ class WalletServiceTest {
         assertThat(saved.get()).isNotNull();
         assertThat(saved.get().getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
     }
+
+    @Test
+    void scheduledPayoutsTriggersForDriversAboveThreshold() throws Exception {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+
+        LedgerAccount d1 = new LedgerAccount();
+        d1.setAccountKey("DRIVER:9");
+        d1.setAccountType(com.binbash.mobigo.domain.enumeration.LedgerAccountType.DRIVER);
+        d1.setOwnerPeopleId(9L);
+        d1.setBalance(new BigDecimal("12000"));
+        when(
+            accountRepo.findByAccountTypeAndBalanceGreaterThanEqual(
+                com.binbash.mobigo.domain.enumeration.LedgerAccountType.DRIVER,
+                new BigDecimal("5000")
+            )
+        ).thenReturn(java.util.List.of(d1));
+
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+
+        com.binbash.mobigo.domain.People driver = new com.binbash.mobigo.domain.People();
+        driver.setId(9L);
+        driver.setTelephone("237690000000");
+        when(peopleRepo.findById(9L)).thenReturn(Optional.of(driver));
+
+        // requestPayout path stubs (re-uses accountRepo/txRepo/campayService inside txTemplate)
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(d1));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(d1));
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PLATFORM")).thenReturn(Optional.empty());
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.findByExternalReference(any())).thenReturn(Optional.empty());
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(campayService.disburse(eq("237690000000"), eq(12000), any(), any())).thenReturn(
+            new CampayService.DisbursementResponse("DR-9", "PENDING")
+        );
+
+        wallet.runScheduledPayouts();
+
+        verify(campayService).disburse(eq("237690000000"), eq(12000), any(), any());
+    }
 }
