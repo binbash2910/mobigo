@@ -29,7 +29,6 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final RideRepository rideRepository;
     private final BookingSearchRepository bookingSearchRepository;
-    private final PaymentService paymentService;
     private final MailService mailService;
     private final EntityManager entityManager;
     private final AppSettingService appSettingService;
@@ -40,7 +39,6 @@ public class BookingService {
         BookingRepository bookingRepository,
         RideRepository rideRepository,
         BookingSearchRepository bookingSearchRepository,
-        PaymentService paymentService,
         MailService mailService,
         EntityManager entityManager,
         AppSettingService appSettingService,
@@ -50,7 +48,6 @@ public class BookingService {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
         this.bookingSearchRepository = bookingSearchRepository;
-        this.paymentService = paymentService;
         this.mailService = mailService;
         this.entityManager = entityManager;
         this.appSettingService = appSettingService;
@@ -164,11 +161,6 @@ public class BookingService {
         booking.setStatut(BookingStatusEnum.CONFIRME);
         booking = bookingRepository.save(booking);
         bookingSearchRepository.index(booking);
-
-        // Notify passenger to confirm payment (Campay flow)
-        if (booking.getMethodePayment() != null) {
-            notificationEventService.onPaymentRequested(booking);
-        }
 
         LOG.info("Booking {} accepted for ride {}", bookingId, ride.getId());
 

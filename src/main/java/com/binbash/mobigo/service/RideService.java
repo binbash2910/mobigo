@@ -28,7 +28,6 @@ public class RideService {
     private final MailService mailService;
     private final EntityManager entityManager;
     private final NotificationEventService notificationEventService;
-    private final PaymentService paymentService;
     private final WalletService walletService;
 
     public RideService(
@@ -37,7 +36,6 @@ public class RideService {
         MailService mailService,
         EntityManager entityManager,
         NotificationEventService notificationEventService,
-        PaymentService paymentService,
         WalletService walletService
     ) {
         this.rideRepository = rideRepository;
@@ -45,7 +43,6 @@ public class RideService {
         this.mailService = mailService;
         this.entityManager = entityManager;
         this.notificationEventService = notificationEventService;
-        this.paymentService = paymentService;
         this.walletService = walletService;
     }
 
@@ -73,24 +70,20 @@ public class RideService {
         ride.setStatut(RideStatusEnum.EFFECTUE);
         ride = rideRepository.save(ride);
 
-        // Confirm all pending bookings (the trip happened)
+        // Confirm all pending bookings (the trip happened) and settle wallet in a single pass
         List<Booking> activeBookings = bookingRepository.findByTrajetId(rideId);
-        for (Booking booking : activeBookings) {
-            if (booking.getStatut() == BookingStatusEnum.EN_ATTENTE) {
-                booking.setStatut(BookingStatusEnum.CONFIRME);
-                bookingRepository.save(booking);
-                LOG.debug("Confirmed pending booking {} for completed ride {}", booking.getId(), rideId);
+        for (Booking bk : activeBookings) {
+            if (bk.getStatut() == BookingStatusEnum.EN_ATTENTE) {
+                bk.setStatut(BookingStatusEnum.CONFIRME);
+                bookingRepository.save(bk);
+                LOG.debug("Confirmed pending booking {} for completed ride {}", bk.getId(), rideId);
+            }
+            if (bk.getStatut() == BookingStatusEnum.CONFIRME) {
+                walletService.confirmBookingSettlement(bk.getId());
             }
         }
 
         LOG.info("Ride {} completed successfully", rideId);
-
-        // Confirm wallet settlements for all confirmed/pending bookings (DRAFT → POSTED)
-        for (Booking bk : bookingRepository.findByTrajetId(rideId)) {
-            if (bk.getStatut() == BookingStatusEnum.CONFIRME || bk.getStatut() == BookingStatusEnum.EN_ATTENTE) {
-                walletService.confirmBookingSettlement(bk.getId());
-            }
-        }
 
         // Send email notifications to all passengers with active bookings
         sendRideNotificationEmails(rideId, ride, "COMPLETED");
