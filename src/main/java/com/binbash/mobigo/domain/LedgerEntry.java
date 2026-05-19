@@ -6,6 +6,11 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+/**
+ * Immutable debit/credit line of a {@link LedgerTransaction}. Deliberately does
+ * NOT extend AbstractAuditingEntity: entries are created atomically with their
+ * owning transaction (cascade), whose audit timestamps cover them.
+ */
 @Entity
 @Table(name = "ledger_entry")
 public class LedgerEntry implements Serializable {

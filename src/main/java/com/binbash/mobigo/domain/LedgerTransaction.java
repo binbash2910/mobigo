@@ -203,6 +203,8 @@ public class LedgerTransaction extends AbstractAuditingEntity<Long> implements S
             ", status='" + getStatus() + "'" +
             ", bookingId=" + getBookingId() +
             ", externalReference='" + getExternalReference() + "'" +
+            ", idempotencyKey='" + getIdempotencyKey() + "'" +
+            ", campayReference='" + getCampayReference() + "'" +
             "}";
     }
 }

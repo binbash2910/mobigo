@@ -6,6 +6,14 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+/**
+ * Mutable, derived running-balance row for a ledger account. Deliberately does
+ * NOT extend AbstractAuditingEntity: the authoritative, append-only audit trail
+ * of all money movement lives in the immutable {@link LedgerTransaction} journal
+ * (which is audited) and its {@link LedgerEntry} lines. Concurrency on the
+ * balance is guarded by the {@code @Version} optimistic lock plus a pessimistic
+ * lock finder in the repository layer.
+ */
 @Entity
 @Table(name = "ledger_account", uniqueConstraints = @UniqueConstraint(columnNames = "account_key"))
 public class LedgerAccount implements Serializable {
@@ -141,6 +149,8 @@ public class LedgerAccount implements Serializable {
             ", accountKey='" + getAccountKey() + "'" +
             ", accountType='" + getAccountType() + "'" +
             ", balance=" + getBalance() +
+            ", ownerPeopleId=" + getOwnerPeopleId() +
+            ", version=" + getVersion() +
             "}";
     }
 }
