@@ -336,6 +336,7 @@ public class WalletService {
         }
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void runScheduledPayouts() {
         BigDecimal min = appSettingService.getMinWithdrawal();
         for (LedgerAccount acc : accountRepo.findByAccountTypeAndBalanceGreaterThanEqual(LedgerAccountType.DRIVER, min)) {
