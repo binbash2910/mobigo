@@ -136,6 +136,9 @@ public class WalletService {
         }
 
         String passKey = accountKey(LedgerAccountType.PASSENGER, passengerId);
+        // Pessimistic row lock acquired for its side-effect only (serializes concurrent
+        // holds for this passenger). Absence => zero balance below.
+        accountRepo.lockByAccountKey(passKey);
         BigDecimal available = availableBalance(passKey);
         if (available.compareTo(total) < 0) {
             throw new InsufficientWalletBalanceException(total.subtract(available));

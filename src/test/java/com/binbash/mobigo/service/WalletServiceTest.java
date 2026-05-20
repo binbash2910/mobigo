@@ -230,6 +230,33 @@ class WalletServiceTest {
     }
 
     @Test
+    void holdForBookingLocksPassengerAccountBeforeBalanceCheck() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(104L, 6000f, 1000f, 7L, 9L);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(txRepo.findByIdempotencyKey("SETTLE-104")).thenReturn(Optional.empty());
+        when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(accountRepo.findByAccountKey(any())).thenAnswer(i -> {
+            String k = i.getArgument(0);
+            if (k.equals("PASSENGER:7")) return Optional.of(pass);
+            return Optional.empty();
+        });
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.holdForBooking(b);
+
+        // Verify the lock was acquired AND that it was called before the balance read.
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(accountRepo, entryRepo);
+        inOrder.verify(accountRepo).lockByAccountKey("PASSENGER:7");
+        inOrder.verify(entryRepo).sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT);
+    }
+
+    @Test
     void holdForBookingIsIdempotent() {
         com.binbash.mobigo.domain.Booking b = bookingFixture(102L, 6000f, 1000f, 7L, 9L);
         LedgerTransaction existing = new LedgerTransaction();
