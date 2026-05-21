@@ -28,7 +28,7 @@ public class RideService {
     private final MailService mailService;
     private final EntityManager entityManager;
     private final NotificationEventService notificationEventService;
-    private final PaymentService paymentService;
+    private final WalletService walletService;
 
     public RideService(
         RideRepository rideRepository,
@@ -36,14 +36,14 @@ public class RideService {
         MailService mailService,
         EntityManager entityManager,
         NotificationEventService notificationEventService,
-        PaymentService paymentService
+        WalletService walletService
     ) {
         this.rideRepository = rideRepository;
         this.bookingRepository = bookingRepository;
         this.mailService = mailService;
         this.entityManager = entityManager;
         this.notificationEventService = notificationEventService;
-        this.paymentService = paymentService;
+        this.walletService = walletService;
     }
 
     /**
@@ -70,25 +70,20 @@ public class RideService {
         ride.setStatut(RideStatusEnum.EFFECTUE);
         ride = rideRepository.save(ride);
 
-        // Confirm all pending bookings (the trip happened)
+        // Confirm all pending bookings (the trip happened) and settle wallet in a single pass
         List<Booking> activeBookings = bookingRepository.findByTrajetId(rideId);
-        for (Booking booking : activeBookings) {
-            if (booking.getStatut() == BookingStatusEnum.EN_ATTENTE) {
-                booking.setStatut(BookingStatusEnum.CONFIRME);
-                bookingRepository.save(booking);
-                LOG.debug("Confirmed pending booking {} for completed ride {}", booking.getId(), rideId);
+        for (Booking bk : activeBookings) {
+            if (bk.getStatut() == BookingStatusEnum.EN_ATTENTE) {
+                bk.setStatut(BookingStatusEnum.CONFIRME);
+                bookingRepository.save(bk);
+                LOG.debug("Confirmed pending booking {} for completed ride {}", bk.getId(), rideId);
+            }
+            if (bk.getStatut() == BookingStatusEnum.CONFIRME) {
+                walletService.confirmBookingSettlement(bk.getId());
             }
         }
 
         LOG.info("Ride {} completed successfully", rideId);
-
-        // Disburse funds to driver
-        People driver = ride.getVehicule() != null && ride.getVehicule().getProprietaire() != null
-            ? ride.getVehicule().getProprietaire()
-            : null;
-        if (driver != null) {
-            paymentService.disburseToDriver(rideId, ride, driver);
-        }
 
         // Send email notifications to all passengers with active bookings
         sendRideNotificationEmails(rideId, ride, "COMPLETED");
@@ -126,8 +121,8 @@ public class RideService {
                 restoredSeats += booking.getNbPlacesReservees() != null ? booking.getNbPlacesReservees().intValue() : 0;
                 LOG.debug("Cancelled booking {} for cancelled ride {}", booking.getId(), rideId);
 
-                // Refund passenger if payment was collected
-                paymentService.refundPassenger(booking.getId());
+                // Release passenger hold in the internal wallet (idempotent; no-op if no settlement)
+                walletService.voidBookingSettlement(booking.getId());
             }
         }
 

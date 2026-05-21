@@ -1,0 +1,555 @@
+package com.binbash.mobigo.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+import com.binbash.mobigo.domain.LedgerAccount;
+import com.binbash.mobigo.domain.LedgerTransaction;
+import com.binbash.mobigo.domain.enumeration.LedgerAccountType;
+import com.binbash.mobigo.domain.enumeration.LedgerDirection;
+import com.binbash.mobigo.domain.enumeration.LedgerTransactionStatus;
+import com.binbash.mobigo.domain.enumeration.LedgerTransactionType;
+import com.binbash.mobigo.repository.*;
+import java.math.BigDecimal;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+
+@ExtendWith(MockitoExtension.class)
+class WalletServiceTest {
+
+    @Mock
+    private LedgerAccountRepository accountRepo;
+
+    @Mock
+    private LedgerTransactionRepository txRepo;
+
+    @Mock
+    private LedgerEntryRepository entryRepo;
+
+    @Mock
+    private BookingRepository bookingRepo;
+
+    @Mock
+    private PeopleRepository peopleRepo;
+
+    @Mock
+    private CampayService campayService;
+
+    @Mock
+    private AppSettingService appSettingService;
+
+    @Mock
+    private PlatformTransactionManager ptm;
+
+    WalletService wallet;
+
+    @BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient()
+            .when(ptm.getTransaction(org.mockito.ArgumentMatchers.any()))
+            .thenReturn(org.mockito.Mockito.mock(TransactionStatus.class));
+        wallet = new WalletService(accountRepo, txRepo, entryRepo, bookingRepo, peopleRepo, campayService, appSettingService, ptm);
+    }
+
+    @Test
+    void getOrCreateAccountCreatesWhenMissing() {
+        when(accountRepo.findByAccountKey("PASSENGER:42")).thenReturn(Optional.empty());
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+
+        LedgerAccount acc = wallet.getOrCreateAccount(LedgerAccountType.PASSENGER, 42L);
+
+        assertThat(acc.getAccountKey()).isEqualTo("PASSENGER:42");
+        assertThat(acc.getAccountType()).isEqualTo(LedgerAccountType.PASSENGER);
+        assertThat(acc.getOwnerPeopleId()).isEqualTo(42L);
+        assertThat(acc.getBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void singletonAccountKeyHasNoOwnerSuffix() {
+        when(accountRepo.findByAccountKey("ESCROW")).thenReturn(Optional.empty());
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+
+        LedgerAccount acc = wallet.getOrCreateAccount(LedgerAccountType.ESCROW, null);
+
+        assertThat(acc.getAccountKey()).isEqualTo("ESCROW");
+        assertThat(acc.getOwnerPeopleId()).isNull();
+    }
+
+    @Test
+    void availableBalanceSubtractsDraftDebits() {
+        LedgerAccount acc = new LedgerAccount();
+        acc.setAccountKey("PASSENGER:7");
+        acc.setBalance(new BigDecimal("10000"));
+        when(accountRepo.findByAccountKey("PASSENGER:7")).thenReturn(Optional.of(acc));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            new BigDecimal("3000")
+        );
+
+        BigDecimal available = wallet.availableBalance("PASSENGER:7");
+
+        assertThat(available).isEqualByComparingTo(new BigDecimal("7000"));
+    }
+
+    @Test
+    void getOrCreateAccountReturnsExistingAccount() {
+        LedgerAccount existing = new LedgerAccount();
+        existing.setAccountKey("PASSENGER:99");
+        when(accountRepo.findByAccountKey("PASSENGER:99")).thenReturn(Optional.of(existing));
+
+        LedgerAccount result = wallet.getOrCreateAccount(LedgerAccountType.PASSENGER, 99L);
+
+        assertThat(result).isSameAs(existing);
+        verify(accountRepo, never()).save(any());
+    }
+
+    private com.binbash.mobigo.domain.Booking bookingFixture(long id, float total, Float commission, long passengerId, long driverId) {
+        com.binbash.mobigo.domain.People passenger = new com.binbash.mobigo.domain.People();
+        passenger.setId(passengerId);
+        com.binbash.mobigo.domain.People driver = new com.binbash.mobigo.domain.People();
+        driver.setId(driverId);
+        com.binbash.mobigo.domain.Vehicle v = new com.binbash.mobigo.domain.Vehicle();
+        v.setProprietaire(driver);
+        com.binbash.mobigo.domain.Ride ride = new com.binbash.mobigo.domain.Ride();
+        ride.setVehicule(v);
+        com.binbash.mobigo.domain.Booking b = new com.binbash.mobigo.domain.Booking();
+        b.setId(id);
+        b.setMontantTotal(total);
+        b.setCommission(commission);
+        b.setPassager(passenger);
+        b.setTrajet(ride);
+        return b;
+    }
+
+    @Test
+    void holdForBookingCreatesDraftSettlementWhenSolvent() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(100L, 6000f, 1000f, 7L, 9L);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(txRepo.findByIdempotencyKey("SETTLE-100")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey(any())).thenAnswer(i -> {
+            String k = i.getArgument(0);
+            if (k.equals("PASSENGER:7")) return Optional.of(pass);
+            return Optional.empty();
+        });
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.holdForBooking(b);
+
+        org.mockito.ArgumentCaptor<LedgerTransaction> cap = org.mockito.ArgumentCaptor.forClass(LedgerTransaction.class);
+        verify(txRepo).save(cap.capture());
+        LedgerTransaction tx = cap.getValue();
+        assertThat(tx.getType()).isEqualTo(LedgerTransactionType.BOOKING_SETTLEMENT);
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.DRAFT);
+        assertThat(tx.getIdempotencyKey()).isEqualTo("SETTLE-100");
+        assertThat(tx.getEntries()).hasSize(6);
+        BigDecimal debitSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal creditSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debitSum).isEqualByComparingTo(creditSum);
+    }
+
+    @Test
+    void holdForBookingThrowsWhenInsufficient() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(101L, 6000f, 1000f, 7L, 9L);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("1000"));
+        when(txRepo.findByIdempotencyKey("SETTLE-101")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.holdForBooking(b)).isInstanceOf(
+            InsufficientWalletBalanceException.class
+        );
+    }
+
+    @Test
+    void holdForBookingHandlesNullCommission() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(103L, 6000f, null, 7L, 9L);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(txRepo.findByIdempotencyKey("SETTLE-103")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey(any())).thenAnswer(i -> {
+            String k = i.getArgument(0);
+            if (k.equals("PASSENGER:7")) return Optional.of(pass);
+            return Optional.empty();
+        });
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.holdForBooking(b);
+
+        org.mockito.ArgumentCaptor<com.binbash.mobigo.domain.LedgerTransaction> cap = org.mockito.ArgumentCaptor.forClass(
+            com.binbash.mobigo.domain.LedgerTransaction.class
+        );
+        verify(txRepo).save(cap.capture());
+        com.binbash.mobigo.domain.LedgerTransaction tx = cap.getValue();
+        BigDecimal debitSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal creditSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debitSum).isEqualByComparingTo(creditSum);
+        assertThat(tx.getEntries()).hasSize(6);
+    }
+
+    @Test
+    void holdForBookingLocksPassengerAccountBeforeBalanceCheck() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(104L, 6000f, 1000f, 7L, 9L);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        when(entryRepo.sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(txRepo.findByIdempotencyKey("SETTLE-104")).thenReturn(Optional.empty());
+        when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(accountRepo.findByAccountKey(any())).thenAnswer(i -> {
+            String k = i.getArgument(0);
+            if (k.equals("PASSENGER:7")) return Optional.of(pass);
+            return Optional.empty();
+        });
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.holdForBooking(b);
+
+        // Verify the lock was acquired AND that it was called before the balance read.
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(accountRepo, entryRepo);
+        inOrder.verify(accountRepo).lockByAccountKey("PASSENGER:7");
+        inOrder.verify(entryRepo).sumByAccountDirectionAndStatus("PASSENGER:7", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT);
+    }
+
+    @Test
+    void holdForBookingIsIdempotent() {
+        com.binbash.mobigo.domain.Booking b = bookingFixture(102L, 6000f, 1000f, 7L, 9L);
+        LedgerTransaction existing = new LedgerTransaction();
+        existing.setIdempotencyKey("SETTLE-102");
+        when(txRepo.findByIdempotencyKey("SETTLE-102")).thenReturn(Optional.of(existing));
+
+        wallet.holdForBooking(b);
+
+        verify(txRepo, never()).save(any());
+    }
+
+    @Test
+    void confirmAppliesEntriesToBalancesAndPosts() {
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        LedgerAccount esc = new LedgerAccount();
+        esc.setAccountKey("ESCROW");
+        esc.setBalance(BigDecimal.ZERO);
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setIdempotencyKey("SETTLE-100");
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.DEBIT, new BigDecimal("6000")));
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(esc, LedgerDirection.CREDIT, new BigDecimal("6000")));
+        when(txRepo.lockByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
+        when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(accountRepo.lockByAccountKey("ESCROW")).thenReturn(Optional.of(esc));
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.confirmBookingSettlement(100L);
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.POSTED);
+        assertThat(pass.getBalance()).isEqualByComparingTo(new BigDecimal("4000"));
+        assertThat(esc.getBalance()).isEqualByComparingTo(new BigDecimal("6000"));
+    }
+
+    @Test
+    void confirmIsIdempotentWhenAlreadyPosted() {
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.POSTED);
+        tx.setIdempotencyKey("SETTLE-100");
+        when(txRepo.lockByIdempotencyKey("SETTLE-100")).thenReturn(Optional.of(tx));
+
+        wallet.confirmBookingSettlement(100L);
+
+        verify(accountRepo, never()).save(any());
+        verify(txRepo, never()).save(any());
+    }
+
+    @Test
+    void voidDraftLeavesBalancesUntouched() {
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(new BigDecimal("10000"));
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.DEBIT, new BigDecimal("6000")));
+        when(txRepo.lockByIdempotencyKey("SETTLE-200")).thenReturn(Optional.of(tx));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.voidBookingSettlement(200L);
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
+        assertThat(pass.getBalance()).isEqualByComparingTo(new BigDecimal("10000"));
+    }
+
+    @Test
+    void voidPostedThrows() {
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setStatus(LedgerTransactionStatus.POSTED);
+        tx.setIdempotencyKey("SETTLE-300");
+        when(txRepo.lockByIdempotencyKey("SETTLE-300")).thenReturn(Optional.of(tx));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.voidBookingSettlement(300L)).isInstanceOf(
+            IllegalStateException.class
+        );
+    }
+
+    @Test
+    void rechargeComputesGrossFeeOnTopAndCallsCampay() throws Exception {
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PASSENGER:7")).thenReturn(Optional.empty());
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.findByExternalReference(org.mockito.ArgumentMatchers.any())).thenReturn(Optional.empty());
+        when(campayService.collect(eq("237600000000"), eq(10200), any(), any())).thenReturn(
+            new CampayService.CollectResponse("CR-1", "PENDING", "#150#")
+        );
+
+        com.binbash.mobigo.domain.LedgerTransaction tx = wallet.rechargeWallet(7L, new BigDecimal("10000"), "237600000000");
+
+        assertThat(tx.getType()).isEqualTo(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.DRAFT);
+        assertThat(tx.getCampayReference()).isEqualTo("CR-1");
+        verify(campayService).collect(eq("237600000000"), eq(10200), any(), any());
+        assertThat(tx.getEntries()).hasSize(2);
+        BigDecimal extDebit = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal passCredit = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(extDebit).isEqualByComparingTo(new BigDecimal("10000"));
+        assertThat(passCredit).isEqualByComparingTo(new BigDecimal("10000"));
+    }
+
+    @Test
+    void rechargeCallbackSuccessPostsAndCreditsPassenger() {
+        LedgerAccount ext = new LedgerAccount();
+        ext.setAccountKey("EXTERNAL");
+        ext.setBalance(BigDecimal.ZERO);
+        LedgerAccount pass = new LedgerAccount();
+        pass.setAccountKey("PASSENGER:7");
+        pass.setBalance(BigDecimal.ZERO);
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setType(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setExternalReference("RCG-x");
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(ext, LedgerDirection.DEBIT, new BigDecimal("10000")));
+        tx.addEntry(com.binbash.mobigo.domain.LedgerEntry.of(pass, LedgerDirection.CREDIT, new BigDecimal("10000")));
+        when(txRepo.lockByExternalReference("RCG-x")).thenReturn(Optional.of(tx));
+        when(accountRepo.lockByAccountKey("EXTERNAL")).thenReturn(Optional.of(ext));
+        when(accountRepo.lockByAccountKey("PASSENGER:7")).thenReturn(Optional.of(pass));
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.handleCampayCallback("RCG-x", "SUCCESSFUL");
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.POSTED);
+        assertThat(pass.getBalance()).isEqualByComparingTo(new BigDecimal("10000"));
+    }
+
+    @Test
+    void rechargeCallbackFailedVoids() {
+        com.binbash.mobigo.domain.LedgerTransaction tx = new com.binbash.mobigo.domain.LedgerTransaction();
+        tx.setType(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.RECHARGE);
+        tx.setStatus(LedgerTransactionStatus.DRAFT);
+        tx.setExternalReference("RCG-y");
+        when(txRepo.lockByExternalReference("RCG-y")).thenReturn(Optional.of(tx));
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        wallet.handleCampayCallback("RCG-y", "FAILED");
+
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
+    }
+
+    @Test
+    void requestPayoutRejectsBelowMinWithdrawal() {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.requestPayout(9L, new BigDecimal("3000"), "237690000000")
+        ).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void requestPayoutRejectsWhenInsufficientAvailable() {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        LedgerAccount drv = new LedgerAccount();
+        drv.setAccountKey("DRIVER:9");
+        drv.setBalance(new BigDecimal("4000"));
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.requestPayout(9L, new BigDecimal("6000"), "237690000000")
+        ).isInstanceOf(InsufficientWalletBalanceException.class);
+    }
+
+    @Test
+    void requestPayoutCreatesWithdrawalDraftAndCallsDisburse() throws Exception {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        LedgerAccount drv = new LedgerAccount();
+        drv.setAccountKey("DRIVER:9");
+        drv.setBalance(new BigDecimal("20000"));
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PLATFORM")).thenReturn(Optional.empty());
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.findByExternalReference(any())).thenReturn(Optional.empty());
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(campayService.disburse(eq("237690000000"), eq(10000), any(), any())).thenReturn(
+            new CampayService.DisbursementResponse("DR-1", "PENDING")
+        );
+
+        com.binbash.mobigo.domain.LedgerTransaction tx = wallet.requestPayout(9L, new BigDecimal("10000"), "237690000000");
+
+        assertThat(tx.getType()).isEqualTo(com.binbash.mobigo.domain.enumeration.LedgerTransactionType.WITHDRAWAL);
+        assertThat(tx.getStatus()).isEqualTo(LedgerTransactionStatus.DRAFT);
+        assertThat(tx.getEntries()).hasSize(4);
+        BigDecimal debitSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.DEBIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal creditSum = tx
+            .getEntries()
+            .stream()
+            .filter(e -> e.getDirection() == LedgerDirection.CREDIT)
+            .map(com.binbash.mobigo.domain.LedgerEntry::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debitSum).isEqualByComparingTo(creditSum);
+        verify(campayService).disburse(eq("237690000000"), eq(10000), any(), any());
+    }
+
+    @Test
+    void requestPayoutVoidsDraftWhenDisburseFails() throws Exception {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+        LedgerAccount drv = new LedgerAccount();
+        drv.setAccountKey("DRIVER:9");
+        drv.setBalance(new BigDecimal("20000"));
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(drv));
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PLATFORM")).thenReturn(Optional.empty());
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        java.util.concurrent.atomic.AtomicReference<com.binbash.mobigo.domain.LedgerTransaction> saved =
+            new java.util.concurrent.atomic.AtomicReference<>();
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> {
+            com.binbash.mobigo.domain.LedgerTransaction t = i.getArgument(0);
+            saved.set(t);
+            return t;
+        });
+        when(txRepo.findByExternalReference(any())).thenAnswer(i -> Optional.ofNullable(saved.get()));
+        when(campayService.disburse(any(), anyInt(), any(), any())).thenThrow(new RuntimeException("network down"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> wallet.requestPayout(9L, new BigDecimal("10000"), "237690000000")
+        ).isInstanceOf(RuntimeException.class);
+
+        assertThat(saved.get()).isNotNull();
+        assertThat(saved.get().getStatus()).isEqualTo(LedgerTransactionStatus.VOID);
+    }
+
+    @Test
+    void scheduledPayoutsTriggersForDriversAboveThreshold() throws Exception {
+        when(appSettingService.getMinWithdrawal()).thenReturn(new BigDecimal("5000"));
+        when(appSettingService.getCampayFeeRate()).thenReturn(0.02);
+
+        LedgerAccount d1 = new LedgerAccount();
+        d1.setAccountKey("DRIVER:9");
+        d1.setAccountType(com.binbash.mobigo.domain.enumeration.LedgerAccountType.DRIVER);
+        d1.setOwnerPeopleId(9L);
+        d1.setBalance(new BigDecimal("12000"));
+        when(
+            accountRepo.findByAccountTypeAndBalanceGreaterThanEqual(
+                com.binbash.mobigo.domain.enumeration.LedgerAccountType.DRIVER,
+                new BigDecimal("5000")
+            )
+        ).thenReturn(java.util.List.of(d1));
+
+        when(entryRepo.sumByAccountDirectionAndStatus("DRIVER:9", LedgerDirection.DEBIT, LedgerTransactionStatus.DRAFT)).thenReturn(
+            BigDecimal.ZERO
+        );
+
+        com.binbash.mobigo.domain.People driver = new com.binbash.mobigo.domain.People();
+        driver.setId(9L);
+        driver.setTelephone("237690000000");
+        when(peopleRepo.findById(9L)).thenReturn(Optional.of(driver));
+
+        // requestPayout path stubs (re-uses accountRepo/txRepo/campayService inside txTemplate)
+        when(accountRepo.lockByAccountKey("DRIVER:9")).thenReturn(Optional.of(d1));
+        when(accountRepo.findByAccountKey("DRIVER:9")).thenReturn(Optional.of(d1));
+        when(accountRepo.findByAccountKey("EXTERNAL")).thenReturn(Optional.empty());
+        when(accountRepo.findByAccountKey("PLATFORM")).thenReturn(Optional.empty());
+        when(accountRepo.save(any(LedgerAccount.class))).thenAnswer(i -> i.getArgument(0));
+        when(txRepo.findByExternalReference(any())).thenReturn(Optional.empty());
+        when(txRepo.save(any(com.binbash.mobigo.domain.LedgerTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(campayService.disburse(eq("237690000000"), eq(12000), any(), any())).thenReturn(
+            new CampayService.DisbursementResponse("DR-9", "PENDING")
+        );
+
+        wallet.runScheduledPayouts();
+
+        verify(campayService).disburse(eq("237690000000"), eq(12000), any(), any());
+    }
+}

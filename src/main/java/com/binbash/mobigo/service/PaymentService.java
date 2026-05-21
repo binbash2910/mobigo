@@ -218,7 +218,11 @@ public class PaymentService {
      * or manually by the passenger via POST /api/payments/initiate-collect/{bookingId}.
      *
      * Idempotent: returns the existing payment if a collect is already in progress or succeeded.
+     *
+     * @deprecated Remplacé par le porte-monnaie interne (WalletService). Conservé
+     * temporairement pour compatibilité jusqu'à la migration du frontend (Plan 2).
      */
+    @Deprecated
     public Payment initiateCollect(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
 
@@ -404,7 +408,11 @@ public class PaymentService {
 
     /**
      * Disburse funds to driver for all completed bookings of a ride.
+     *
+     * @deprecated Remplacé par le porte-monnaie interne (WalletService). Conservé
+     * temporairement pour compatibilité jusqu'à la migration du frontend (Plan 2).
      */
+    @Deprecated
     public void disburseToDriver(Long rideId, Ride ride, People driver) {
         List<Booking> paidBookings = bookingRepository
             .findByTrajetId(rideId)
@@ -481,7 +489,11 @@ public class PaymentService {
     /**
      * Refund passenger for a booking (no reason provided).
      * Called by BookingService.cancelBooking.
+     *
+     * @deprecated Remplacé par le porte-monnaie interne (WalletService). Conservé
+     * temporairement pour compatibilité jusqu'à la migration du frontend (Plan 2).
      */
+    @Deprecated
     public void refundPassenger(Long bookingId) {
         refundPassenger(bookingId, null);
     }
@@ -489,7 +501,11 @@ public class PaymentService {
     /**
      * Refund passenger for a booking with an optional audit reason.
      * Only refunds if the payment was collected (COLLECTE_REUSSIE or REUSSI).
+     *
+     * @deprecated Remplacé par le porte-monnaie interne (WalletService). Conservé
+     * temporairement pour compatibilité jusqu'à la migration du frontend (Plan 2).
      */
+    @Deprecated
     public void refundPassenger(Long bookingId, String reason) {
         Payment payment = paymentRepository.findByBookingId(bookingId).orElse(null);
         if (payment == null) {
@@ -528,7 +544,11 @@ public class PaymentService {
 
     /**
      * Alias exposed as {@code refund(Long, String)} for clarity at the REST layer.
+     *
+     * @deprecated Remplacé par le porte-monnaie interne (WalletService). Conservé
+     * temporairement pour compatibilité jusqu'à la migration du frontend (Plan 2).
      */
+    @Deprecated
     public void refund(Long bookingId, String reason) {
         refundPassenger(bookingId, reason);
     }

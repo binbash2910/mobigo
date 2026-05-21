@@ -1,7 +1,9 @@
 package com.binbash.mobigo.web.rest;
 
 import com.binbash.mobigo.config.ApplicationProperties;
+import com.binbash.mobigo.repository.LedgerTransactionRepository;
 import com.binbash.mobigo.service.PaymentService;
+import com.binbash.mobigo.service.WalletService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -28,11 +30,21 @@ public class CampayWebhookResource {
     private final PaymentService paymentService;
     private final ApplicationProperties.Campay campayConfig;
     private final ObjectMapper objectMapper;
+    private final WalletService walletService;
+    private final LedgerTransactionRepository ledgerTransactionRepository;
 
-    public CampayWebhookResource(PaymentService paymentService, ApplicationProperties applicationProperties, ObjectMapper objectMapper) {
+    public CampayWebhookResource(
+        PaymentService paymentService,
+        ApplicationProperties applicationProperties,
+        ObjectMapper objectMapper,
+        WalletService walletService,
+        LedgerTransactionRepository ledgerTransactionRepository
+    ) {
         this.paymentService = paymentService;
         this.campayConfig = applicationProperties.getCampay();
         this.objectMapper = objectMapper;
+        this.walletService = walletService;
+        this.ledgerTransactionRepository = ledgerTransactionRepository;
     }
 
     @PostMapping("/campay")
@@ -61,6 +73,11 @@ public class CampayWebhookResource {
                 return ResponseEntity.badRequest().build();
             }
 
+            if (externalReference != null && ledgerTransactionRepository.findByExternalReference(externalReference).isPresent()) {
+                walletService.handleCampayCallback(externalReference, status);
+                return ResponseEntity.ok().build();
+            }
+            // Fallback: legacy paymentService handler for non-ledger transactions
             paymentService.handleWebhook(reference, status, externalReference);
             return ResponseEntity.ok().build();
         } catch (Exception e) {

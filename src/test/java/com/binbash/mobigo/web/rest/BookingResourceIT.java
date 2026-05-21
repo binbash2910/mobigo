@@ -11,11 +11,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.binbash.mobigo.IntegrationTest;
 import com.binbash.mobigo.domain.Booking;
+import com.binbash.mobigo.domain.LedgerAccount;
+import com.binbash.mobigo.domain.People;
+import com.binbash.mobigo.domain.Ride;
+import com.binbash.mobigo.domain.Vehicle;
 import com.binbash.mobigo.domain.enumeration.BookingStatusEnum;
+import com.binbash.mobigo.domain.enumeration.LedgerAccountType;
+import com.binbash.mobigo.domain.enumeration.RideStatusEnum;
 import com.binbash.mobigo.repository.BookingRepository;
+import com.binbash.mobigo.repository.LedgerAccountRepository;
+import com.binbash.mobigo.repository.PeopleRepository;
+import com.binbash.mobigo.repository.RideRepository;
+import com.binbash.mobigo.repository.VehicleRepository;
 import com.binbash.mobigo.repository.search.BookingSearchRepository;
+import com.binbash.mobigo.service.WalletService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -76,6 +88,21 @@ class BookingResourceIT {
     @Autowired
     private MockMvc restBookingMockMvc;
 
+    @Autowired
+    private PeopleRepository peopleRepository;
+
+    @Autowired
+    private VehicleRepository vehicleRepository;
+
+    @Autowired
+    private RideRepository rideRepository;
+
+    @Autowired
+    private LedgerAccountRepository ledgerAccountRepository;
+
+    @Autowired
+    private WalletService walletService;
+
     private Booking booking;
 
     private Booking insertedBooking;
@@ -127,6 +154,66 @@ class BookingResourceIT {
     void createBooking() throws Exception {
         long databaseSizeBeforeCreate = getRepositoryCount();
         int searchDatabaseSizeBefore = IterableUtil.sizeOf(bookingSearchRepository.findAll());
+
+        // Seed: driver
+        People driver = new People();
+        driver.setNom("Driver");
+        driver.setTelephone("+237690000001");
+        driver.setCni("CNI-DRV-IT-01");
+        driver.setActif("Y");
+        driver.setDateNaissance(LocalDate.of(1985, 6, 15));
+        driver = peopleRepository.saveAndFlush(driver);
+
+        // Seed: vehicle owned by driver
+        Vehicle vehicle = new Vehicle();
+        vehicle.setMarque("Toyota");
+        vehicle.setModele("Camry");
+        vehicle.setAnnee("2021");
+        vehicle.setCarteGrise("CG-IT-001");
+        vehicle.setImmatriculation("LT-999-IT");
+        vehicle.setNbPlaces(4);
+        vehicle.setCouleur("Noir");
+        vehicle.setActif("Y");
+        vehicle.setProprietaire(driver);
+        vehicle = vehicleRepository.saveAndFlush(vehicle);
+
+        // Seed: ride linked to that vehicle, status OUVERT, price=1000 per seat
+        Ride ride = new Ride();
+        ride.setVilleDepart("Yaoundé");
+        ride.setVilleArrivee("Douala");
+        ride.setDateDepart(LocalDate.now().plusDays(2));
+        ride.setDateArrivee(LocalDate.now().plusDays(2));
+        ride.setHeureDepart("08");
+        ride.setHeureArrivee("12");
+        ride.setMinuteDepart("00");
+        ride.setMinuteArrivee("00");
+        ride.setPrixParPlace(1000f);
+        ride.setNbrePlaceDisponible(3);
+        ride.setStatut(RideStatusEnum.OUVERT);
+        ride.setVehicule(vehicle);
+        ride = rideRepository.saveAndFlush(ride);
+
+        // Seed: passenger
+        People passenger = new People();
+        passenger.setNom("Passenger");
+        passenger.setTelephone("+237690000002");
+        passenger.setCni("CNI-PAS-IT-01");
+        passenger.setActif("Y");
+        passenger.setDateNaissance(LocalDate.of(1992, 3, 20));
+        passenger = peopleRepository.saveAndFlush(passenger);
+
+        // Seed: passenger wallet with 50 000 (well above any booking total)
+        LedgerAccount passAccount = walletService.getOrCreateAccount(LedgerAccountType.PASSENGER, passenger.getId());
+        passAccount.setBalance(new BigDecimal("50000"));
+        ledgerAccountRepository.saveAndFlush(passAccount);
+
+        // Wire booking to the persisted passenger and ride (booking has 1 seat, ride price=1000)
+        booking.setPassager(passenger);
+        booking.setTrajet(ride);
+        booking.setNbPlacesReservees(1L);
+        // montantTotal and commission will be recomputed by BookingService; set something non-null
+        booking.setMontantTotal(1000f);
+
         // Create the Booking
         var returnedBooking = om.readValue(
             restBookingMockMvc

@@ -2,6 +2,7 @@ package com.binbash.mobigo.service;
 
 import com.binbash.mobigo.domain.AppSetting;
 import com.binbash.mobigo.repository.AppSettingRepository;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -17,6 +18,12 @@ public class AppSettingService {
 
     public static final String COMMISSION_RATE = "commission_rate";
     private static final String DEFAULT_COMMISSION_RATE = "0.10";
+
+    public static final String CAMPAY_FEE_RATE = "campay_fee_rate";
+    private static final String DEFAULT_CAMPAY_FEE_RATE = "0.02";
+
+    public static final String WALLET_MIN_WITHDRAWAL = "wallet_min_withdrawal";
+    private static final String DEFAULT_WALLET_MIN_WITHDRAWAL = "5000";
 
     private final AppSettingRepository repository;
     private final Map<String, String> cache = new ConcurrentHashMap<>();
@@ -55,5 +62,25 @@ public class AppSettingService {
 
     public void setCommissionRate(double rate) {
         set(COMMISSION_RATE, String.valueOf(rate));
+    }
+
+    public double getCampayFeeRate() {
+        String value = get(CAMPAY_FEE_RATE, DEFAULT_CAMPAY_FEE_RATE);
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            LOG.warn("Invalid campay fee rate in DB: {}, using default", value);
+            return Double.parseDouble(DEFAULT_CAMPAY_FEE_RATE);
+        }
+    }
+
+    public BigDecimal getMinWithdrawal() {
+        String value = get(WALLET_MIN_WITHDRAWAL, DEFAULT_WALLET_MIN_WITHDRAWAL);
+        try {
+            return new BigDecimal(value);
+        } catch (NumberFormatException e) {
+            LOG.warn("Invalid min withdrawal in DB: {}, using default", value);
+            return new BigDecimal(DEFAULT_WALLET_MIN_WITHDRAWAL);
+        }
     }
 }

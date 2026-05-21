@@ -4,6 +4,7 @@ import com.binbash.mobigo.domain.Booking;
 import com.binbash.mobigo.repository.BookingRepository;
 import com.binbash.mobigo.repository.search.BookingSearchRepository;
 import com.binbash.mobigo.service.BookingService;
+import com.binbash.mobigo.service.InsufficientWalletBalanceException;
 import com.binbash.mobigo.web.rest.errors.BadRequestAlertException;
 import com.binbash.mobigo.web.rest.errors.ElasticsearchExceptionMapper;
 import com.binbash.mobigo.web.websocket.WebSocketNotificationService;
@@ -69,7 +70,14 @@ public class BookingResource {
     @PostMapping("")
     public ResponseEntity<Booking> createBooking(@Valid @RequestBody Booking booking) throws URISyntaxException {
         LOG.debug("REST request to save Booking : {}", booking);
-        booking = bookingService.createBooking(booking);
+        try {
+            booking = bookingService.createBooking(booking);
+        } catch (InsufficientWalletBalanceException ex) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                .header("X-mobigo-error", "wallet-insufficient")
+                .header("X-mobigo-shortfall", ex.getShortfall().toPlainString())
+                .build();
+        }
         webSocketNotificationService.notifyDataChanged("BOOKINGS_CHANGED");
         return ResponseEntity.created(new URI("/api/bookings/" + booking.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, booking.getId().toString()))
